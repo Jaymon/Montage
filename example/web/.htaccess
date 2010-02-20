@@ -1,0 +1,12 @@
+Options +FollowSymLinks +ExecCGI
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # uncomment the following line, if you are having trouble
+  # getting no_script_name to work
+  #RewriteBase /
+
+  # push everything to the main index, let it sort it out...
+  RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>
