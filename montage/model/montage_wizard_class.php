@@ -54,27 +54,55 @@ final class montage_wizard extends montage_base_static {
     // load the controller...
     self::setClasses(self::getCustomPath(self::getAppPath(),'controller',$controller));
     
+    out::e(self::$core_class_map);
+    
     // set the defaul autoloader...
     self::set(array(__CLASS__,'get'));
   
   }//method
   
   /**
-   *  get the best request class name
+   *  get the class name from the given $class_key
    *  
-   *  @return string  a class name
+   *  @param  string  $class_key      
+   *  @return string
    */
-  static function getRequest(){
-    return self::getClassName(self::$core_class_map['MONTAGE_REQUEST']);
+  static function getClassName($class_key){
+    
+    // sanity, make sure the class key is in the right format...
+    $class_key = self::getClassKey($class_key);
+    
+    $ret_str = '';
+    if(isset(self::$class_map[$class_key])){
+      $ret_str = self::$class_map[$class_key]['class_name'];
+    }//if
+    return $ret_str;
+    
+  }//method
+  
+  static function getCoreClassName($core_class_key){
+    // sanity, make sure the class key is in the right format...
+    $core_class_key = self::getClassKey($core_class_key);
+    
+    $ret_str = '';
+    
+    if(isset(self::$core_class_map[$core_class_key])){
+    
+      $ret_str = self::getClassName(self::$core_class_map[$core_class_key]);
+    
+    }//if
+    
+    return $ret_str;
+    
   }//method
   
   /**
-   *  get the best response class name
+   *  format the class key
    *  
-   *  @return string  a class name
+   *  @return string      
    */
-  static function getResponse(){
-    return self::getClassName(self::$core_class_map['MONTAGE_RESPONSE']);
+  static function getClassKey($class_name){
+    return mb_strtoupper($class_name);
   }//method
   
   /**
@@ -332,24 +360,6 @@ final class montage_wizard extends montage_base_static {
       
     return $ret_list;
       
-  }//method
-  
-  /**
-   *  get the class name from the given $class_key
-   *  
-   *  @param  string  $class_key      
-   *  @return string
-   */
-  static private function getClassName($class_key){
-    $ret_str = '';
-    if(isset(self::$class_map[$class_key])){
-      $ret_str = self::$class_map[$class_key]['class_name'];
-    }//if
-    return $ret_str;
-  }//method
-  
-  static private function getClassKey($class_name){
-    return mb_strtoupper($class_name);
   }//method
 
 }//class     

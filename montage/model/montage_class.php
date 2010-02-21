@@ -20,7 +20,7 @@ final class montage extends montage_base_static {
    */
   static function start(){
   
-    $class_name = montage_wizard::getRequest();
+    $class_name = montage_wizard::getCoreClassName('montage_request');
     self::setField(
       'montage_request',
       new $class_name(
@@ -31,24 +31,9 @@ final class montage extends montage_base_static {
       )
     );
     
-    $class_name = montage_wizard::getResponse();
+    $class_name = montage_wizard::getCoreClassName('montage_response');
     self::setField('montage_response',new $class_name());
     
-    return;
-  
-    /*
-    // the loader needs to be first since it's used to do autoloading...
-    self::$class_map['loader'] = new montage_load();
-    // add the path list...
-    foreach($load_path_list as $load_path){
-      self::$class_map['loader']->setPath($load_path);
-    }//method
-    
-    self::$class_map['request'] = new montage_request($request_root_path);
-    */
-    
-  
-  
   }//method
   
   /**

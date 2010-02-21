@@ -8,7 +8,7 @@
  *  @since 2-19-10
  *  @package montage 
  ******************************************************************************/
-abstract class montage_controller {
+abstract class montage_controller extends montage_base {
 
   final function __construct(){}//method
 
