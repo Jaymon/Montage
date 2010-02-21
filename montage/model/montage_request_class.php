@@ -33,10 +33,14 @@ class montage_request extends montage_base {
 
       if(!empty($uri_path_list[0])){
         
-        $this->setClass(mb_strtolower($uri_path_list[0]));
-        
-        if(!empty($uri_path_list[1])){
-          $this->setMethod(sprintf('get%s',ucfirst(mb_strtolower($uri_path_class[1]))));
+        if(montage_wizard::isController($uri_path_list[0])){
+          
+          $this->setClass(mb_strtolower($uri_path_list[0]));
+          
+          if(!empty($uri_path_list[1])){
+            $this->setMethod(sprintf('get%s',ucfirst(mb_strtolower($uri_path_list[1]))));
+          }//if
+          
         }//if
         
       }//if

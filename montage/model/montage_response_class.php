@@ -1,24 +1,21 @@
 <?php
 
 /**
- *  handle root requests
+ *  all the montage response stuff
  *  
  *  @version 0.1
  *  @author Jay Marcyes {@link http://marcyes.com}
- *  @since 2-19-10
+ *  @since 2-20-10
  *  @package montage 
  ******************************************************************************/
-class foo extends montage_controller {
+class montage_response extends montage_base {
 
-  function start(){}//method
-  
-  function getIndex(){
-  
-    out::h();
-  
+  final function __construct(){
+    $this->start();
   }//method
-  
-  function stop(){}//method
 
+  function start(){
+    
+  }//method
 
 }//class     

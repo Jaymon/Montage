@@ -10,18 +10,33 @@
  *  @since 12-28-09
  *  @package montage 
  ******************************************************************************/
-final class montage {
-
-  static $class_map = array();
-
+final class montage extends montage_base_static {
+  
   /**
    *  start the main montage instance, this will allow access to most of the montage features
    *
    *  @param  string  $request_root_path  usually the app's web/ directory   
    *  @param  array $load_path_list a list of paths that can be autoloaded   
    */
-  static function start($request_root_path,$load_path_list = array()){
+  static function start(){
   
+    $class_name = montage_wizard::getRequest();
+    self::setField(
+      'montage_request',
+      new $class_name(
+        montage_wizard::getCustomPath(
+          montage_wizard::getAppPath(),
+          'web'
+        )
+      )
+    );
+    
+    $class_name = montage_wizard::getResponse();
+    self::setField('montage_response',new $class_name());
+    
+    return;
+  
+    /*
     // the loader needs to be first since it's used to do autoloading...
     self::$class_map['loader'] = new montage_load();
     // add the path list...
@@ -30,6 +45,7 @@ final class montage {
     }//method
     
     self::$class_map['request'] = new montage_request($request_root_path);
+    */
     
   
   
@@ -42,7 +58,7 @@ final class montage {
    *  file, this is really the only thing that needs to be called, everything else
    *  will take care of itself      
    */
-  function handle(){
+  static function handle(){
   
     try{
     
@@ -53,10 +69,15 @@ final class montage {
       
       ///out::e($class,$method); return;
       
+      // get all the filters and start them...
+      $filter_list = montage_wizard::getFilters();
+      foreach($filter_list as $key => $filter_class_name){
+        $filter_list[$key] = new $filter_class_name();
+        $filter_list[$key]->start();
+      }//foreach
+      
       $controller = new $class();
       $controller->start();
-      
-      // @tbi if the $class doesn't exted montage_controller throw an exception
     
       if(!method_exists($controller,$method)){
         $request->killMethod();
@@ -64,8 +85,13 @@ final class montage {
       }//if
     
       $result = call_user_func(array($controller,$method));
-        
+      
       $controller->stop();
+      
+      // run all the filters again...
+      foreach($filter_list as $filter_instance){
+        $filter_instance->stop();
+      }//foreach
       
     }catch(Exception $e){
     
@@ -79,32 +105,16 @@ final class montage {
   /**
    *  return the montage_request instance
    */
-  static function getRequest(){ return self::getClass('request'); }//method
+  static function getRequest(){ return self::getField('montage_request'); }//method
 
   /**
-   *  
+   *  return the montage_response instance
    */
-  static function getResponse(){}//method
+  static function getResponse(){ return self::getField('montage_response'); }//method
   
   /**
    *  
    */
-  static function getConfig(){}//method
-  
-  /**
-   *  get the montage_load instance
-   *  @return montage_load   
-   */
-  static function getLoader(){ return self::getClass('loader'); }//method
-
-  /**
-   *  get the class in the $class_map specified at the $class key
-   *  
-   *  @param  string  $class  the key where the class can be foun in $class_map
-   *  @return object|null          
-   */
-  static function getClass($class){
-    return empty(self::$class_map[$class]) ? null : self::$class_map[$class];
-  }//method
+  static function getSettings(){}//method
 
 }//class     
