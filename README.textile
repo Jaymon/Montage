@@ -1,0 +1,40 @@
+h1. Montage Web Framework
+
+_Build your websites through the power of the montage._
+
+Montage is an ultra-lightweight MVC framework that does not try to be all things to all people so it can avoid the heft of other frameworks. The goal is to make Montage ultra-flexible yet still super-lightweight.
+
+h2. Getting Started
+
+h3. Terminology
+
+Before you dive in you should be familiar with certain terms Montage uses.
+
+* *App* - This is your web application you are going to build using Montage
+* *Controller* - This is the consumer facing part of your application that will handle the request from your visitors. For example, The default or world accessible part of your site might use the _frontend_ controller. The administration interface might use the _backend_ controller. And API calls might use the _api_ controller.
+* *Model* - all your supporting classes/libraries
+* *View* - what you will actually show visitors
+
+h3. The directory structure of a Montage web application
+
+<pre>
+app_path/
+  cache/
+  controller/
+  model/
+  settings/
+  view/
+  web/
+</pre>
+
+* *cache* - Temporary storage for Montage. Montage will cache things to this directory for quicker access. This directory can be cleared at anytime without problems.
+
+* *controller* - All your controllers go in this folder in their respective sub directory (e.g., if you are using the frontend controller, then all your frontend classes will go in the <code>controller/frontend</code> directory).
+
+* *model* - all supporting classes/libraries go in this directory.
+
+* *settings* - all configuration files go in this directory.
+
+* *view* - all templates should go in this directory.
+
+* *web* - this is the Montage request root directory, it contains the index.php that Montage will use to service all web requests.
