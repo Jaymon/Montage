@@ -19,6 +19,13 @@ if(MONTAGE_DEBUG){
   ini_set('display_errors','off');
 }//if/else
 
+if(!defined('MONTAGE_CONTROLLER')){
+  throw new RuntimeException('MONTAGE_CONTROLLER constant has not been set. Set this in your index.php file!');
+}//if
+if(!defined('MONTAGE_ENVIRONMENT')){
+  throw new RuntimeException('MONTAGE_ENVIRONMENT constant has not been set. Set this in your index.php file!');
+}//if
+
 if(!defined('MONTAGE_CHARSET')){ define('MONTAGE_CHARSET','UTF-8'); }//if
 mb_internal_encoding(MONTAGE_CHARSET);
 
@@ -26,40 +33,55 @@ if(!defined('MONTAGE_TIMEZONE')){ define('MONTAGE_TIMEZONE','UTC'); }//if
 date_default_timezone_set(MONTAGE_TIMEZONE);
 
 // where the framework's core can be found...
-define('MONTAGE_PATH',realpath(join(DIRECTORY_SEPARATOR,array(dirname(__FILE__),'..'))));
+if(!defined('MONTAGE_PATH')){
+  define('MONTAGE_PATH',realpath(join(DIRECTORY_SEPARATOR,array(dirname(__FILE__),'..'))));
+}//if
+
+// @todo  get rid of this...
+require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','out_class.php')));
 
 // where the applications core can be found...
 // this can be set in the app's start.php for a speed boost...
 if(!defined('MONTAGE_APP_PATH')){
   // auto-discover the app's root dir...
   $bt = debug_backtrace();
-  if(!empty($bt[0])){
-    define('MONTAGE_APP_PATH',realpath(join(DIRECTORY_SEPARATOR,array(dirname($bt[0]['file']),'..'))));
+  $bt_map = end($bt);
+  if(!empty($bt_map)){
+    define('MONTAGE_APP_PATH',realpath(join(DIRECTORY_SEPARATOR,array(dirname($bt_map['file']),'..'))));
   }//if
+  unset($bt);
+  unset($bt_map);
 }//if
 
-if(!defined('MONTAGE_CONTROLLER')){
-  throw new exception('MONTAGE_CONTROLLER constant has not been set. Set this in your index.php file!');
-}//if
-
-require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','out_class.php')));
-
-require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_base_static_class.php')));
 // include the autoloader...
+require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_base_static_class.php')));
 require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_wizard_class.php')));
 
 // start the auto-loader...
-montage_wizard::setPath(MONTAGE_PATH);
-montage_wizard::setAppPath(MONTAGE_APP_PATH);
-montage_wizard::start(MONTAGE_CONTROLLER);
+montage_wizard::start(
+  MONTAGE_CONTROLLER,
+  MONTAGE_PATH,
+  MONTAGE_APP_PATH
+);
 
 // officially start montage...
 montage::start();
-/*montage::start(
-  join(DIRECTORY_SEPARATOR,array(MONTAGE_APP_DIR,'web')),
-  array(
-    MONTAGE_MODEL_DIR,
-    MONTAGE_APP_MODEL_DIR,
-    MONTAGE_APP_CONTROLLER_DIR
-  )
-);*/
+
+// load settings...
+
+// first load the global settings...
+$settings = montage_wizard::getCustomPath(
+  montage_wizard::getAppPath(),
+  'settings',
+  'settings.php'
+);
+if(file_exists($settings)){ include($env_settings); }//if
+
+// now load the environment settings so they can override any global settings...
+$settings = montage_wizard::getCustomPath(
+  montage_wizard::getAppPath(),
+  'settings',
+  sprintf('%s.php',MONTAGE_ENVIRONMENT)
+);
+if(file_exists($settings)){ include($settings); }//if
+unset($settings);

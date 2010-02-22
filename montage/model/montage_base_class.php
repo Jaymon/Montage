@@ -86,5 +86,29 @@ abstract class montage_base {
     }//if
     return $ret_bool;
   }//method
+  
+  /**
+   *  add all the fields in $field_map to the instance field_map
+   *  
+   *  the past in $field_map takes precedence, it will overwrite previous values
+   *      
+   *  @param  array $field_map      
+   *  @return array
+   */
+  function setFields($field_map){
+  
+    if(!empty($field_map)){
+      $this->field_map = array_merge($this->field_map,$field_map);
+    }//if
+    return $this->field_map;
+  
+  }//method
+  
+  /**
+   *  return the instance's field_map
+   *  
+   *  @return array
+   */
+  function getFields(){ return $this->field_map; }//method
 
 }//class     

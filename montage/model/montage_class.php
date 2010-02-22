@@ -34,6 +34,9 @@ final class montage extends montage_base_static {
     $class_name = montage_wizard::getCoreClassName('montage_response');
     self::setField('montage_response',new $class_name());
     
+    $class_name = montage_wizard::getCoreClassName('montage_settings');
+    self::setField('montage_settings',new $class_name());
+    
   }//method
   
   /**
@@ -49,8 +52,8 @@ final class montage extends montage_base_static {
     
       $request = self::getRequest();
     
-      $class = $request->getClass();
-      $method = $request->getMethod();
+      $class = $request->getControllerClass();
+      $method = $request->getControllerMethod();
       
       ///out::e($class,$method); return;
       
@@ -65,8 +68,8 @@ final class montage extends montage_base_static {
       $controller->start();
     
       if(!method_exists($controller,$method)){
-        $request->killMethod();
-        $method = $request->getMethod();
+        $request->killControllerMethod();
+        $method = $request->getControllerMethod();
       }//if
     
       $result = call_user_func(array($controller,$method));
@@ -98,8 +101,8 @@ final class montage extends montage_base_static {
   static function getResponse(){ return self::getField('montage_response'); }//method
   
   /**
-   *  
+   *  return the montage_settings instance
    */
-  static function getSettings(){}//method
+  static function getSettings(){ return self::getField('montage_settings'); }//method
 
 }//class     

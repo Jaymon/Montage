@@ -41,14 +41,21 @@ final class montage_wizard extends montage_base_static {
   static $parent_class_map = array();
   
   /**
-   *  start the loader class
+   *  start the wizard
    *  
    *  @parma  string  $controller the controller that will be used
    */
-  static function start($controller){
+  static function start($controller,$framework_path,$app_path){
+  
+    // save the paths...
+    self::setFrameworkPath($framework_path);
+    self::setAppPath($app_path);
+    
+    self::setPath(self::getCustomPath($framework_path,'model'));
+    
   
     // load the model directories...
-    self::setClasses(self::getCustomPath(self::getPath(),'model'));
+    ///self::setClasses(self::getCustomPath(self::getPath(),'model'));
     self::setClasses(self::getCustomPath(self::getAppPath(),'model'));
     
     // load the controller...
@@ -139,21 +146,21 @@ final class montage_wizard extends montage_base_static {
    *  
    *  @param  string  $val
    */
-  static function setPath($val){ self::setField('montage_path',$val); }//method
+  static private function setFrameworkPath($val){ self::setField('montage_framework_path',$val); }//method
   
   /**
    *  get the montage root path
    *  
    *  @return string
    */
-  static function getPath(){ return self::getField('montage_path',''); }//method
+  static private function getFrameworkPath(){ return self::getField('montage_framework_path',''); }//method
   
   /**
    *  set the montage app root path
    *  
    *  @param  string  $val
    */
-  static function setAppPath($val){ self::setField('montage_app_path',$val); }//method
+  static private function setAppPath($val){ self::setField('montage_app_path',$val); }//method
   
   /**
    *  get the montage app root path
@@ -161,6 +168,20 @@ final class montage_wizard extends montage_base_static {
    *  @return string
    */
   static function getAppPath(){ return self::getField('montage_app_path',''); }//method
+
+  static function setPath($path){
+  
+    // canary...
+    if(empty($path)){
+      throw new UnexpectedValueException('tried to get classes in an empty $path');
+    }//if
+    if(!is_dir($path)){
+      throw new UnexpectedValueException(sprintf('"%s" is not a valid directory',$path));
+    }//if
+    
+    self::setClasses($path);
+  
+  }//method
 
   /**
    *  given multiple path bits, build a custom path
@@ -245,14 +266,6 @@ final class montage_wizard extends montage_base_static {
    *  @param  string  $path all the files in $path and its sub-dirs will be examined
    */
   static private function setClasses($path){
-  
-    // canary...
-    if(empty($path)){
-      throw new UnexpectedValueException('tried to get classes in an empty $path');
-    }//if
-    if(!is_dir($path)){
-      throw new UnexpectedValueException(sprintf('"%s" is not a valid directory',$path));
-    }//if
   
     $ret_map = array();
   

@@ -19,12 +19,16 @@ class montage_request extends montage_base {
   function start(){
   
     // are we in CLI?
-    $this->setCLI(strncasecmp(PHP_SAPI, 'cli', 3) === 0);
-  
-    if($this->isCLI()){
+    if(strncasecmp(PHP_SAPI, 'cli', 3) === 0){
     
+      $this->setMethod('CLI');
       throw new exception('in CLI, tbi');
-    
+      
+      // make all the command line arguments available through the field methods...
+      if(!empty($_SERVER['argv'])){
+        $this->setFields($_SERVER['argv']);
+      }//if
+      
     }else{
     
       $root_path_list = explode(DIRECTORY_SEPARATOR,$this->getRoot());
@@ -35,39 +39,54 @@ class montage_request extends montage_base {
         
         if(montage_wizard::isController($uri_path_list[0])){
           
-          $this->setClass(mb_strtolower($uri_path_list[0]));
+          $this->setControllerClass(mb_strtolower($uri_path_list[0]));
           
           if(!empty($uri_path_list[1])){
-            $this->setMethod(sprintf('get%s',ucfirst(mb_strtolower($uri_path_list[1]))));
+            $this->setControllerMethod(sprintf('get%s',ucfirst(mb_strtolower($uri_path_list[1]))));
           }//if
           
         }//if
         
       }//if
       
-      $this->setField('uri_path_list',$uri_path_list);
+      // make all the different vars available through the field methods...
+      if(!empty($_COOKIE)){ $this->setFields($_COOKIE); }//if
+      if(!empty($_SESSION)){ $this->setFields($_SESSION); }//if
+      
+      $this->setFields($uri_path_list);
+      $this->setFields($_GET);
+      $this->setFields($_POST);
+      
+      $this->setField('montage_request_uri_path_list',$uri_path_list);
+      
+      $this->setMethod($this->getServerField('REQUEST_METHOD','GET'));
       
     }//if/else
     
   }//method
 
-  function setRoot($val){ return $this->setField('root',$val); }//method
-  function getRoot(){ return $this->getField('root',''); }//method
-  function hasRoot(){ return $this->hasField('root'); }//method
+  function setRoot($val){ return $this->setField('montage_request_root',$val); }//method
+  function getRoot(){ return $this->getField('montage_request_root',''); }//method
+  function hasRoot(){ return $this->hasField('montage_request_root'); }//method
   
-  function setClass($val){ return $this->setField('class',$val); }//method
-  function getClass(){ return $this->getField('class',$this->getDefaultClass()); }//method
-  function hasClass(){ return $this->hasField('class'); }//method
-  protected function getDefaultClass(){ return 'index'; }//method
+  function setControllerClass($val){ return $this->setField('montage_request_controller_class',$val); }//method
+  function getControllerClass(){ return $this->getField('montage_request_controller_class',$this->getDefaultControllerClass()); }//method
+  function hasControllerClass(){ return $this->hasField('montage_request_controller_class'); }//method
+  protected function getDefaultControllerClass(){ return 'montage_request_controller_index'; }//method
   
-  function setMethod($val){ return $this->setField('method',$val); }//method
-  function getMethod(){ return $this->getField('method',$this->getDefaultMethod()); }//method
-  function hasMethod(){ return $this->hasField('method'); }//method
-  function killMethod(){ return $this->killField('method'); }//method
-  protected function getDefaultMethod(){ return 'getIndex'; }//method
+  function setControllerMethod($val){ return $this->setField('montage_request_controller_method',$val); }//method
+  function getControllerMethod(){ return $this->getField('montage_request_controller_method',$this->getDefaultControllerMethod()); }//method
+  function hasControllerMethod(){ return $this->hasField('montage_request_controller_method'); }//method
+  function killControllerMethod(){ return $this->killField('montage_request_controller_method'); }//method
+  protected function getDefaultControllerMethod(){ return 'getIndex'; }//method
   
-  protected function setCLI($val){ return $this->setField('cli',$val); }//method
-  function isCLI(){ return $this->hasField('cli'); }//method
+  function setMethod($val){ return $this->setField('montage_request_method',mb_strtoupper($val)); }//method
+  function getMethod(){ return $this->getField('montage_request_method',''); }//method
+  function hasMethod(){ return $this->hasField('montage_request_method'); }//method
+  function isMethod($val){ return $this->isField('montage_request_method',mb_strtoupper($val)); }//method
+  
+  function isCli(){ return $this->isMethod('CLI'); }//method
+  function isPost(){ return $this->isMethod('POST'); }//method
   
   /**
    *  checks both $_SERVER and $_ENV for a value
@@ -94,3 +113,4 @@ class montage_request extends montage_base {
   }//method
 
 }//class     
+
