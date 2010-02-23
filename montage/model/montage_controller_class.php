@@ -14,12 +14,18 @@ abstract class montage_controller extends montage_base {
 
   /**
    *  before calling the get* method, run this method
-   *  
-   *  the reason why this is abstract and required is so you know about it and
-   *  it isn't one of those magic things that montage can do, if you don't want
-   *  to use it just put "function start(){}" in your controller child
    */
-  abstract function start();
+  function start(){}//method
+  
+  /**
+   *  this is the default controller method for this controller
+   *  
+   *  this method is called if this controller is activated but no other method is given
+   *      
+   *  @return boolean|string  if true, then the template will be rendered, if string, then the
+   *                          string will be echoed
+   */
+  abstract function getIndex();
   
   /**
    *  after calling the get* method, run this method

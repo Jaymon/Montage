@@ -21,7 +21,7 @@ abstract class montage_filter extends montage_base {
   /**
    *  this method will be called before the controller is called
    */
-  abstract function start();
+  function start(){}//method
   
   /**
    *  this method will be called after the controller is called

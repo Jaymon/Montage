@@ -17,6 +17,10 @@ abstract class montage_base {
    */
   protected $field_map = array();
 
+  /**
+   *  this is just here so other constructors can call it but children can override it
+   */        
+  function start(){}//method
 
   /**
    *  set the $val into $key
@@ -90,7 +94,7 @@ abstract class montage_base {
   /**
    *  add all the fields in $field_map to the instance field_map
    *  
-   *  the past in $field_map takes precedence, it will overwrite previous values
+   *  $field_map takes precedence, it will overwrite previously set values
    *      
    *  @param  array $field_map      
    *  @return array
@@ -110,5 +114,100 @@ abstract class montage_base {
    *  @return array
    */
   function getFields(){ return $this->field_map; }//method
+  
+  /**
+   *  designed to be called from a __call() magic method, this will decide what
+   *  method to call and return the result
+   *  
+   *  @param  array $method_map a key/val mapping where the key is the $prefix that is
+   *                            returned from {@link getSplitMethod()} and the val is
+   *                            the internal callback method that will take the $field
+   *                            returned from {@link getSplitMethod()} and the $args
+   *  @param  string  $method the method that was passed into __call()
+   *  @param  array $args the arguments passed into the __call() method
+   *  @return mixed whatever is returned from the callback
+   *  @throws montage_exception   
+   */
+  protected function getCall($method_map,$method,$args){
+    
+    $ret_mix = null;
+    list($key,$field) = $this->getSplitMethod($method);
+    
+    if(empty($method_map[$key])){
+    
+      throw new montage_exception(sprintf('could not find a match for $method %s with command: %s',$method,$key));
+    
+    }else{
+    
+      $callback = $method_map[$key];
+      $ret_mix = $this->{$callback}($field,$args);
+    
+    }//if/else
+  
+    return $ret_mix;
+  
+  }//method
+  
+  /**
+   *  splits the $method by the first non lowercase char found
+   *  
+   *  the reason why we split on the first capital is because if we just did find
+   *  first substring that matches in __call(), then something like gt and gte would 
+   *  match the same method, so we enforce camel casing (eg, gteEdward and gtEdward) 
+   *  so that all method names can be matched. And we use this method across all
+   *  __call() using classes to make it consistent.         
+   *  
+   *  @param  string  $method the method name that was called
+   *  @return array array($prefix,$field)
+   */
+  protected function getSplitMethod($method){
+  
+    $ret_prefix = $ret_field = '';
+  
+    // get everything lowercase form start...
+    for($i = 0,$max = mb_strlen($method); $i < $max ;$i++){
+    
+      $ascii = ord($method[$i]);
+      if(($ascii < 97) || ($ascii > 122)){
+      
+        $ret_field = $this->getNormalizedField(mb_substr($method,$i));
+        break;
+      
+      }else{
+      
+        $ret_prefix .= $method[$i];
+      
+      }//if/else
+    
+    }//for
+    
+    if(empty($ret_field)){
+    
+      throw new montage_exception(
+        'no field was specified in the method, for example, if you want to "get" the field "foo" '.
+        'you would do: getFoo() (notice the capital F)'
+      ); 
+    
+    }//if
+    
+    return array($ret_prefix,$ret_field);
+  
+  }//method
+  
+  /**
+   *  make the field name consistent
+   *  
+   *  @param  string  $field  the field name
+   *  @return string  the $field, normalized
+   */
+  protected function getNormalizedField($field){
+    
+    // canary...
+    if(is_numeric($field)){
+      throw new mingo_exception(sprintf('an all numeric $field like %s is not allowed',$field));
+    }//if
+    
+    return mb_strtolower((string)$field);
+  }//method
 
 }//class     

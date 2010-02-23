@@ -37,9 +37,6 @@ if(!defined('MONTAGE_PATH')){
   define('MONTAGE_PATH',realpath(join(DIRECTORY_SEPARATOR,array(dirname(__FILE__),'..'))));
 }//if
 
-// @todo  get rid of this...
-require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','out_class.php')));
-
 // where the applications core can be found...
 // this can be set in the app's start.php for a speed boost...
 if(!defined('MONTAGE_APP_PATH')){
@@ -53,7 +50,8 @@ if(!defined('MONTAGE_APP_PATH')){
   unset($bt_map);
 }//if
 
-// include the autoloader...
+// include the autoloader (and supporting files)...
+require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_cache_class.php')));
 require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_base_static_class.php')));
 require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_wizard_class.php')));
 
@@ -75,7 +73,7 @@ $settings = montage_wizard::getCustomPath(
   'settings',
   'settings.php'
 );
-if(file_exists($settings)){ include($env_settings); }//if
+if(file_exists($settings)){ include($settings); }//if
 
 // now load the environment settings so they can override any global settings...
 $settings = montage_wizard::getCustomPath(

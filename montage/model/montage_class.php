@@ -32,10 +32,25 @@ final class montage extends montage_base_static {
     );
     
     $class_name = montage_wizard::getCoreClassName('montage_response');
-    self::setField('montage_response',new $class_name());
+    self::setField(
+      'montage_response',
+      new $class_name(
+        montage_wizard::getCustomPath(
+          montage_wizard::getAppPath(),
+          'view'
+        )
+      )
+    );
     
     $class_name = montage_wizard::getCoreClassName('montage_settings');
     self::setField('montage_settings',new $class_name());
+    
+    $class_name = montage_wizard::getCoreClassName('montage_url');
+    self::setField('montage_url',new $class_name());
+    self::getUrl()->setRoot(
+      self::getRequest()->getHost(),
+      self::getRequest()->getPath()
+    );
     
   }//method
   
@@ -73,13 +88,60 @@ final class montage extends montage_base_static {
       }//if
     
       $result = call_user_func(array($controller,$method));
-      
       $controller->stop();
       
       // run all the filters again...
       foreach($filter_list as $filter_instance){
         $filter_instance->stop();
       }//foreach
+      
+      $response = montage::getResponse();
+      
+      // send the content type header...  
+      if(!headers_sent()){
+        header(
+          sprintf(
+            'Content-Type: %s; charset=%s',
+            $response->getContentType(),
+            MONTAGE_CHARSET
+          )
+        );
+      }//if
+      
+      // @tbi status code (eg, 404) header needs to be sent
+      
+      if(is_bool($result)){
+      
+        if($result === true){
+      
+          // actually render the view...
+          
+          ///if(!headers_sent()){ header("Content-Type: text/html"); }//if
+          
+          $template = $response->getTemplateInstance();
+          $template->out(montage_template::OPTION_OUT_STD);
+          
+        }else{
+          // @tbi do something if controller returned false, not sure what to do
+        }//if/else
+      
+      }else if(is_string($result)){
+      
+        // it's a string, so just echo it to the screen and be done...
+        echo $result;
+      
+      }else{
+      
+        throw new UnexpectedValueException(
+          sprintf(
+            'the controller method (%s:%s) returned a value that was neither a boolean or a string, it was a %s',
+            $class,
+            $method,
+            gettype($result)
+          )
+        );
+      
+      }//if/else if/else
       
     }catch(Exception $e){
     
@@ -104,5 +166,10 @@ final class montage extends montage_base_static {
    *  return the montage_settings instance
    */
   static function getSettings(){ return self::getField('montage_settings'); }//method
+  
+  /**
+   *  return the montage_url instance
+   */
+  static function getUrl(){ return self::getField('montage_url'); }//method
 
 }//class     

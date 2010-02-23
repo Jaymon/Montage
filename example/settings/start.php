@@ -10,4 +10,9 @@
  ******************************************************************************/
 
 $start_path = join(DIRECTORY_SEPARATOR,array(dirname(__FILE__),'..','..','montage','settings','start.php'));
+
+// @todo  get rid of this...
+$out_path = realpath(join(DIRECTORY_SEPARATOR,array(dirname(__FILE__),'..','..','montage','model','extlib','out_class.php')));
+require($out_path);
+
 require($start_path);

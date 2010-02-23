@@ -28,7 +28,8 @@ final class montage_wizard extends montage_base_static {
   static $core_class_map = array(
     'MONTAGE_REQUEST' => '',
     'MONTAGE_SETTINGS' => '',
-    'MONTAGE_RESPONSE' => ''
+    'MONTAGE_RESPONSE' => '',
+    'MONTAGE_URL' => ''
   );
   
   /**
@@ -43,29 +44,53 @@ final class montage_wizard extends montage_base_static {
   /**
    *  start the wizard
    *  
-   *  @parma  string  $controller the controller that will be used
+   *  @param  string  $controller the controller that will be used
+   *  @param  string  $framework_path corresponds to MONTAGE_PATH constant
+   *  @param  string  $app_path corresponds to MONTAGE_APP_PATH constant        
    */
   static function start($controller,$framework_path,$app_path){
   
-    // save the paths...
-    self::setFrameworkPath($framework_path);
-    self::setAppPath($app_path);
-    
-    self::setPath(self::getCustomPath($framework_path,'model'));
-    
+    // canary...
+    if(empty($controller)){
+      throw new UnexpectedValueException('$controller cannot be empty');
+    }//if
+    if(empty($framework_path)){
+      throw new UnexpectedValueException('$framework_path cannot be empty');
+    }//if
+    if(empty($app_path)){
+      throw new UnexpectedValueException('$app_path cannot be empty');
+    }//if
   
-    // load the model directories...
-    ///self::setClasses(self::getCustomPath(self::getPath(),'model'));
-    self::setClasses(self::getCustomPath(self::getAppPath(),'model'));
-    
-    // load the controller...
-    self::setClasses(self::getCustomPath(self::getAppPath(),'controller',$controller));
-    
-    out::e(self::$core_class_map);
-    
     // set the defaul autoloader...
     self::set(array(__CLASS__,'get'));
   
+    // save the important paths...
+    self::setFrameworkPath($framework_path);
+    self::setAppPath($app_path);
+    montage_cache::setPath(self::getCustomPath($app_path,'cache'));
+    
+    // load the default model directories...
+    self::setPath(self::getCustomPath($framework_path,'model'));
+    self::setPath(self::getCustomPath($app_path,'model'));
+    
+    // load the controller...
+    $controller_path = self::getCustomPath($app_path,'controller',$controller);
+    self::setPath($controller_path);
+    
+    if(empty(self::$parent_class_map['MONTAGE_CONTROLLER'])){
+      throw new RuntimeException(
+        sprintf(
+          'the controller (%s) does not have any classes that extend "montage_controller" '
+          .'so no requests can be processed. Fix this by adding some classes that extend '
+          .'"montage_controller" in the "%s" directory. At the very least, you should have '
+          .'an index class that has a getIndex() method (eg, index::getIndex()) to fulfill '
+          .'default requests.',
+          $path,
+          $controller_path
+        )
+      );
+    }//if
+    
   }//method
   
   /**
@@ -137,8 +162,35 @@ final class montage_wizard extends montage_base_static {
    *  @return boolean true if $class_name is the name of a controller
    */
   static function isController($class_name){
-    $class_key = self::getClassKey($class_name);
-    return in_array($class_key,self::$parent_class_map['MONTAGE_CONTROLLER'],true);
+    // canary...
+    if(empty(self::$parent_class_map['MONTAGE_CONTROLLER'])){ return false; }//if
+  
+    return self::isChild($class_name,'MONTAGE_CONTROLLER');
+  }//method
+  
+  /**
+   *  return true if $child_class_name is a child of $parent_class_name
+   *  
+   *  @param  string  $child_class_name
+   *  @param  string  $parent_class_name      
+   *  @return boolean      
+   *
+   */        
+  static function isChild($child_class_name,$parent_class_name){
+  
+    // canary...
+    if(empty($child_class_name)){ return false; }//if
+    if(empty($parent_class_name)){ return false; }//if
+  
+    $ret_bool = false;
+    $child_class_key = self::getClassKey($child_class_name);
+    $parent_class_key = self::getClassKey($parent_class_name);
+    if(is_array(self::$parent_class_map[$parent_class_key])){
+      $ret_bool = in_array($child_class_key,self::$parent_class_map[$parent_class_key],true);
+    }//if
+    
+    return $ret_bool;
+  
   }//method
   
   /**
@@ -179,7 +231,18 @@ final class montage_wizard extends montage_base_static {
       throw new UnexpectedValueException(sprintf('"%s" is not a valid directory',$path));
     }//if
     
-    self::setClasses($path);
+    $class_map = montage_cache::get($path);
+    if(empty($class_map)){
+      
+      // cached miss, so get them the old fashioned way...
+      
+      $class_map = self::getClasses($path);
+      montage_cache::set($path,$class_map);
+      
+    }//if
+    
+    self::addClasses($class_map);
+    return $path;
   
   }//method
 
@@ -212,39 +275,39 @@ final class montage_wizard extends montage_base_static {
    *  
    *  @return boolean      
    */
-  static function get($class){
+  static function get($class_name){
   
     // if you just get blank pages: http://www.php.net/manual/en/function.error-reporting.php#28181
     //  http://www.php.net/manual/en/function.include-once.php#53239
-  
-    out::e($class);
-    return;
-  
-    $name_list = array();
-    $name_list[] = sprintf('%s_class.php',$class);
-    $name_list[] = sprintf('%s.class.php',$class);
-    $name_list[] = sprintf('%s.php',$class);
+
+    $class_key = self::getClassKey($class_name);
+    if(isset(self::$class_map[$class_key])){
     
-    // go through each of the paths...
-    foreach($this->path_map as $path_list){
+      include(self::$class_map[$class_key]['path']);
+      self::$class_map[$class_key]['method'] = __METHOD__;
+      return true;
     
-      // now go through each path and check it agains $name_list...
-      foreach($path_list as $path){
-        
-        foreach($name_list as $name){
-          
-          $filepath = join(DIRECTORY_SEPARATOR,array($path,$name));
-          if(file_exists($filepath)){
-            require($filepath);
-            $this->class_map[$class] = $filepath;
-            return true;
-          }//if
-          
-        }//foreach
+    }else{
+    
+      throw new RuntimeException(sprintf('unable to autoload $class_name (%s)',$class_name));
       
-      }//foreach
-    
-    }//foreach
+      $backtrace = debug_backtrace();
+      $file = empty($backtrace[1]['file']) ? 'unknown' : $backtrace[1]['file'];
+      $line = empty($backtrace[1]['line']) ? 'unknown' : $backtrace[1]['line']; 
+      trigger_error(
+        sprintf(
+          '%s was not found, called from %s:%s'.
+          $class_name,
+          $file,
+          $line
+        ),
+        E_USER_ERROR
+      );
+      
+      return false;
+      
+    }//if/else
+  
 
     /**
     $backtrace = debug_backtrace();
@@ -261,13 +324,76 @@ final class montage_wizard extends montage_base_static {
   }//method
   
   /**
-   *  find all the classes in a given path and map them for later use
+   *  add the class map to the global class map
+   *  
+   *  also set all the other global class bindings like the core classes and parent map
+   *  
+   *  @param  array $class_map
+   */
+  static private function addClasses($class_map){
+  
+    // canary...
+    if(empty($class_map)){ return; }//if
+  
+    // first merge the $class_map into the global class map in case the autoloader is called...
+    self::$class_map = array_merge(self::$class_map,$class_map);
+  
+    foreach($class_map as $class_key => $map){
+  
+      // @note  this depends on the autoloader...
+      $parent_list = class_parents($map['class_name'],true);
+            
+      // save the children mappings...
+      foreach($parent_list as $parent_class_name){
+        $parent_class_key = self::getClassKey($parent_class_name);
+        if(!isset(self::$parent_class_map[$parent_class_key])){
+          self::$parent_class_map[$parent_class_key] = array();
+        }//if
+      
+        self::$parent_class_map[$parent_class_key][] = $class_key;
+      
+      }//if
+    
+      // check if we have a core class override...
+      if(isset(self::$core_class_map[$class_key])){
+    
+        self::$core_class_map[$class_key] = $class_key;
+      
+      }else{
+        
+        foreach($parent_list as $parent_class_name){
+        
+          $parent_class_key = self::getClassKey($parent_class_name);
+          if(isset(self::$core_class_map[$parent_class_key])){
+            
+            // see if the current core set class is a child of the current $class
+            if(!self::isChild(self::$core_class_map[$parent_class_key],$parent_class_key)){
+            
+              self::$core_class_map[$parent_class_key] = $class_key;
+              break;
+            
+            }//if
+            
+          }//if
+          
+        }//foreach
+        
+      }//if/else
+      
+    }//foreach
+  
+  }//method
+  
+  /**
+   *  find all the classes in a given path and return information about them
    *  
    *  @param  string  $path all the files in $path and its sub-dirs will be examined
+   *  @return array a bunch of maps with {@link getClassKey()} keys containing info about the class_name   
    */
-  static private function setClasses($path){
+  static private function getClasses($path){
   
     $ret_map = array();
+    $declared_class_list = get_declared_classes();
   
     $path_iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path));
     foreach($path_iterator as $file){
@@ -275,78 +401,72 @@ final class montage_wizard extends montage_base_static {
       if($file->isFile()){
       
         $file_path = $file->getRealPath();
-        $file_contents = file_get_contents($file_path);
         
-        // find the class declaration lines...
-        $line_matches = array();
-        if(preg_match_all('#^[\w\s]*class\s+[^{]+#sium',$file_contents,$line_matches)){
+        // include the file since we need to check inheritance and stuff...
+        // include_once returns TRUE if the file was already included and 1 if it was just
+        // included, we want to ignore files that were already included...
+        try{
         
-          foreach($line_matches[0] as $line_match){
-          
-            // get the class...
-            $class_match = array();
-            if(preg_match('#class\s+(\S+)#',$line_match,$class_match)){
-              
-              $class_name = $class_match[1];
-              $class_key = self::getClassKey($class_match[1]);
-              
-              // include the file since we need to check inheritance and stuff...
-              include_once($file_path);
-                
-              // get all the classes this object extends...
-              $parent_list = array();
-              $class_reflector = new ReflectionClass($class_name);
-              $parent_reflector = $class_reflector->getParentClass();
-              while(!empty($parent_reflector)){
-                $parent_list[] = $parent_reflector->getName();
-                $parent_reflector = $parent_reflector->getParentClass();
-              }//while
+          $ret_mix = include_once($file_path);
+          if($ret_mix === 1){
             
-              // save the children mappings...
-              foreach($parent_list as $parent_class_name){
-                $parent_class_key = self::getClassKey($parent_class_name);
-                if(!isset(self::$parent_class_map[$parent_class_key])){
-                  self::$parent_class_map[$parent_class_key] = array();
-                }//if
-              
-                self::$parent_class_map[$parent_class_key][] = $class_key;
-              
-              }//if
+            $new_declared_class_list = get_declared_classes();
+            $added_class_list = array_diff($new_declared_class_list,$declared_class_list);
+            if(!empty($added_class_list)){
             
-              if(isset(self::$core_class_map[$class_key])){
-            
-                self::$core_class_map[$class_key] = $class_key;
+              $declared_class_list = $new_declared_class_list;
               
-              }else{
-                
-                foreach($parent_list as $parent_class_name){
-                
-                  $parent_class_key = self::getClassKey($parent_class_name);
-                  if(isset(self::$core_class_map[$parent_class_key])){
-                    
-                    self::$core_class_map[$parent_class_key] = $class_key;
-                    break;
-                    
-                  }//if
-                  
-                }//foreach
-                
-              }//if/else
+              foreach($added_class_list as $class_name){
               
-              self::$class_map[$class_key] = array(
-                'path' => $file_path,
-                'class_name' => $class_name
-              );
-            
+                $class_key = self::getClassKey($class_name);
+                
+                $ret_map[$class_key] = array(
+                  'path' => $file_path,
+                  'class_name' => $class_name
+                );
+              
+              }//foreach
+              
             }//if
+            
+          }//if
           
-          }//foreach
+        }catch(Exception $e){
         
-        }//if
+          // let's try and recover...
+        
+          $file_contents = file_get_contents($file_path);
+        
+          // find the class declaration lines...
+          $line_matches = array();
+          if(preg_match_all('#^[\w\s]*class\s+[^{]+#sium',$file_contents,$line_matches)){
+          
+            foreach($line_matches[0] as $line_match){
+            
+              // get the class...
+              $class_match = array();
+              if(preg_match('#class\s+(\S+)#',$line_match,$class_match)){
+                
+                $class_name = $class_match[1];
+                $class_key = self::getClassKey($class_match[1]);
+                $ret_map[$class_key] = array(
+                  'path' => $file_path,
+                  'class_name' => $class_name
+                );
+                
+              }//if
+              
+            }//foreach
+            
+          }//if
+          
+        }//try/catch
       
       }//if
       
     }//foreach
+  
+    return $ret_map;
   
   }//method
   
