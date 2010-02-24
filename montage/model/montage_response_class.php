@@ -11,7 +11,15 @@
 class montage_response extends montage_base {
 
   const CONTENT_HTML = 'text/html';
-
+  const CONTENT_TXT = 'text/plain';
+  const CONTENT_JS = 'text/javascript'; // application/javascript, application/x-javascript
+  const CONTENT_CSS = 'text/css';
+  const CONTENT_JSON = 'application/json';
+  const CONTENT_JSON_HEADER = 'application/x-json';
+  const CONTENT_XML = 'text/xml'; // application/xml, application/x-xml
+  const CONTENT_RDF = 'application/rdf+xml';
+  const CONTENT_ATOM = 'application/atom+xml';
+  
   /**
    *  holds the template instance that will be used to render the response
    *

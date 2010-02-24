@@ -28,4 +28,7 @@ try{
 
 }//try/catch
 
+// clear the cache while we are developing...
+montage_cache::kill();
+
 echo 'done';

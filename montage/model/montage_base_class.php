@@ -19,7 +19,11 @@ abstract class montage_base {
 
   /**
    *  this is just here so other constructors can call it but children can override it
-   */        
+   *
+   *  most core class will do all the required init stuff in __construct() and then call 
+   *  start() so if you extend any of the core classes and want to do your own init stuff, 
+   *  put it in this method
+   */
   function start(){}//method
 
   /**

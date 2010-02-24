@@ -10,6 +10,14 @@
  ******************************************************************************/
 class montage_request extends montage_base {
 
+  /**
+   *  initialize the request class
+   *  
+   *  this will do all the required init stuff and then call start() so if you extend
+   *  this class and want to do your own init stuff, put it in start()
+   *  
+   *  @param  string  $request_root_path  most likely the /web/ directory
+   */
   final function __construct($request_root_path){
   
     $this->setRequestRoot($request_root_path);
@@ -33,7 +41,7 @@ class montage_request extends montage_base {
 
       if(!empty($path_list[0])){
         
-        if(montage_wizard::isController($path_list[0])){
+        if(montage_core::isController($path_list[0])){
           
           $this->setControllerClass(mb_strtolower($path_list[0]));
           

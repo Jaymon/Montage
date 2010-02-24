@@ -20,32 +20,36 @@ final class montage extends montage_base_static {
    */
   static function start(){
   
-    $class_name = montage_wizard::getCoreClassName('montage_request');
+    if(montage_core::isStarted()){
+      throw new RuntimeException('The framework was already started, no point in starting it again');
+    }//if
+  
+    $class_name = montage_core::getCoreClassName('montage_request');
     self::setField(
       'montage_request',
       new $class_name(
-        montage_wizard::getCustomPath(
-          montage_wizard::getAppPath(),
+        montage_core::getCustomPath(
+          montage_core::getAppPath(),
           'web'
         )
       )
     );
     
-    $class_name = montage_wizard::getCoreClassName('montage_response');
+    $class_name = montage_core::getCoreClassName('montage_response');
     self::setField(
       'montage_response',
       new $class_name(
-        montage_wizard::getCustomPath(
-          montage_wizard::getAppPath(),
+        montage_core::getCustomPath(
+          montage_core::getAppPath(),
           'view'
         )
       )
     );
     
-    $class_name = montage_wizard::getCoreClassName('montage_settings');
+    $class_name = montage_core::getCoreClassName('montage_settings');
     self::setField('montage_settings',new $class_name());
     
-    $class_name = montage_wizard::getCoreClassName('montage_url');
+    $class_name = montage_core::getCoreClassName('montage_url');
     self::setField('montage_url',new $class_name());
     self::getUrl()->setRoot(
       self::getRequest()->getHost(),
@@ -73,7 +77,7 @@ final class montage extends montage_base_static {
       ///out::e($class,$method); return;
       
       // get all the filters and start them...
-      $filter_list = montage_wizard::getFilters();
+      $filter_list = montage_core::getFilters();
       foreach($filter_list as $key => $filter_class_name){
         $filter_list[$key] = new $filter_class_name();
         $filter_list[$key]->start();

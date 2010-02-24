@@ -12,8 +12,8 @@ Before you dive in you should be familiar with certain terms Montage uses.
 
 * *App* - This is your web application you are going to build using Montage
 * *Controller* - This is the consumer facing part of your application that will handle the requests from your visitors. For example, The default or world accessible part of your site might use the _frontend_ controller. The administration interface might use the _backend_ controller. And API calls might use the _api_ controller.
-* *Model* - all your supporting classes/libraries
-* *View* - what you will actually show visitors
+* *Model* - all your supporting classes/libraries. Most frameworks only use the _model_ to refer to Database classes, Montage uses the _model_ to refer to all supporting classes.
+* *View* - what you will actually show visitors.
 
 h3. The directory structure of a Montage web application
 
@@ -29,7 +29,7 @@ app_path/
 
 * *cache* - Temporary storage for Montage. Montage will cache things to this directory for quicker access. This directory can be cleared at any time without problems.
 
-* *controller* - All your controllers go in this folder in their respective sub directory (e.g., if you are using the frontend controller, then all your frontend controller classes will go in the <code>controller/frontend</code> directory).
+* *controller* - All your controllers go in this directory in their respective sub directories (e.g., if you are using the frontend controller, then all your frontend controller classes will go in the <code>controller/frontend</code> directory).
 
 * *model* - all supporting classes/libraries go in this directory.
 
@@ -58,21 +58,36 @@ You can set app specific classes for some of the core classes by just extending 
 <pre>
 class request extends montage_request {
   // place application specific methods here
-}
+}//class
 </pre>
 
-That's all there is to it. You can extend: <code>montage_request</code>, <code>montage_response</code>, <code>montage_settings</code>, and <code>montage_filter</code>. All your controller classes should extend: <code>montage_controller</code>.
+That's all there is to it. 
 
-To have custom settings, you just need to place a php file in your Application's <code>settings</code> directory with the name of the environment. For example, if you are using the <code>dev</code> environment, you would create:
+The core classes You can extend: 
+* <code>montage_request</code>
+* <code>montage_response</code>
+* <code>montage_settings</code>
+* <code>montage_filter</code>
+
+All your controller classes should extend: 
+* <code>montage_controller</code>
+
+All your start classes should extend:
+* <code>montage_start</code>
+
+Need to have certain settings set for your application? No problem, Montage has you covered, you just need to extend <code>montage_start</code> in your settings directory.
+
+For _global_ settings, just create a start class with the name *app*:
 
 <pre>
-[MONTAGE_APP_PATH]/settings/dev.php
+// [MONTAGE_APP_PATH]/settings/start_app_class.php
+class app extends montage_start {
+  function start(){
+  
+   // all the custom application startup settings go here
+  
+  }//method
+}//class
 </pre>
 
-If you want _global_ settings, just place a <code>settings.php</code> file in the settings directory:
-
-<pre>
-[MONTAGE_APP_PATH]/settings/settings.php
-</pre>
-
-The settings files do follow a precedence chain so <code>settings.php</code> is called first, followed by the environment settings file (so it can override any global settings to environment specific settings.
+You can also have a _controller_ startup class and an _environment_ startup class. The start classes follow a defined precedence order: app, controller, and environment. That way, your controller can override any app-wide settings, and your environment can override any app-wide or controller-wide settings.

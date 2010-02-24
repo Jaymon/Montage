@@ -53,33 +53,15 @@ if(!defined('MONTAGE_APP_PATH')){
 // include the autoloader (and supporting files)...
 require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_cache_class.php')));
 require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_base_static_class.php')));
-require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_wizard_class.php')));
+require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_core_class.php')));
 
 // start the auto-loader...
-montage_wizard::start(
+montage_core::start(
   MONTAGE_CONTROLLER,
+  MONTAGE_ENVIRONMENT,
+  MONTAGE_DEBUG,
+  MONTAGE_CHARSET,
+  MONTAGE_TIMEZONE,
   MONTAGE_PATH,
   MONTAGE_APP_PATH
 );
-
-// officially start montage...
-montage::start();
-
-// load settings...
-
-// first load the global settings...
-$settings = montage_wizard::getCustomPath(
-  montage_wizard::getAppPath(),
-  'settings',
-  'settings.php'
-);
-if(file_exists($settings)){ include($settings); }//if
-
-// now load the environment settings so they can override any global settings...
-$settings = montage_wizard::getCustomPath(
-  montage_wizard::getAppPath(),
-  'settings',
-  sprintf('%s.php',MONTAGE_ENVIRONMENT)
-);
-if(file_exists($settings)){ include($settings); }//if
-unset($settings);

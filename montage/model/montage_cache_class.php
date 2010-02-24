@@ -104,6 +104,56 @@ final class montage_cache {
   }//method
   
   /**
+   *  delete the given url from the cache
+   *  
+   *  @since  9-04-08
+   *      
+   *  @param  string  $url  the url to delete
+   *  @return boolean         
+   */        
+  static function kill($key = ''){
+  
+    $ret_bool = false;
+  
+    if(empty($key)){
+    
+      if(self::hasPath()){
+      
+        $ret_bool = self::killAll(self::$path);
+      
+      }//method
+    
+    }else{
+    
+      $path = self::getPath($key);
+      if(self::exists($path)){
+        $ret_bool = unlink($path);
+      }//if
+    
+    }//if/else
+  
+    return $ret_bool;
+  
+  }//method
+  
+  /**
+   *  generate a key for the cache
+   *  
+   *  @param  string  $val
+   *  @return string
+   */
+  static private function getKey($val){
+    
+    // canary...
+    if(empty($val)){
+      throw new UnexpectedValueException('cannot generate a key for an empty $val');
+    }//if
+    
+    return md5($val);
+    
+  }//method
+  
+  /**
    *  this is the private version of {@link has()} that doesn't need to render the path
    *  so it can be called from other methods that need the path and don't want to have
    *  to render it twice
@@ -129,19 +179,48 @@ final class montage_cache {
   }//method
   
   /**
-   *  generate a key for the cache
+   *  true if a path exists
    *  
-   *  @param  string  $val
-   *  @return string
+   *  @param  string  $key
+   *  @return string  the full path
    */
-  static function getKey($val){
-    
+  static private function hasPath(){ return !empty(self::$path); }//method
+  
+  /**
+   *  recursively clear an entire directory, files, folders, everything
+   *  
+   *  based off of: http://www.php.net/manual/en/function.unlink.php#94766      
+   *
+   *  @param  string  $path the starting path, all sub things will be removed
+   */
+  static private function killAll($path){
+  
     // canary...
-    if(empty($val)){
-      throw new UnexpectedValueException('cannot generate a key for an empty $val');
-    }//if
+    if(!is_dir($path)){ return false; }//if
     
-    return md5($val);
+    $ret_bool = false;
+    $path_iterator = new RecursiveDirectoryIterator($path);
+    foreach($path_iterator as $file){
+      
+      $file_path = $file->getRealPath();
+      
+      if($file->isDir()){
+      
+        $ret_bool = self::killAll($file_path);
+        rmdir($file_path);
+      
+      }else{
+      
+        unlink($file_path);
+      
+      }//if/else
+      
+    }//foreach
+    
+    // uncomment if you want to clear the root dir, which you don't...
+    ///rmdir($path);
+    
+    return $ret_bool;
     
   }//method
 
