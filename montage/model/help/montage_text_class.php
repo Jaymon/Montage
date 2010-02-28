@@ -11,12 +11,40 @@
 class montage_text {
 
   /**
+   *  recursively strip all the slashes from a $val
+   *  
+   *  @param  mixed $val
+   *  @return $val with all slashes stripped
+   */
+  static function getSlashless($val){
+  
+    // canary...
+    if(is_array($val)){ return self::getSlashless($val); }//if
+    if(is_object($val)){ return $val; }//if
+    
+    return stripslashes($val);
+    
+  }//method
+
+  /**
+   *  true if $val is a url
+   *  
+   *  @param  string  $val
+   *  @return true if $val is a url, false otherwise
+   */
+  static function isUrl($val){
+    // canary...
+    if(empty($val)){ return false; }//if
+    return preg_match('#^\w+://\S{3,}#',$val) ? true : false;
+  }//method
+
+  /**
    *  return a safe value for $val that is suitable for display in stuff like the value attribute 
    *  
    *  @param  string  $val  the value to be "cleansed"
    *  @return string      
    */
-  static function getSafe($val){ return htmlspecialchars($val,ENT_COMPAT,MONTAGE_CHARSET,false); }//method
+  static function getSafe($val){ return empty($val) ? '' : htmlspecialchars($val,ENT_COMPAT,MONTAGE_CHARSET,false); }//method
   
   /**
    *  perform a word safe substring operation that works exactly like php's built-in
@@ -100,7 +128,7 @@ class montage_text {
       $ret_str = self::getWordSubStr($str,$start,$len);
       
       if(mb_strlen($ret_str) < $orig_size){
-        $ret_str .= '…'; ///'...';
+        $ret_str .= '...';
       }//if
       
       return $ret_str;

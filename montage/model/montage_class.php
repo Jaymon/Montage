@@ -15,19 +15,27 @@ final class montage extends montage_base_static {
   /**
    *  start the main montage instance, this will allow access to most of the montage features
    *
-   *  @param  string  $request_root_path  usually the app's web/ directory   
-   *  @param  array $load_path_list a list of paths that can be autoloaded   
+   *  @param  string  $controller the requested controller name
+   *  @param  string  $environment  the env that will be used
+   *  @param  boolean if debug is on or not
+   *  @param  string  $charset
+   *  @param  string  $timezone               
    */
-  static function start(){
+  static function start($controller,$environment,$debug,$charset,$timezone){
   
     if(montage_core::isStarted()){
       throw new RuntimeException('The framework was already started, no point in starting it again');
     }//if
+    
+    $class_name = montage_core::getCoreClassName('montage_log');
+    self::setField('montage_log',new $class_name());
   
     $class_name = montage_core::getCoreClassName('montage_request');
     self::setField(
       'montage_request',
       new $class_name(
+        $controller,
+        $environment,
         montage_core::getCustomPath(
           montage_core::getAppPath(),
           'web'
@@ -47,14 +55,17 @@ final class montage extends montage_base_static {
     );
     
     $class_name = montage_core::getCoreClassName('montage_settings');
-    self::setField('montage_settings',new $class_name());
+    self::setField(
+      'montage_settings',
+      new $class_name(
+        $debug,
+        $charset,
+        $timezone
+      )
+    );
     
     $class_name = montage_core::getCoreClassName('montage_url');
     self::setField('montage_url',new $class_name());
-    self::getUrl()->setRoot(
-      self::getRequest()->getHost(),
-      self::getRequest()->getPath()
-    );
     
   }//method
   
@@ -67,37 +78,65 @@ final class montage extends montage_base_static {
    */
   static function handle(){
   
+    $debug = self::getSettings()->getDebug();
+    
+    // profile...
+    if($debug){ montage_profile::start(__METHOD__); }//if
+  
     try{
-    
-      $request = self::getRequest();
-    
-      $class = $request->getControllerClass();
-      $method = $request->getControllerMethod();
       
       ///out::e($class,$method); return;
       
-      // get all the filters and start them...
-      $filter_list = montage_core::getFilters();
-      foreach($filter_list as $key => $filter_class_name){
-        $filter_list[$key] = new $filter_class_name();
-        $filter_list[$key]->start();
-      }//foreach
+      // profile...
+      if($debug){ montage_profile::start('filters start'); }//if
       
-      $controller = new $class();
-      $controller->start();
+      // get all the filters and start them...
+      $filter_list = array_map(array('montage_core','getInstance'),montage_core::getFilters());
+      
+      // profile...
+      if($debug){ montage_profile::stop(); }//if
+      
+      $controller_class_name = $controller_method = '';
+      
+      // profile...
+      if($debug){ montage_profile::start('controller'); }//if
+      
+      while(true){
+        
+        try{
+          
+          $request = self::getRequest();
+          
+          // create the controller and call its requested method...
+          $controller_class_name = $request->getControllerClass();
+          $controller_method = $request->getControllerMethod();
+          $controller = new $controller_class_name();
+          $result = call_user_func(array($controller,$controller_method));
+          $controller->stop();
+          break;
+          
+        }catch(montage_forward_exception $e){
     
-      if(!method_exists($controller,$method)){
-        $request->killControllerMethod();
-        $method = $request->getControllerMethod();
-      }//if
+          // we want to go another round in the while loop since the original
+          // controller is being forwarded to another controller
     
-      $result = call_user_func(array($controller,$method));
-      $controller->stop();
+        }//try/catch
+        
+      }//while
+      
+      // profile...
+      if($debug){ montage_profile::stop(); }//if
+      
+      // profile...
+      if($debug){ montage_profile::start('filters stop'); }//if
       
       // run all the filters again...
       foreach($filter_list as $filter_instance){
         $filter_instance->stop();
       }//foreach
+      
+      // profile...
+      if($debug){ montage_profile::stop(); }//if
       
       $response = montage::getResponse();
       
@@ -116,6 +155,9 @@ final class montage extends montage_base_static {
       
       if(is_bool($result)){
       
+        // profile...
+        if($debug){ montage_profile::start('render view'); }//if
+      
         if($result === true){
       
           // actually render the view...
@@ -128,31 +170,49 @@ final class montage extends montage_base_static {
         }else{
           // @tbi do something if controller returned false, not sure what to do
         }//if/else
+        
+        // profile...
+        if($debug){ montage_profile::stop(); }//if
       
       }else if(is_string($result)){
       
+        // profile...
+        if($debug){ montage_profile::start('echo response'); }//if
+      
         // it's a string, so just echo it to the screen and be done...
         echo $result;
+        
+        // profile...
+        if($debug){ montage_profile::stop(); }//if
       
       }else{
       
         throw new UnexpectedValueException(
           sprintf(
-            'the controller method (%s:%s) returned a value that was neither a boolean or a string, it was a %s',
-            $class,
-            $method,
+            'the controller method (%s::%s) returned a value that was neither a boolean or a string, it was a %s',
+            $controller_class_name,
+            $controller_method,
             gettype($result)
           )
         );
       
       }//if/else if/else
       
+    }catch(montage_redirect_exception $e){
+    
+      // we don't really need to do anything since the redirect header should have been called
+    
     }catch(Exception $e){
     
-      // @tbi logging?
+      self::getLog()->setException($e);
+      
+      // @tbi so we really want to re-throw or should we check for an error controller?
       throw $e;
     
     }//try/catch
+    
+    // profile...
+    if($debug){ montage_profile::stop(); }//if
     
   }//method
 
@@ -175,5 +235,10 @@ final class montage extends montage_base_static {
    *  return the montage_url instance
    */
   static function getUrl(){ return self::getField('montage_url'); }//method
+  
+  /**
+   *  return the montage_log instance
+   */
+  static function getLog(){ return self::getField('montage_log'); }//method
 
 }//class     

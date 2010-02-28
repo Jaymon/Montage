@@ -242,12 +242,29 @@ abstract class montage_form extends montage_form_base implements ArrayAccess,Cou
     }//if
     
     foreach($this->field_map as $field){
-      return sprintf('%s:<br /> %s<br /> %s<br /> %s<br />',
-        $field->outLabel(),
-        $field->outError(),
-        $field->out(),
-        $field->outDesc()
-      );
+    
+      $format_str = '';
+      $format_vals = array();
+      
+      if($field->hasLabel()){
+        $format_str .= '%s:<br />';
+        $format_vals[] = $field->getLabel();
+      }//if
+      if($field->hasError()){
+        $format_str .= '%s<br />';
+        $format_vals[] = $field->getError();
+      }//if
+      
+      $format_str .= '%s<br />';
+      $format_vals[] = $field->out();
+      
+      if($field->hasDesc()){
+        $format_str .= '%s<br />';
+        $format_vals[] = $field->getDesc();
+      }//if
+      
+      $ret_str .= vsprintf($format_str,$format_vals);
+    
     }//foreach
     
     $ret_str .= $this->outStop();

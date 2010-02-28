@@ -22,6 +22,7 @@ app_path/
   cache/
   controller/
   model/
+  plugins/
   settings/
   view/
   web/
@@ -90,4 +91,28 @@ class app extends montage_start {
 }//class
 </pre>
 
-You can also have a _controller_ startup class and an _environment_ startup class. The start classes follow a defined precedence order: app, controller, and environment. That way, your controller can override any app-wide settings, and your environment can override any app-wide or controller-wide settings.
+You can also have a _controller_ startup class and an _environment_ startup class. The start classes follow a defined precedence order: app, controller, environment, and plugin. That way, your controller can override any app-wide settings, and your environment can override any app-wide or controller-wide settings.
+
+h2. Plugins
+
+h3. Directory structure of a plugin:
+
+<pre>
+app_path/
+  plugins/
+   plugin_name/
+     model/
+     settings/
+</pre>
+
+in the Plugin's settings directory you can have a _plugin_name_ startup class. For example, if your plugin was named *foo*, then your startup class would be: 
+
+<pre>
+class foo extends montage_start {
+  function start(){
+    // place all plugin initialization code here
+  }//method
+}//class
+</pre>
+
+The model directory should contain the plugin's core classes.

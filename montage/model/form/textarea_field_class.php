@@ -9,7 +9,7 @@
  *  @package montage
  *  @subpackage form
  ******************************************************************************/
-class field_textarea extends montage_form_field {
+class textarea_field extends montage_form_field {
   
   function out(){
   

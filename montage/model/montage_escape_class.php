@@ -26,16 +26,37 @@ class montage_escape implements ArrayAccess,Iterator,Countable {
   const ACCESS_ALL = 7;
   const ACCESS_NONE = 0;
   
+  /**
+   *  one of the ACCESS_* constants, set in {@link __construct()}
+   *  
+   *  @var  integer
+   */
   protected $access = self::ACCESS_NONE;
 
+  /**
+   *  one of the TYPE_* constants, set in {@link __construct()}
+   *  
+   *  @var  integer
+   */
   protected $type = self::TYPE_SAFE;
   
+  /**
+   *  hold the value that is going to be escaped
+   *  
+   *  @var  mixed
+   */
   protected $val = null;
   
+  /**
+   *  since this class can be overloaded, we need to make sure we always create instances
+   *  of the right montage_escape class, so this holds the class name
+   *  
+   *  @var  string
+   */
   protected $class_name = '';
   
 
-  function __construct($val){
+  final function __construct($val){
   
     if(is_array($val)){
     
@@ -77,7 +98,41 @@ class montage_escape implements ArrayAccess,Iterator,Countable {
   
   }//method
   
+  /**
+   *  this is here since this class does not extend montage_base but any children
+   *  class should have a start method to keep it consistent with other montage classes   
+   */
   function start(){}//method
+  
+  /**
+   *  if you ever need the actual vanilla value, you can call this method
+   *  
+   *  @return mixed the vanilla {@link $val}
+   *  @throws BadMethodCallException  if $val is an object with a method of the same name
+   */
+  function getRawVal(){
+  
+    if($this->isType(self::TYPE_OBJECT)){
+      if(method_exists($this->val,__FUNCTION__)){
+        throw new BadMethodCallException(
+          sprintf(
+            '%s has a %s method call but the wrapped $val (%s instance) also has a %s method. '
+            .'I would consider changing the %s::%s method name so it does not conflict with %s.',
+            $this->class_name,
+            __FUNCTION__,
+            get_class($this->val),
+            __FUNCTION__,
+            get_class($this->val),
+            __FUNCTION__,
+            __METHOD__
+          )
+        );  
+      }//if
+    }//if
+  
+    return $this->val;
+    
+  }//method
   
   /**
    *  Required definition for Countable, allows count($this) to work
@@ -162,6 +217,9 @@ class montage_escape implements ArrayAccess,Iterator,Countable {
     return $this->val->valid();
   }//method
   
+  /**
+   *  http://www.php.net/manual/en/language.oop5.overloading.php#language.oop5.overloading.methods
+   */     
   function __call($method,$args){
   
     // canary...
@@ -174,6 +232,81 @@ class montage_escape implements ArrayAccess,Iterator,Countable {
   
   }//method
   
+  /**
+   *  http://www.php.net/manual/en/language.oop5.overloading.php#language.oop5.overloading.members
+   */        
+  function __set($name,$val){
+  
+    // canary...
+    if(!$this->isType(self::TYPE_OBJECT)){
+      throw new RuntimeException('cannot do things like $instance->foo since escaped $val is not an object');
+    }//if
+    if(!method_exists($this->val,'__set')){
+      throw new RuntimeException(
+        'cannot do things like $instance->foo since escaped $val does not support __set() magic method'
+      );
+    }//if
+    
+    return $this->val->__set($key,$val);
+  
+  }//method
+  
+  function __get($name){
+  
+    // canary...
+    if(!$this->isType(self::TYPE_OBJECT)){
+      throw new RuntimeException('cannot do things like $instance->foo since escaped $val is not an object');
+    }//if
+    if(!method_exists($this->val,'__set')){
+      throw new RuntimeException(
+        'cannot do things like $instance->foo since escaped $val does not support __get() magic method'
+      );
+    }//if
+    
+    $class_name = $this->class_name;
+    return new $class_name($this->val->__get($key));
+  
+  }//method
+  
+  function __isset($name){
+  
+    // canary...
+    if(!$this->isType(self::TYPE_OBJECT)){
+      throw new RuntimeException('cannot do things like isset($instance->foo) since escaped $val is not an object');
+    }//if
+    if(!method_exists($this->val,'__isset')){
+      throw new RuntimeException(
+        'cannot do things like isset($instance->foo) since escaped $val does not support __isset() magic method'
+      );
+    }//if
+    
+    return $this->val->__isset($name);
+    
+  }//method
+  
+  function __unset($name){
+  
+    // canary...
+    if(!$this->isType(self::TYPE_OBJECT)){
+      throw new RuntimeException('cannot do things like unset($instance->foo) since escaped $val is not an object');
+    }//if
+    if(!method_exists($this->val,'__isset')){
+      throw new RuntimeException(
+        'cannot do things like unset($instance->foo) since escaped $val does not support __unset() magic method'
+      );
+    }//if
+    
+    $this->val->__unset($name);
+    
+  }//method
+  
+  /**
+   *  output the $val as a string
+   *     
+   *  http://www.php.net/manual/en/language.oop5.magic.php#language.oop5.magic.tostring
+   *  
+   *  @return string      
+   */
   function __toString(){
 
     $ret_str = '';
@@ -221,9 +354,6 @@ class montage_escape implements ArrayAccess,Iterator,Countable {
   
   }//method
   
-  ///function __isset(){}//method
-  ///function __empty(){}//method
-  
   /**
    *  assure that the internal $val has the given access
    *  
@@ -233,6 +363,11 @@ class montage_escape implements ArrayAccess,Iterator,Countable {
     if(!($this->access & $access)){ throw new RuntimeException($msg); }//if
   }//method
   
+  /**
+   *  return true if the internal type is the same as $type
+   *  
+   *  @param  integer $type one of the TYPE_* constants
+   */
   protected function isType($type){ return $this->type === $type; }//if
 
 }//class     

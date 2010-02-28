@@ -10,6 +10,8 @@
  ******************************************************************************/
 final class montage_cache {
 
+  const PREFIX = 'montage_';
+
   /**
    *  hold the path where stuff will be cached
    * 
@@ -62,12 +64,11 @@ final class montage_cache {
    *  @return boolean true if saved, false otherwise
    */
   static function set($key,$val){
-  
-    // canary...
-    $key = self::getKey($key);
+    
+    $path = self::getPath($key);
     
     $bytes = file_put_contents(
-      self::getPath($key),
+      $path,
       serialize($val),
       LOCK_EX
     );
@@ -119,7 +120,7 @@ final class montage_cache {
     
       if(self::hasPath()){
       
-        $ret_bool = self::killAll(self::$path);
+        $ret_bool = self::clear(self::$path);
       
       }//method
     
@@ -149,7 +150,7 @@ final class montage_cache {
       throw new UnexpectedValueException('cannot generate a key for an empty $val');
     }//if
     
-    return md5($val);
+    return sprintf('%s%s',self::PREFIX,md5($val));
     
   }//method
   
@@ -193,32 +194,37 @@ final class montage_cache {
    *
    *  @param  string  $path the starting path, all sub things will be removed
    */
-  static private function killAll($path){
+  static private function clear($path){
   
     // canary...
     if(!is_dir($path)){ return false; }//if
     
-    $ret_bool = false;
+    $ret_bool = true;
     $path_iterator = new RecursiveDirectoryIterator($path);
     foreach($path_iterator as $file){
       
       $file_path = $file->getRealPath();
       
-      if($file->isDir()){
-      
-        $ret_bool = self::killAll($file_path);
-        rmdir($file_path);
-      
-      }else{
-      
-        unlink($file_path);
-      
-      }//if/else
+      // make sure we only kill files that are montage cache files since we don't
+      // want to accidently nuke an app's personal cache...
+      if(preg_match(sprintf('#^%s#u',self::PREFIX),$file->getFilename())){
+        
+        if($file->isDir()){
+          
+          $ret_bool = self::clear($file_path);
+          if($ret_bool){
+            rmdir($file_path);
+          }//if
+        
+        }else{
+        
+          unlink($file_path);
+        
+        }//if/else
+        
+      }//if
       
     }//foreach
-    
-    // uncomment if you want to clear the root dir, which you don't...
-    ///rmdir($path);
     
     return $ret_bool;
     

@@ -9,7 +9,7 @@
  *  @package montage
  *  @subpackage form
  ******************************************************************************/
-class field_input extends montage_form_field {
+class input_field extends montage_form_field {
 
   /**#@+
    *  the different types an input field can contain

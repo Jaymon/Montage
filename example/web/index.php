@@ -28,7 +28,13 @@ try{
 
 }//try/catch
 
+/*
 // clear the cache while we are developing...
+montage_profile::start('kill cache');
 montage_cache::kill();
+montage_profile::stop();
+*/
+
+out::e(montage_profile::get());
 
 echo 'done';

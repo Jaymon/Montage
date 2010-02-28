@@ -16,7 +16,9 @@
  ******************************************************************************/
 abstract class montage_filter extends montage_base {
 
-  final function __construct(){}//method
+  final function __construct(){
+    $this->start();
+  }//method
 
   /**
    *  this method will be called before the controller is called

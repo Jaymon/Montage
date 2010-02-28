@@ -10,13 +10,10 @@
  ******************************************************************************/
 abstract class montage_controller extends montage_base {
 
-  final function __construct(){}//method
+  final function __construct(){
+    $this->start();
+  }//method
 
-  /**
-   *  before calling the get* method, run this method
-   */
-  function start(){}//method
-  
   /**
    *  this is the default controller method for this controller
    *  

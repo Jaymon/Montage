@@ -27,7 +27,7 @@ final class montage_core extends montage_base_static {
   static private $class_map = array();
   
   /**
-   *  hold the core classes with their class_keys being the value
+   *  hold the mapped core classes with their best defined class_keys being the value
    *  
    *  @var  array
    */
@@ -35,7 +35,10 @@ final class montage_core extends montage_base_static {
     'MONTAGE_REQUEST' => '',
     'MONTAGE_SETTINGS' => '',
     'MONTAGE_RESPONSE' => '',
-    'MONTAGE_URL' => ''
+    'MONTAGE_URL' => '',
+    'MONTAGE_ESCAPE' => '',
+    'MONTAGE_TEMPLATE' => '',
+    'MONTAGE_LOG' => ''
   );
   
   /**
@@ -52,11 +55,18 @@ final class montage_core extends montage_base_static {
   /**
    *  start the wizard
    *  
-   *  @param  string  $controller the controller that will be used
+   *  @param  string  $controller the requested controller name
+   *  @param  string  $environment  the env that will be used
+   *  @param  boolean if debug is on or not
+   *  @param  string  $charset
+   *  @param  string  $timezone
    *  @param  string  $framework_path corresponds to MONTAGE_PATH constant
    *  @param  string  $app_path corresponds to MONTAGE_APP_PATH constant        
    */
   static function start($controller,$environment,$debug,$charset,$timezone,$framework_path,$app_path){
+  
+    // profile...
+    if($debug){ montage_profile::start(__METHOD__); }//if
   
     // canary...
     if(empty($controller)){
@@ -75,6 +85,9 @@ final class montage_core extends montage_base_static {
     // set the default autoloader...
     self::set(array(__CLASS__,'load'));
   
+    // profile...
+    if($debug){ montage_profile::start('set paths'); }//if
+  
     // save the important paths...
     self::setFrameworkPath($framework_path);
     self::setAppPath($app_path);
@@ -85,6 +98,7 @@ final class montage_core extends montage_base_static {
     if(!empty($cache_maps)){
       self::$core_class_map = $cache_maps['core_class_map'];
       self::$parent_class_map = $cache_maps['parent_class_map'];
+      self::$class_map = $cache_maps['class_map'];
     }//if
     
     // load the default model directories...
@@ -109,10 +123,22 @@ final class montage_core extends montage_base_static {
       );
     }//if
     
+    // profile...
+    if($debug){ montage_profile::stop(); }//if
+    
+    // profile...
+    if($debug){ montage_profile::start('initialize classes'); }//if
+    
     // officially start the framework...
-    montage::start();
+    montage::start($controller,$environment,$debug,$charset,$timezone);
+    
+    // profile...
+    if($debug){ montage_profile::stop(); }//if
     
     // load the settings directory and "start" the app...
+    
+    // profile...
+    if($debug){ montage_profile::start('main settings'); }//if
     
     self::setPath(self::getCustomPath($app_path,'settings'));
     
@@ -124,27 +150,68 @@ final class montage_core extends montage_base_static {
     $start_class_parent_key = self::getClassKey('MONTAGE_START');
     $start_class_list = array('app',$controller,$environment);
     foreach($start_class_list as $start_class_name){
-    
-      $start_class_key = self::getClassKey($start_class_name);
-      if(isset(self::$class_map[$start_class_key])){
-      
-        if(self::isChild($start_class_key,$start_class_parent_key)){
-        
-          $start_class_name = self::$class_map[$start_class_key]['class_name'];
-          $start_class = new $start_class_name();
-          
-        }//if
-      
-      }//if
-    
+      self::getInstance($start_class_name,$start_class_parent_key);
     }//foreach
     
+    // profile...
+    if($debug){ montage_profile::stop(); }//if
+    
+    // profile...
+    if($debug){ montage_profile::start('plugin settings'); }//if
+    
+    // start all the plugins...
+    $plugin_path_list = self::getPaths(self::getCustomPath($app_path,'plugins'),false);
+    foreach($plugin_path_list as $plugin_path){
+      
+      // find all the classes in the plugin path...
+      self::setPath($plugin_path);
+      $start_class_name = basename($plugin_path);
+      self::getInstance($start_class_name,$start_class_parent_key);
+      
+    }//foreach
+    
+    // profile...
+    if($debug){ montage_profile::stop(); }//if
+    
     self::$is_started = true;
+    
+    // profile...
+    if($debug){ montage_profile::stop(); }//if
+    
+  }//method
+  
+  /**
+   *  create and return an instance of $class_name
+   *  
+   *  this only works for classes that don't take any arguments in their constructor
+   *      
+   *  @param  string  $class_name the name of the class whose instance should be returned
+   *  @param  string  $parent_name  the name of the parent class, if not empty then $class_name
+   *                                must be a child of $parent_name, otherwise null is returned
+   *  @return object
+   */
+  static function getInstance($class_name,$parent_name = ''){
+    
+    $class_name = self::getClassName($class_name);
+  
+    if(!empty($parent_name)){
+    
+      if(!self::isChild($class_name,$parent_name)){
+        $class_name = '';
+      }//if
+    
+    }//if
+    
+    return empty($class_name) ? null : new $class_name();
     
   }//method
   
   /**
    *  get the class name from the given $class_key
+   *  
+   *  this is useful because since we standardize all the class names we can find
+   *  a class whether we pass in ClassName Classname className. Basically, montage
+   *  classes are case-insensitive            
    *  
    *  @param  string  $class_key      
    *  @return string
@@ -162,6 +229,17 @@ final class montage_core extends montage_base_static {
     
   }//method
   
+  /**
+   *  get the class name for a key core class
+   *  
+   *  the reason why this method exists is because you can extend certain core classes
+   *  (the ones found in the {@link $core_class_map}) and there needs to be a way for
+   *  the framework to get the core class that is going to be used
+   *  
+   *  @param  string  $core_class_key the core class you want to get the best matching class
+   *                                  for
+   *  @return string  the class name that is going to be used as the core class
+   */
   static function getCoreClassName($core_class_key){
     // sanity, make sure the class key is in the right format...
     $core_class_key = self::getClassKey($core_class_key);
@@ -181,10 +259,12 @@ final class montage_core extends montage_base_static {
   /**
    *  format the class key
    *  
+   *  the class key is basically the class name standardized         
+   *  
    *  @return string      
    */
   static function getClassKey($class_name){
-    return mb_strtoupper($class_name);
+    return empty($class_name) ? '' : mb_strtoupper($class_name);
   }//method
   
   /**
@@ -193,6 +273,9 @@ final class montage_core extends montage_base_static {
    *  @return array a list of class names that extend montage_filter
    */
   static function getFilters(){
+  
+    // canary...
+    if(empty(self::$parent_class_map['MONTAGE_FILTER'])){ return array(); }//if
   
     $ret_list = array();
   
@@ -286,23 +369,27 @@ final class montage_core extends montage_base_static {
     if(!is_dir($path)){
       throw new UnexpectedValueException(sprintf('"%s" is not a valid directory',$path));
     }//if
-    
-    $class_map = montage_cache::get($path);
-    if(empty($class_map)){
+
+    // we only really need to check if the cache exists, we don't need to bother
+    // with fetching it since all the class maps get saved into the main cache
+    // when the directory is first seen...
+    if(!montage_cache::has($path)){
       
       // cached miss, so get them the old fashioned way...
-      
       $class_map = self::getClasses($path);
+      
       self::addClasses($class_map);
       
       // now cache away...
       montage_cache::set($path,$class_map);
-      // save the other class maps into cache...
+      
+      // save all the class maps into cache...
       montage_cache::set(
         'montage_core:class_maps',
         array(
           'core_class_map' => self::$core_class_map,
-          'parent_class_map' => self::$parent_class_map
+          'parent_class_map' => self::$parent_class_map,
+          'class_map' => self::$class_map
         )
       );
       
@@ -501,20 +588,20 @@ final class montage_core extends montage_base_static {
         
         // I originally called get_declared_classes() before and after an include_once but
         // it would fail when a child class was included where the parent class hadn't been
-        // seen yet, so I'm back to the reading the file in and regexing for classes, which
+        // seen yet, so I'm back to reading the file in and regexing for classes, which
         // I consider hackish
         
         $file_contents = file_get_contents($file_path);
         
         // find the class declaration lines...
         $line_matches = array();
-        if(preg_match_all('#^[\w\s]*class\s+[^{]+#sium',$file_contents,$line_matches)){
+        if(preg_match_all('#^[\w\s]*(?:class|interface)\s+[^{]+#sium',$file_contents,$line_matches)){
         
           foreach($line_matches[0] as $line_match){
           
             // get the class...
             $class_match = array();
-            if(preg_match('#class\s+(\S+)#',$line_match,$class_match)){
+            if(preg_match('#(?:class|interface)\s+(\S+)#',$line_match,$class_match)){
               
               $class_name = $class_match[1];
               $class_key = self::getClassKey($class_match[1]);
@@ -528,7 +615,7 @@ final class montage_core extends montage_base_static {
           }//foreach
           
         }//if
-      
+        
       }//if
       
     }//foreach
@@ -541,20 +628,25 @@ final class montage_core extends montage_base_static {
    *  recursively get all the child directories in a given directory
    *  
    *  @param  string  $path a valid directory path
-   *  @return array an array of $path and all its sub-directory paths
+   *  @param  boolean $go_deep  if true, then get all the directories   
+   *  @return array an array of sub-directories, 1 level deep if $go_deep = false, otherwise
+   *                all directories   
    */
-  private static function getPaths($path){
+  private static function getPaths($path,$go_deep = true){
   
     // canary...
     if(empty($path)){ return array(); }//if
     
-    $ret_list = array($path);
-    $path_list = glob(join(DIRECTORY_SEPARATOR,array($path,'*')),GLOB_ONLYDIR);
-    if(!empty($path_list)){
-      
-      foreach($path_list as $path){
-        $ret_list = array_merge($ret_list,$this->getPaths($path));
-      }//foreach
+    $ret_list = glob(join(DIRECTORY_SEPARATOR,array($path,'*')),GLOB_ONLYDIR);
+    if($go_deep){
+    
+      if(!empty($ret_list)){
+        
+        foreach($ret_list as $path){
+          $ret_list = array_merge($ret_list,$this->getPaths($path));
+        }//foreach
+        
+      }//if
       
     }//if
       

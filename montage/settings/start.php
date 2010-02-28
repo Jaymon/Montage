@@ -38,7 +38,7 @@ if(!defined('MONTAGE_PATH')){
 }//if
 
 // where the applications core can be found...
-// this can be set in the app's start.php for a speed boost...
+// this can be set in the app before calling this file for a very slight speed boost...
 if(!defined('MONTAGE_APP_PATH')){
   // auto-discover the app's root dir...
   $bt = debug_backtrace();
@@ -54,6 +54,11 @@ if(!defined('MONTAGE_APP_PATH')){
 require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_cache_class.php')));
 require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_base_static_class.php')));
 require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_core_class.php')));
+
+// include the profile cache so we can see how long core takes to run...
+if(MONTAGE_DEBUG){
+  require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_profile_class.php')));
+}//if
 
 // start the auto-loader...
 montage_core::start(

@@ -37,6 +37,9 @@ class montage_template extends montage_base {
     $this->start();
   }//method
   
+  /**
+   *  the actual template name (eg, layout.php or page_tmpl.php
+   */        
   function setTemplate($val){ return $this->template = $val; }//method
   function getTemplate(){ return $this->template; }//method
   function hasTemplate(){ return !empty($this->template); }//method
@@ -117,5 +120,38 @@ class montage_template extends montage_base {
     return $path;
   
   }//method
+  
+  /**
+   *  overloaded from parent so when in the template it will return a montage_escaped wrapped
+   *  value, this is useful for making sure user submitted input is safe while not having to worry
+   *  about it anywhere else but the view      
+   *  
+   *  @see  parent::getField()
+   */
+  function getField($key,$default_val = null){
+    
+    $ret_mix = $default_val;
+    
+    if($this->in_template){
+      if($this->existsField($key)){
+        $class_name = montage_core::getCoreClassName('MONTAGE_ESCAPE');
+        $ret_mix = new $class_name($this->field_map[$key]);
+      }//if
+    }else{
+      $ret_mix = parent::getField($key,$default_val);
+    }//if/else
+  
+    return $ret_mix;
+    
+  }//method
+  
+  /**
+   *  always return the raw value, regardless of whether we are in the template or not
+   *  
+   *  @see  parent::getField()
+   */
+  function getRawField($key,$default_val = null){
+    return parent::getField($key,$default_val);
+  }//function
 
 }//class     

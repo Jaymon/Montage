@@ -10,16 +10,23 @@
  ******************************************************************************/
 class montage_request extends montage_base {
 
+  const FIELD_CONTROLLER = 'montage_request_controller';
+  const FIELD_ENVIRONMENT = 'montage_request_environment';
+
   /**
    *  initialize the request class
    *  
    *  this will do all the required init stuff and then call start() so if you extend
    *  this class and want to do your own init stuff, put it in start()
    *  
+   *  @param  string  $controller the requested controller name
+   *  @param  string  $environment  the env that will be used   
    *  @param  string  $request_root_path  most likely the /web/ directory
    */
-  final function __construct($request_root_path){
+  final function __construct($controller,$environment,$request_root_path){
   
+    $this->setField(self::FIELD_CONTROLLER,$controller);
+    $this->setField(self::FIELD_ENVIRONMENT,$environment);
     $this->setRequestRoot($request_root_path);
     
     // are we in CLI?
@@ -35,18 +42,34 @@ class montage_request extends montage_base {
       
     }else{
     
+      // find the controller and method...
       $root_path_list = explode(DIRECTORY_SEPARATOR,$request_root_path);
       $request_path_list = preg_split('#\\/#u',$this->getServerField('REQUEST_URI'));
       $path_list = array_values(array_filter(array_diff($request_path_list,$root_path_list)));
+      
+      // this will contain no fake path parts like controller class and controller method...
+      $base_path_list = preg_split('#\\/#u',$this->getServerField('DOCUMENT_ROOT'));
+      $base_path_list = array_values(array_filter(array_diff($base_path_list,$root_path_list)));
 
       if(!empty($path_list[0])){
         
-        if(montage_core::isController($path_list[0])){
+        $controller_class = montage_core::getClassName($path_list[0]);
+        
+        if(montage_core::isController($controller_class)){
           
-          $this->setControllerClass(mb_strtolower($path_list[0]));
+          $this->setControllerClass($controller_class);
           
           if(!empty($path_list[1])){
-            $this->setControllerMethod(sprintf('get%s',ucfirst(mb_strtolower($path_list[1]))));
+          
+            $controller_method = sprintf('get%s',ucfirst(mb_strtolower($path_list[1])));
+          
+            // if the controller method does not exist then use the default...
+            if(method_exists($controller_class,$controller_method)){
+            
+              $this->setControllerMethod($controller_method);
+              
+            }//if
+            
           }//if
           
         }//if
@@ -62,8 +85,8 @@ class montage_request extends montage_base {
       // strip out the magic quotes if they exist...
       if(get_magic_quotes_gpc()){
       
-        $this->setFields($this->stripSlashes($_GET));
-        $this->setFields($this->stripSlashes($_POST));
+        $this->setFields(montage_text::getSlashless($_GET));
+        $this->setFields(montage_text::getSlashless($_POST));
         
       }else{
       
@@ -74,9 +97,33 @@ class montage_request extends montage_base {
       
       $this->setField('montage_request_path_list',$path_list);
       
-      $host = $this->getServerField('HTTP_HOST','');
-      $this->setHost($host);
+      if(!$this->hasHost()){
+        $host = $this->getServerField(array('HTTP_X_FORWARDED_HOST','HTTP_HOST'),'');
+        $this->setHost($host);
+      }//if
+      
       $this->setPath(join('/',$path_list));
+      
+      // NOTE: REQUEST_URI is the best since it includes any query string, you can't just append
+      // the query string to the others either because if you use mod_rewrite, everything will get
+      // appended on again
+      $this->setUrl(
+        sprintf(
+          '%s://%s%s',
+          $this->isSecure() ? montage_url::SCHEME_SECURE : montage_url::SCHEME_NORMAL,
+          $host,
+          $this->getServerField('REQUEST_URI')
+        )
+      );
+      
+      $this->setBase(
+        sprintf(
+          '%s://%s%s',
+          montage_url::SCHEME_NORMAL,
+          $host,
+          empty($base_path_list) ? '' : join('/',$base_path_list)
+        )
+      );
       
       $this->setMethod($this->getServerField('REQUEST_METHOD','GET'));
       
@@ -85,6 +132,24 @@ class montage_request extends montage_base {
     $this->start();
     
   }//method
+  
+  final function getController(){ return $this->getField(self::FIELD_CONTROLLER,''); }//method
+  final function getEnvironment(){ return $this->getField(self::FIELD_ENVIRONMENT,''); }//method
+
+  /**
+   *  the full requested base, the base is different than url because url would have the generated
+   *  path on it (eg, controller_class/controller_method/...) and this won't   
+   */        
+  function setBase($val){ return $this->setField('montage_request_base',$val); }//method
+  function getBase(){ return $this->getField('montage_request_base',''); }//method
+  function hasBase(){ return $this->hasField('montage_request_base'); }//method
+
+  /**
+   *  the full requested url
+   */        
+  function setUrl($val){ return $this->setField('montage_request_url',$val); }//method
+  function getUrl(){ return $this->getField('montage_request_url',''); }//method
+  function hasUrl(){ return $this->hasField('montage_request_url'); }//method
 
   /**
    *  usually something like: example.com or subdomain.example.com
@@ -106,7 +171,6 @@ class montage_request extends montage_base {
    */        
   function setRequestRoot($val){ return $this->setField('montage_request_request_root',$val); }//method
   function getRequestRoot(){ return $this->getField('montage_request_request_root',''); }//method
-  function hasRequestRoot(){ return $this->hasField('montage_request_request_root'); }//method
   
   /**
    *  the requested controller class that will be used to answer this request
@@ -122,7 +186,6 @@ class montage_request extends montage_base {
   function setControllerMethod($val){ return $this->setField('montage_request_controller_method',$val); }//method
   function getControllerMethod(){ return $this->getField('montage_request_controller_method',$this->getDefaultControllerMethod()); }//method
   function hasControllerMethod(){ return $this->hasField('montage_request_controller_method'); }//method
-  function killControllerMethod(){ return $this->killField('montage_request_controller_method'); }//method
   protected function getDefaultControllerMethod(){ return 'getIndex'; }//method
   
   /**
@@ -217,41 +280,159 @@ class montage_request extends montage_base {
   /**
    *  checks both $_SERVER and $_ENV for a value
    *  
-   *  @param  string  $key  the name of the variable to find
+   *  @param  string|array  $key_list the name of the variable to find, this can either be a string
+   *                                  (eg, 'HTTP_HOST') or a list of strings (eg, array('FOO','BAR'))   
    *  @param  mixed $default_val  if $key isn't found, return $default_val
    *  @return mixed
    */
-  function getServerField($key,$default_val = null){
+  function getServerField($key_list,$default_val = null){
   
     // canary...
-    if(empty($key)){ return $default_val; }//if
+    if(empty($key_list)){ return $default_val; }//if
+    if(!is_array($key_list)){ $key_list = array($key_list); }//if
   
     $ret_val = $default_val;
     
-    if(isset($_SERVER[$key])){
-      $ret_val = $_SERVER[$key];
-    }else if(isset($_ENV[$key])){
-      $ret_val = $_ENV[$key];
-    }//if/else if
+    foreach($key_list as $key){
+      
+      if(isset($_SERVER[$key])){
+        $ret_val = $_SERVER[$key];
+        break;
+      }else if(isset($_ENV[$key])){
+        $ret_val = $_ENV[$key];
+        break;
+      }//if/else if
+      
+    }//foreach
   
     return $ret_val;
   
   }//method
   
   /**
-   *  recursively strip all the slashes from a $val
+   *  return a header field if it is found
    *  
-   *  @param  mixed $val
-   *  @return $val with all slashes stripped
+   *  php attaches HTTP_ to all header fields and also cahnges dash to underscore, 
+   *  this accounts for stuff like that
+   *  
+   *  @param  string  $header_name  the header name to get
+   *  @return string  the header value (the part to the right of the colon)
    */
-  private function stripSlashes($val)
-  {
+  function getHeaderField($header_name){
+  
     // canary...
-    if(is_array($val)){ return $this->stripSlashes($val); }//if
-    if(is_object($val)){ return $val; }//if
+    if(empty($header_name)){ return ''; }//if
     
-    return stripslashes($val);
-    
+    $header_name = sprintf('HTTP_%s',str_replace('-','_',$header_name));
+    return $this->getServerField($header_name,'');
+  
+  }//method
+  
+  /**
+   *  return all the GET fields
+   *  
+   *  @return array
+   */
+  function getGetFields(){
+    return empty($_GET) ? array() : montage_text::getSlashless($_GET);
+  }//method
+  
+  /**
+   *  return all the POST fields
+   *  
+   *  @return array
+   */
+  function getPostFields(){
+    return empty($_POST) ? array() : montage_text::getSlashless($_POST);
+  }//method
+  
+  /**
+   *  return all the COOKIE fields
+   *  
+   *  @return array
+   */
+  function getCookieFields(){
+    return empty($_COOKIE) ? array() : montage_text::getSlashless($_COOKIE);
+  }//method
+  
+  /**
+   *  return all the SESSION fields
+   *  
+   *  @return array
+   */
+  function getSessionFields(){
+    return empty($_SESSION) ? array() : montage_text::getSlashless($_SESSION);
+  }//method
+  
+  /**
+   *  forwards this request to another controller::method
+   *  
+   *  this is internally (ie, browser url will not change). If you want to send the visitor
+   *  to another url then call montage_response::redirect()
+   *
+   *  @param  string  $controller the name of the controller child to forward to (this can be a class_key also)
+   *  @param  string  $method the method of $controller that will be called   
+   *  @throws montage_forward_exception if $controller and $method are valid
+   */
+  function forward($controller,$method){
+  
+    // canary...
+    if(empty($controller)){
+      throw new UnexpectedValueException('$controller cannot be empty');
+    }//if
+    if(empty($method)){
+      throw new UnexpectedValueException('$method cannot be empty');
+    }//if
+    if(!montage_core::isController($controller)){
+      throw new DomainException('$controller is not a valid montage_controller child');
+    }//if
+    if(!method_exists($controller,$method)){
+      throw new BadMethodCallException(sprintf('%s::%s does not exist',$controller,$method));
+    }//if
+  
+    $this->setControllerClass($controller);
+    $this->setControllerMethod($method);
+    throw new montage_forward_exception();
+  
+  }//method
+  
+  /**
+   *  Returns true if the request is a XMLHttpRequest.
+   *
+   *  It works if your JavaScript library set an X-Requested-With HTTP header.
+   *  Works with Prototype, Mootools, jQuery, and perhaps others.
+   *
+   *  @return bool true if the request is an XMLHttpRequest, false otherwise
+   */
+  function isAjax(){
+    return (mb_stripos($this->getServerField('HTTP_X_REQUESTED_WITH'), 'XMLHttpRequest') !== false);
+  }//method
+  
+  /**
+   *  get the browser's user agent string
+   *  
+   *  @return string  the user agent (eg, Mozilla/5.0 (Windows; U; Windows NT 5.1;) Firefox/3.0.17)
+   */
+  function getUserAgent(){
+    return $this->getServerField('HTTP_USER_AGENT','');
+  }//method
+  
+  /**
+   *  Returns referer.
+   *
+   *  @return string
+   */
+  function getReferer(){
+    return $this->getServerField('HTTP_REFERER','');
+  }//method
+  
+  /**
+   *  Returns the requested script name
+   *
+   *  @return string
+   */
+  function getFile(){
+    return $this->getServerField(array('SCRIPT_FILENAME','SCRIPT_NAME','ORIG_SCRIPT_NAME'),'');
   }//method
 
 }//class     
