@@ -16,7 +16,9 @@ class montage_url extends montage_base {
   const SCHEME_SECURE = 'https';
 
   /**
+   *  override default constructor
    *  
+   *  start() is called so that a child that extends this class can do its own initialization      
    */
   final function __construct(){
     $this->start();
@@ -30,8 +32,17 @@ class montage_url extends montage_base {
    *  get($base,'foo','bar',array('getfoo' => 'getbar');
    *  
    *  if you don't include a root as the first argument, everything else will
-   *  be appended to the current url
+   *  be appended to the deafult base/root url
    *  
+   *  @example:
+   *    // base url: http://app.com/
+   *    // current url: http://app.com/bar/foo/?che=baz   
+   *    $this->get(); // -> http://app.com/
+   *    $this->get('bar','foo'); // -> http://app.com/bar/foo
+   *    $this->get('bar',array('foo' => 'baz')); // -> http://app.com/bar/?foo=baz
+   *    $this->getCurrent(); // -> http://app.com/bar/foo/?che=baz
+   *    $this->get('http://example.com','bar'.'foo'); // -> http://example.com/bar/foo   
+   *            
    *  @param  mixed $arg,...  first argument can be a root last argument can be
    *                          an array of key/val mappings that will be turned into
    *                          a query string                                           
@@ -40,37 +51,19 @@ class montage_url extends montage_base {
   function get(){
   
     $args = func_get_args();
-    list($url,$path_list,$var_map) = $this->parse($args);
+    list($base_url,$path_list,$var_map) = $this->parse($args);
     
-    return $this->build($url,$path_list,$var_map);
+    return $this->build($base_url,$path_list,$var_map);
   
   }//method
   
   /**
-   *  get the host of the site (eg, http://example.com)
-   *  
-   *  like most of the other get* methods, you can pass in path and query vars
-   *  
-   *  @param  mixed $arg,...
-   *  @return string  the host with any args attached to it
-   */
-  function getHost(){
-  
-    $args = func_get_args();
-    list($path_list,$var_map) = $this->sortArgs($args);
-    $request = montage::getRequest();
-    
-    return $this->build($request->getBase(),$path_list,$var_map);
-  
-  }//method
-  
-  /**
-   *  same as {@link get()} but it strips out any get vars that would have been appended
+   *  same as {@link getCurrent()} but it strips out any get vars that would have been included
    *  with the question mark. this is handy when you want to use the current url but you
    *  don't want the query vars that are already on the current url
    *  
    *  @example
-   *    $url->get(); // -> http://example.com/foo/?bar=che
+   *    $url->getCurrent(); // -> http://example.com/foo/?bar=che
    *    $url->getPath(); // -> http://example.com/foo/
    *    $url->getPath(array('che' => 'bar')); // -> http://example.com/foo/?che=bar   
    *  
@@ -80,9 +73,25 @@ class montage_url extends montage_base {
   function getPath(){
   
     $args = func_get_args();
-    list($url,$var_list,$var_map) = $this->parse($args);
-    list($url,$query_var_map) = $this->getSplit($url);
-    return self::build($url,$var_list,$var_map);
+    list($base_url,$path_list,$var_map) = $this->parse($args);
+    list($base_url,$current_var_map) = $this->getSplit($this->getCurrent());
+    return self::build($base_url,$path_list,$var_map);
+  
+  }//method
+  
+  /**
+   *  gets the current url, can take passed in values similar to {@link get()} but will always
+   *  use the current url as a base
+   *  
+   *  @see  get()         
+   *  @return string  the current url with any passed in vars appended to it
+   */
+  function getCurrent(){
+  
+    $args = func_get_args();
+    list($base_url,$path_list,$var_map) = $this->parse($args);
+    $base_url = montage::getRequest()->getUrl();
+    return $this->build($base_url,$path_list,$var_map);
   
   }//method
   
@@ -144,6 +153,36 @@ class montage_url extends montage_base {
   
     return array($url,$query_vars);
     
+  }//method
+  
+  /**
+   *  returns true if the current url is the same as the passed in url, false otherwise...
+   *  
+   *  @param  string  $url  the url to check against the current url
+   *  @param  boolean $path_only  if true, then the query string will be stripped off the current
+   *                              url, this is handy if you are doing tabs or something            
+   *  @return string
+   */
+  function isSame($url,$path_only = false){
+  
+    // sanity...
+    if(empty($url)){ return false; }//if
+  
+    $current_url = $path_only
+      ? $this->getPath()
+      : $this->getCurrent();
+  
+    /* $current_url = $this->getCurrent();
+    if($path_only){
+      list($current_url,$current_query_vars) = $this->getSplit($current_url);
+    }//if */
+  
+    // normalize the urls...
+    $url = rtrim(mb_strtoupper($url),self::URL_SEP);
+    $current_url = rtrim(mb_strtoupper($current_url),self::URL_SEP);
+    
+    return ($current_url === $url);
+  
   }//method
   
   /**
@@ -237,45 +276,39 @@ class montage_url extends montage_base {
    *  will be appended to the base url
    *  
    *  @param  array $args
-   *  @param  boolean $ignore_current_get_vars  see {@link getCurrentMap()} for explanation
-   *  @return array array($url_map,$var_list,$var_map) where $url_map has keys: 'url', 'module', and 'action'
-   *                and $var_list is all the path elements (eg, array('foo','bar' would become: /foo/bar)
+   *  @return array array($base_url,$path_list,$var_map) where $base_url is the url that will be at the beginning
+   *                and $path_list is all the path elements (eg, array('foo','bar' would become: /foo/bar)
    *                and $var_map are the get vars (eg, array('foo' => 'bar') would become ?foo=bar)      
    */
-  protected function parse($args,$ignore_current_get_vars = false){
+  protected function parse($args){
   
     // canary...
-    if(empty($args)){ return array($this->get(),array(),array()); }//if
+    if(empty($args)){      
+      return array(montage::getRequest()->getBase(),array(),array());
+    }//if
     
-    $ret_url = '';
-    list($ret_list,$var_map) = $this->sortArgs($args);
-    $base = empty($ret_list[0]) ? '' : $ret_list[0];
+    list($path_list,$var_map) = $this->sortArgs($args);
+    $base_url = empty($path_list[0]) ? '' : $path_list[0];
     
-    if(!empty($base)){
+    if(!empty($base_url)){
     
-      if(montage_text::isUrl($base)){
+      if(montage_text::isUrl($base_url)){
       
-        $ret_url = $base;
-        $ret_list = array_slice($ret_list,1);
+        $path_list = array_slice($path_list,1);
         
-      }else if($base[0] === '/'){
-      
-        $ret_url = $this->assemble(self::SCHEMA_NORMAL,$this->getHost(),$base);
-        $ret_list = array_slice($ret_list,1);
-      
       }else{
       
-        $ret_url = $this->gethost();
+        $base_url = montage::getRequest()->getBase();
       
       }//if/else if/else
     
     }else{
     
-      $ret_url = montage::getRequest()->getUrl();
+      $base_url = montage::getRequest()->getBase();
     
     }//if/else
-
-    return array($ret_url,$ret_list,$var_map);
+    
+    return array($base_url,$path_list,$var_map);
   
   }//method
   
@@ -285,26 +318,26 @@ class montage_url extends montage_base {
    *  from the parameter vars (eg, ?foo=bar) and returns them
    *  
    *  @param  array $args an array of path/parameters
-   *  @return array($path_vars,$get_vars)
+   *  @return array($path_list,$get_vars)
    */              
   protected function sortArgs($args){
     
     // canary...
     if(empty($args)){ return array(array(),array()); }//if
     
-    $ret_list = $ret_var_map = array();
+    $path_list = $var_map = array();
     
     // if the last element is an array, then it is a var_map, else it is just a normal value...
-    $ret_var_map = end($args);
-    if(is_array($ret_var_map)){
+    $var_map = end($args);
+    if(is_array($var_map)){
       // the last element isn't part of the url var list, it contains the get vars...
-      $ret_list = array_slice($args,0,-1);
+      $path_list = array_slice($args,0,-1);
     }else{
-      $ret_list = $args;
-      $ret_var_map = array();
+      $path_list = $args;
+      $var_map = array();
     }//if/else
     
-    return array($ret_list,$ret_var_map);
+    return array($path_list,$var_map);
     
   }//method
   
@@ -320,7 +353,7 @@ class montage_url extends montage_base {
     
     if(empty($host)){
     
-      $host = $this->getHost();
+      $host = montage::getRequest()->getBase();
     
     }//if/else
     

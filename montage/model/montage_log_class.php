@@ -295,9 +295,9 @@ class montage_log extends montage_base {
     
     // save some general info about the request...
     $ret_map['request'] = array();
-    $ret_map['request']['url'] = Url::get();
     
     $request = montage::getRequest();
+    $ret_map['request']['url'] = $request->getUrl();
     $ret_map['request']['referrer'] = $request->getReferer();
     $ret_map['request']['controller_class'] = $request->getControllerClass();
     $ret_map['request']['controller_method'] = $request->getControllerMethod();

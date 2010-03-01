@@ -25,8 +25,6 @@ class montage_session {
    *  @var  string
    */
   protected $path = '';
-  
-  protected $killed_map = array();
 
   final function __construct($path = ''){
     
@@ -60,21 +58,29 @@ class montage_session {
         
         session_start();
         
-        // clear the kill list...
-        $kill_field_list = $this->getField('montage_session_flash_kill',array());
-        foreach($kill_field_list as $key){
-          $this->killed_map[$key] = $this->getField($key,'');
-          $this->killField($key);
-        }//foreach
+        // pull out the flash map...
+        $flash_map = $this->getField('montage_session_flash',array());
         
-        // move the born list to the kill list and clear the born list...
-        $born_field_list = $this->getField('montage_session_flash_born',array());
-        $this->setField('montage_session_flash_kill',$born_field_list);
-        $this->setField('montage_session_flash_born',array());
+        // save killed...
+        $flash_map['dead'] = empty($flash_map['kill']) ? array() : $flash_map['kill'];
+        
+        // move get to kill...
+        $flash_map['kill'] = empty($flash_map['get']) ? array() : $flash_map['get'];
+        
+        // move set to get...
+        $flash_map['get'] = empty($flash_map['set']) ? array() : $flash_map['set'];
+        
+        // clear set...
+        $flash_map['set'] = array();
+        
+        // save it back into the session...
+        $this->setField('montage_session_flash',$flash_map);
         
       }//if/else
       
     }//if
+    
+    $this->start();
     
   }//method
   
@@ -90,23 +96,6 @@ class montage_session {
   function setField($key,$val){
   
     $_SESSION[$key] = $val;
-    return $val;
-  
-  }//method
-  
-  /**
-   *  save a field into the session that will be good for only one page load
-   *  
-   *  @param  string  $key
-   *  @param  mixed $val
-   *  @return mixed $val
-   */
-  function setFlashField($key,$val){
-  
-    $born_field_list = $this->getField('montage_session_flash_born',array());
-    $_SESSION[$key] = $val;
-    $born_field_list[] = $key;
-    $this->setField('montage_session_flash_born',$born_field_list);
     return $val;
   
   }//method
@@ -153,6 +142,37 @@ class montage_session {
     return array_key_exists($key,$_SESSION);
   }//method
   
+  
+  /**
+   *  get a flash field (field that is good for about one page load)
+   *  
+   *  @param  string  $key
+   *  @param  mixed $default_val
+   *  @return mixed
+   */
+  function getFlash($key,$default_val = null){
+  
+    $flash_map = $this->getField('montage_session_flash',array());
+    return isset($flash_map['get'][$key]) ? $flash_map['get'][$key] : $default_val;
+  
+  }//method
+  
+  /**
+   *  save a field into the session that will be good for only one page load
+   *  
+   *  @param  string  $key
+   *  @param  mixed $val
+   *  @return mixed $val
+   */
+  function setFlash($key,$val){
+  
+    $flash_map = $this->getField('montage_session_flash',array());
+    $flash_map['set'][$key] = $val;
+    $this->setField('montage_session_flash',$flash_map);
+    return $val;
+  
+  }//method
+  
   /**
    *  basically moves all the flashed fields back into the born position
    *  
@@ -165,18 +185,27 @@ class montage_session {
    */
   function resetFlash(){
   
-    $born_key_list = $this->getField('montage_session_flash_born',array());
-    $kill_key_list = $this->getField('montage_session_flash_kill',array());
-  
-    $key_list = array();
-    foreach($this->killed_map as $key => $val){
-      $key_list[] = $key;
-      $this->setField($key,$val);
-    }//foreach
+    // pull out the flash map...
+    $flash_map = $this->getField('montage_session_flash',array());
     
-    // move everything back into the born list...
-    $this->setField('montage_session_flash_kill',array());
-    $this->setField('montage_session_flash_born',array_merge($born_key_list,$kill_key_list,$key_list));
+    // move get back to set...
+    $flash_map_set = empty($flash_map['set']) ? array() : $flash_map['set'];
+    $flash_map['set'] = array_merge(
+      $flash_map_set,
+      empty($flash_map['get']) ? array() : $flash_map['get']
+    );
+    
+    // move kill to get...
+    $flash_map['get'] = empty($flash_map['kill']) ? array() : $flash_map['kill'];
+    
+    // move dead to kill...
+    $flash_map['kill'] = empty($flash_map['dead']) ? array() : $flash_map['dead'];
+    
+    // clear dead...
+    $flash_map['dead'] = array();
+    
+    // save it back into the session...
+    $this->setField('montage_session_flash',$flash_map);
   
   }//method
   

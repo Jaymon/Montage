@@ -40,19 +40,27 @@ class montage_request extends montage_base {
         $this->setFields($_SERVER['argv']);
       }//if
       
+      // @todo  you can use the server args to set the controller, method, and args
+      
     }else{
-    
-      // find the controller and method...
+      
+      // get the root of the request...
       $root_path_list = explode(DIRECTORY_SEPARATOR,$request_root_path);
-      $request_path_list = preg_split('#\\/#u',$this->getServerField('REQUEST_URI'));
+      
+      // we don't care about the GET vars, so ignore them...
+      $request_uri = $this->getServerField('REQUEST_URI');
+      $request_uri = explode('?',$request_uri);
+      $request_path_list = preg_split('#\\/#u',$request_uri[0]);
+      
+      // find the difference between ROOT and REQUEST and that will decide the controller::method to use...
       $path_list = array_values(array_filter(array_diff($request_path_list,$root_path_list)));
       
       // this will contain no fake path parts like controller class and controller method...
       $base_path_list = preg_split('#\\/#u',$this->getServerField('DOCUMENT_ROOT'));
       $base_path_list = array_values(array_filter(array_diff($base_path_list,$root_path_list)));
 
+      // find the controller, method, and method arguments...
       $controller_method_args = $path_list;
-
       if(!empty($path_list[0])){
         
         $controller_class = montage_core::getClassName($path_list[0]);

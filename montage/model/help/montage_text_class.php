@@ -19,10 +19,16 @@ class montage_text {
   static function getSlashless($val){
   
     // canary...
-    if(is_array($val)){ return self::getSlashless($val); }//if
+    if(empty($val)){ return $val; }//if
     if(is_object($val)){ return $val; }//if
     
-    return stripslashes($val);
+    if(is_array($val)){
+      $val = array_map(array('self','getSlashless'),$val);
+    }else{
+      $val = stripslashes($val);
+    }//if/else
+    
+    return $val;
     
   }//method
 

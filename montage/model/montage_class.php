@@ -31,21 +31,6 @@ final class montage extends montage_base_static {
     $class_name = montage_core::getCoreClassName('montage_log');
     self::setField('montage_log',new $class_name());
     
-    // this will start the session, this also needs to be before response
-    // because it will load any saved request variables that montage_request will
-    // then use...
-    $class_name = montage_core::getCoreClassName('montage_session');
-    self::setField(
-      'montage_session',
-      new $class_name(
-        montage_core::getCustomPath(
-          montage_core::getAppPath(),
-          'cache',
-          'session'
-        )
-      )
-    );
-  
     $class_name = montage_core::getCoreClassName('montage_request');
     self::setField(
       'montage_request',
@@ -82,6 +67,19 @@ final class montage extends montage_base_static {
     
     $class_name = montage_core::getCoreClassName('montage_url');
     self::setField('montage_url',new $class_name());
+    
+    // this will start the session...
+    $class_name = montage_core::getCoreClassName('montage_session');
+    self::setField(
+      'montage_session',
+      new $class_name(
+        montage_core::getCustomPath(
+          montage_core::getAppPath(),
+          'cache',
+          'session'
+        )
+      )
+    );
     
   }//method
   

@@ -50,6 +50,7 @@ abstract class montage_form extends montage_form_base implements ArrayAccess,Cou
   final function __construct($field_map = array()){
   
     $this->form_name = get_class($this);
+    $this->setId($this->form_name);
     $this->start();
     if(!empty($field_map)){
       $this->set($field_map);
