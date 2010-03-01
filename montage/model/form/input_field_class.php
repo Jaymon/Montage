@@ -59,6 +59,7 @@ class input_field extends montage_form_field {
     
     if($this->isType(self::TYPE_SUBMIT)){
       if(!$this->hasName()){ $this->setName(self::TYPE_SUBMIT); }//if
+      if(!$this->hasVal()){ $this->setVal('Submit'); }//if
     }//if
     
   }//method

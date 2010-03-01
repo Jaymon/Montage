@@ -27,6 +27,7 @@ final class montage extends montage_base_static {
       throw new RuntimeException('The framework was already started, no point in starting it again');
     }//if
     
+    // log starts first so startup problems can be logged...
     $class_name = montage_core::getCoreClassName('montage_log');
     self::setField('montage_log',new $class_name());
   
@@ -90,8 +91,21 @@ final class montage extends montage_base_static {
       // profile...
       if($debug){ montage_profile::start('filters start'); }//if
       
+      $filter_list = montage_core::getFilters();
       // get all the filters and start them...
-      $filter_list = array_map(array('montage_core','getInstance'),montage_core::getFilters());
+      ///$filter_list = array_map(array('montage_core','getInstance'),montage_core::getFilters());
+      foreach($filter_list as $key => $filter_class_name){
+        
+        try{
+          
+          $filter_list = montage_core::getInstance($filter_class_name);
+        
+        }catch(montage_forward_exception $e){
+          // we ignore the forward because the controller hasn't been called yet, but people
+          // might want to do the forward instead of all the montage_request::set* methods
+        }//try/catch
+        
+      }//foreach
       
       // profile...
       if($debug){ montage_profile::stop(); }//if
@@ -110,8 +124,9 @@ final class montage extends montage_base_static {
           // create the controller and call its requested method...
           $controller_class_name = $request->getControllerClass();
           $controller_method = $request->getControllerMethod();
+          $controller_method_args = $request->getControllerMethodArgs();
           $controller = new $controller_class_name();
-          $result = call_user_func(array($controller,$controller_method));
+          $result = call_user_func_array(array($controller,$controller_method),$controller_method_args);
           $controller->stop();
           break;
           

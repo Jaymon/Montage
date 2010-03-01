@@ -51,6 +51,8 @@ class montage_request extends montage_base {
       $base_path_list = preg_split('#\\/#u',$this->getServerField('DOCUMENT_ROOT'));
       $base_path_list = array_values(array_filter(array_diff($base_path_list,$root_path_list)));
 
+      $controller_method_args = $path_list;
+
       if(!empty($path_list[0])){
         
         $controller_class = montage_core::getClassName($path_list[0]);
@@ -61,39 +63,63 @@ class montage_request extends montage_base {
           
           if(!empty($path_list[1])){
           
-            $controller_method = sprintf('get%s',ucfirst(mb_strtolower($path_list[1])));
+            $controller_method = $this->getControllerMethodName($path_list[1]);
           
             // if the controller method does not exist then use the default...
             if(method_exists($controller_class,$controller_method)){
             
               $this->setControllerMethod($controller_method);
+              $controller_method_args = array_slice($path_list,2);
               
-            }//if
+              
+            }else{
+              $controller_method_args = array_slice($path_list,1);
+            }//if/else
             
-          }//if
+          }else{
+            $controller_method_args = array_slice($path_list,1);
+          }//if/else
           
-        }//if
+        }//if/else
         
       }//if
+      
+      $this->setControllerMethodArgs($controller_method_args);
+      $this->setFields($path_list);
       
       // make all the different vars available through the field methods...
       if(!empty($_COOKIE)){ $this->setFields($_COOKIE); }//if
       if(!empty($_SESSION)){ $this->setFields($_SESSION); }//if
       
-      $this->setFields($path_list);
-      
       // strip out the magic quotes if they exist...
+      $field_map = array();
       if(get_magic_quotes_gpc()){
       
-        $this->setFields(montage_text::getSlashless($_GET));
-        $this->setFields(montage_text::getSlashless($_POST));
-        
+        $field_map = montage_text::getSlashless(array_merge($_GET,$_POST));
+      
       }else{
       
-        $this->setFields($_GET);
-        $this->setFields($_POST);
+        $field_map = array_merge($_GET,$_POST);
       
       }//if/else
+      
+      // go through looking for form classes so we can wrap them in a form instance...
+      foreach($field_map as $field_key => $field_val){
+      
+        if(is_array($field_val)){
+        
+          if(montage_core::isForm($field_key)){
+          
+            $this->setField('montage_request_form',$field_key);
+          
+          }//if
+        
+        }//if
+      
+      }//method
+      
+      $this->setFields($field_map);
+      
       
       $this->setField('montage_request_path_list',$path_list);
       
@@ -132,6 +158,33 @@ class montage_request extends montage_base {
     $this->start();
     
   }//method
+  
+  /**
+   *  get the form that was passed in
+   *  
+   *  @return montage_form  a child of montage_form, null if none was found         
+   */
+  function getForm(){
+  
+    $ret_instance = null;
+    
+    // get the form values and namespace...
+    $field_key = $this->getField('montage_request_form','');
+    $field_map = $this->getField($field_key,array());
+    
+    // make sure the namespace is a valid form class...
+    if(montage_core::isForm($field_key)){
+      
+      // create the form isntance to wrap the values...
+      $form_class_name = montage_core::getClassName($field_key);
+      $ret_instance = new $form_class_name($field_map);
+    
+    }//if
+    
+    return $ret_instance;
+    
+  }//method
+  function hasForm(){ return $this->hasField('montage_request_form'); }//method
   
   final function getController(){ return $this->getField(self::FIELD_CONTROLLER,''); }//method
   final function getEnvironment(){ return $this->getField(self::FIELD_ENVIRONMENT,''); }//method
@@ -187,6 +240,13 @@ class montage_request extends montage_base {
   function getControllerMethod(){ return $this->getField('montage_request_controller_method',$this->getDefaultControllerMethod()); }//method
   function hasControllerMethod(){ return $this->hasField('montage_request_controller_method'); }//method
   protected function getDefaultControllerMethod(){ return 'getIndex'; }//method
+  
+  /**
+   *  the arguments that will be passed into the controller::method
+   */
+  function setControllerMethodArgs($val){ return $this->setField('montage_request_controller_method_args',$val); }//method
+  function getControllerMethodArgs(){ return $this->getField('montage_request_controller_method_args',array()); }//method
+  function hasControllerMethodArgs(){ return $this->hasField('montage_request_controller_method_args'); }//method
   
   /**
    *  the method used for this request (eg, GET, POST, CLI)
@@ -365,16 +425,17 @@ class montage_request extends montage_base {
   }//method
   
   /**
-   *  forwards this request to another controller::method
+   *  forwards this request to another $controller::$method
    *  
    *  this is internally (ie, browser url will not change). If you want to send the visitor
    *  to another url then call montage_response::redirect()
    *
    *  @param  string  $controller the name of the controller child to forward to (this can be a class_key also)
-   *  @param  string  $method the method of $controller that will be called   
+   *  @param  string  $method the method of $controller that will be called
+   *  @param  array $args a list of values to pass into the $controller::$method     
    *  @throws montage_forward_exception if $controller and $method are valid
    */
-  function forward($controller,$method){
+  function forward($controller,$method,$args = array()){
   
     // canary...
     if(empty($controller)){
@@ -391,7 +452,8 @@ class montage_request extends montage_base {
     }//if
   
     $this->setControllerClass($controller);
-    $this->setControllerMethod($method);
+    $this->setControllerMethod($this->getControllerMethodName($method));
+    $this->setControllerMethodArgs($args);
     throw new montage_forward_exception();
   
   }//method
@@ -433,6 +495,29 @@ class montage_request extends montage_base {
    */
   function getFile(){
     return $this->getServerField(array('SCRIPT_FILENAME','SCRIPT_NAME','ORIG_SCRIPT_NAME'),'');
+  }//method
+  
+  /**
+   *  get the controller name that should be used
+   *  
+   *  @param  string  $method_name  can be the full method name (eg, getFoo) or a partial 
+   *                                that will be made into the full name (eg, foo gets turned into getFoo)      
+   *  @return string
+   */
+  private function getControllerMethodName($method_name){
+  
+    // canary...
+    if(empty($method_name)){
+      throw new UnexpectedValueException('$method_name cannot be empty');
+    }//if
+    
+    // see if the method name starts with "get"...
+    if(mb_stripos($method_name,'get') !== 0){
+      $method_name = sprintf('get%s',ucfirst(mb_strtolower($method_name)));
+    }//if/else
+  
+    return $method_name;
+  
   }//method
 
 }//class     

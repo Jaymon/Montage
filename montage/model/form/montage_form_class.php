@@ -248,11 +248,11 @@ abstract class montage_form extends montage_form_base implements ArrayAccess,Cou
       
       if($field->hasLabel()){
         $format_str .= '%s:<br />';
-        $format_vals[] = $field->getLabel();
+        $format_vals[] = $field->outLabel();
       }//if
       if($field->hasError()){
         $format_str .= '%s<br />';
-        $format_vals[] = $field->getError();
+        $format_vals[] = $field->outError();
       }//if
       
       $format_str .= '%s<br />';
@@ -260,7 +260,7 @@ abstract class montage_form extends montage_form_base implements ArrayAccess,Cou
       
       if($field->hasDesc()){
         $format_str .= '%s<br />';
-        $format_vals[] = $field->getDesc();
+        $format_vals[] = $field->outDesc();
       }//if
       
       $ret_str .= vsprintf($format_str,$format_vals);

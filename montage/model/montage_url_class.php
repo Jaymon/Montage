@@ -40,9 +40,9 @@ class montage_url extends montage_base {
   function get(){
   
     $args = func_get_args();
-    list($url,$var_list,$var_map) = $this->parse($args);
+    list($url,$path_list,$var_map) = $this->parse($args);
     
-    return $this->build($url,$var_list,$var_map);
+    return $this->build($url,$path_list,$var_map);
   
   }//method
   
@@ -54,13 +54,13 @@ class montage_url extends montage_base {
    *  @param  mixed $arg,...
    *  @return string  the host with any args attached to it
    */
-  static function getHost(){
+  function getHost(){
   
     $args = func_get_args();
-    list($ret_list,$var_map) = $this->sortArgs($args);
+    list($path_list,$var_map) = $this->sortArgs($args);
     $request = montage::getRequest();
     
-    return $this->build($request->getBase(),$var_list,$var_map);
+    return $this->build($request->getBase(),$path_list,$var_map);
   
   }//method
   
@@ -77,7 +77,7 @@ class montage_url extends montage_base {
    *  @see  get()
    *  @return string  the base url with no ?key=val... string (unless one was passed in)   
    */
-  static function getBase(){
+  function getBase(){
   
     $args = func_get_args();
     list($url,$var_list,$var_map) = $this->parse($args);
@@ -212,8 +212,9 @@ class montage_url extends montage_base {
     
     if($total_args === 1){
     
+      $request = montage::getRequest();
       $ret_str = $args[0];
-      $this->setField($field,$ret_str);
+      $this->setField($field,$this->assemble('',$request->getBase(),$ret_str));
     
     }else if($total_args < 3){
     
@@ -329,11 +330,11 @@ class montage_url extends montage_base {
     
       if(empty($scheme)){
       
-        $scheme = $url_bits[PHP_URL_SCHEME];
+        $scheme = $url_bits['scheme'];
         $host = sprintf(
           '%s%s',
-          $url_bits[PHP_URL_SCHEME],
-          isset($url_bits[PHP_URL_PATH]) ? rtrim($url_bits[PHP_URL_PATH],self::URL_SEP) : ''
+          $url_bits['scheme'],
+          isset($url_bits['path']) ? rtrim($url_bits['path'],self::URL_SEP) : ''
         );
         
       }//if

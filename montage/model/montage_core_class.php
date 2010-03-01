@@ -292,13 +292,24 @@ final class montage_core extends montage_base_static {
    *  return true if the given $class_name extends the controller class
    *  
    *  @param  string  $class_name
-   *  @return boolean true if $class_name is the name of a controller
+   *  @return boolean true if $class_name is the name of a controller child
    */
   static function isController($class_name){
     // canary...
     if(empty(self::$parent_class_map['MONTAGE_CONTROLLER'])){ return false; }//if
-  
     return self::isChild($class_name,'MONTAGE_CONTROLLER');
+  }//method
+  
+  /**
+   *  return true if the given $class_name extends the form class
+   *  
+   *  @param  string  $class_name
+   *  @return boolean true if $class_name is the name of a montage_form child
+   */
+  static function isForm($class_name){
+    // canary...
+    if(empty(self::$parent_class_map['MONTAGE_FORM'])){ return false; }//if
+    return self::isChild($class_name,'MONTAGE_FORM');
   }//method
   
   /**
@@ -306,9 +317,8 @@ final class montage_core extends montage_base_static {
    *  
    *  @param  string  $child_class_name
    *  @param  string  $parent_class_name      
-   *  @return boolean      
-   *
-   */        
+   *  @return boolean
+   */
   static function isChild($child_class_name,$parent_class_name){
   
     // canary...
