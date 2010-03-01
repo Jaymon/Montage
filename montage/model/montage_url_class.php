@@ -71,13 +71,13 @@ class montage_url extends montage_base {
    *  
    *  @example
    *    $url->get(); // -> http://example.com/foo/?bar=che
-   *    $url->getBase(); // -> http://example.com/foo/
-   *    $url->getBase(array('che' => 'bar')); // -> http://example.com/foo/?che=bar   
+   *    $url->getPath(); // -> http://example.com/foo/
+   *    $url->getPath(array('che' => 'bar')); // -> http://example.com/foo/?che=bar   
    *  
    *  @see  get()
    *  @return string  the base url with no ?key=val... string (unless one was passed in)   
    */
-  function getBase(){
+  function getPath(){
   
     $args = func_get_args();
     list($url,$var_list,$var_map) = $this->parse($args);
@@ -200,7 +200,7 @@ class montage_url extends montage_base {
   protected function handleSet($field,$args){
   
     // canary...
-    if(empty($args[0])){
+    if(empty($args)){
       throw new RuntimeException(
         'cannot set with an empty $args array. Any set* methods can take up to 3 arguments: '
         .' 1 argument: [path (eg, /foo/bar)], 2 arguments: [host (eg, example.com), path], or '

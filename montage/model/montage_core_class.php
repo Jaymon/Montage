@@ -38,7 +38,8 @@ final class montage_core extends montage_base_static {
     'MONTAGE_URL' => '',
     'MONTAGE_ESCAPE' => '',
     'MONTAGE_TEMPLATE' => '',
-    'MONTAGE_LOG' => ''
+    'MONTAGE_LOG' => '',
+    'MONTAGE_SESSION' => ''
   );
   
   /**
@@ -84,6 +85,14 @@ final class montage_core extends montage_base_static {
   
     // set the default autoloader...
     self::set(array(__CLASS__,'load'));
+    
+    // now we need to use all the start classes to initialize the app...
+    // the start classes follow a precedence order: Global, controller, and environment...
+    // we're looking for a class named "app" that is a child of montage_start...
+    // next, load the controller's "start" class...
+    // next, load all the plugins...
+    // finally, load the environment's "start" class...
+    $start_class_list = array('app',$controller);
   
     // profile...
     if($debug){ montage_profile::start('set paths'); }//if
@@ -103,6 +112,21 @@ final class montage_core extends montage_base_static {
     
     // load the default model directories...
     self::setPath(self::getCustomPath($framework_path,'model'));
+    
+    // include all the plugin paths, save all the start class names.
+    // We include these here before the app model path because they can extend core 
+    // but plugin classes should never extend app classes, but app classes can extend
+    // plugin classes...
+    $plugin_path_list = self::getPaths(self::getCustomPath($app_path,'plugins'),false);
+    foreach($plugin_path_list as $plugin_path){
+      
+      $start_class_list[] = basename($plugin_path);
+      
+      // find all the classes in the plugin path...
+      self::setPath($plugin_path);
+      
+    }//foreach
+    
     self::setPath(self::getCustomPath($app_path,'model'));
     
     // load the controller...
@@ -123,11 +147,14 @@ final class montage_core extends montage_base_static {
       );
     }//if
     
+    // set the main settings path...
+    self::setPath(self::getCustomPath($app_path,'settings'));
+    
     // profile...
     if($debug){ montage_profile::stop(); }//if
     
     // profile...
-    if($debug){ montage_profile::start('initialize classes'); }//if
+    if($debug){ montage_profile::start('initialize core classes'); }//if
     
     // officially start the framework...
     montage::start($controller,$environment,$debug,$charset,$timezone);
@@ -138,36 +165,13 @@ final class montage_core extends montage_base_static {
     // load the settings directory and "start" the app...
     
     // profile...
-    if($debug){ montage_profile::start('main settings'); }//if
+    if($debug){ montage_profile::start('settings'); }//if
     
-    self::setPath(self::getCustomPath($app_path,'settings'));
-    
-    // now we need to use all the start classes to initialize the app...
-    // the start classes follow a precedence order: Global, controller, and environment...
-    // we're looking for a class named "app" that is a child of montage_start...
-    // next, load the controller's "start" class...
-    // finally, load the dev's "start" class...
-    $start_class_parent_key = self::getClassKey('MONTAGE_START');
-    $start_class_list = array('app',$controller,$environment);
+    // now actually start to get all the settings...
+    $start_class_list[] = $environment;
+    $start_class_parent_key = 'MONTAGE_START';
     foreach($start_class_list as $start_class_name){
       self::getInstance($start_class_name,$start_class_parent_key);
-    }//foreach
-    
-    // profile...
-    if($debug){ montage_profile::stop(); }//if
-    
-    // profile...
-    if($debug){ montage_profile::start('plugin settings'); }//if
-    
-    // start all the plugins...
-    $plugin_path_list = self::getPaths(self::getCustomPath($app_path,'plugins'),false);
-    foreach($plugin_path_list as $plugin_path){
-      
-      // find all the classes in the plugin path...
-      self::setPath($plugin_path);
-      $start_class_name = basename($plugin_path);
-      self::getInstance($start_class_name,$start_class_parent_key);
-      
     }//foreach
     
     // profile...
@@ -602,10 +606,11 @@ final class montage_core extends montage_base_static {
         // I consider hackish
         
         $file_contents = file_get_contents($file_path);
+        ///$file_contents = mb_convert_encoding($file_contents,'UTF-8');
         
         // find the class declaration lines...
         $line_matches = array();
-        if(preg_match_all('#^[\w\s]*(?:class|interface)\s+[^{]+#sium',$file_contents,$line_matches)){
+        if(preg_match_all('#^[\w\s]*(?:class|interface)\s+[^{]+#sim',$file_contents,$line_matches)){
         
           foreach($line_matches[0] as $line_match){
           

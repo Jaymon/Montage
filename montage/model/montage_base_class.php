@@ -89,8 +89,8 @@ abstract class montage_base {
    */
   function isField($key,$val){
     $ret_bool = false;
-    if($this->existsField($name)){
-      $ret_bool = $this->getField($name) == $val;
+    if($this->existsField($key)){
+      $ret_bool = $this->getField($key) == $val;
     }//if
     return $ret_bool;
   }//method

@@ -92,17 +92,20 @@ class montage_request extends montage_base {
       if(!empty($_SESSION)){ $this->setFields($_SESSION); }//if
       
       // strip out the magic quotes if they exist...
-      $field_map = array();
+      ///$field_map = array();
       if(get_magic_quotes_gpc()){
       
-        $field_map = montage_text::getSlashless(array_merge($_GET,$_POST));
+        ///$field_map = montage_text::getSlashless(array_merge($_GET,$_POST));
+        $this->setFields(montage_text::getSlashless(array_merge($_GET,$_POST)));
       
       }else{
       
-        $field_map = array_merge($_GET,$_POST);
+        ///$field_map = array_merge($_GET,$_POST);
+        $this->setFields(array_merge($_GET,$_POST));
       
       }//if/else
       
+      /*
       // go through looking for form classes so we can wrap them in a form instance...
       foreach($field_map as $field_key => $field_val){
       
@@ -119,7 +122,7 @@ class montage_request extends montage_base {
       }//method
       
       $this->setFields($field_map);
-      
+      */
       
       $this->setField('montage_request_path_list',$path_list);
       
@@ -160,31 +163,40 @@ class montage_request extends montage_base {
   }//method
   
   /**
-   *  get the form that was passed in
+   *  get a $form_name instance
    *  
-   *  @return montage_form  a child of montage_form, null if none was found         
+   *  @param  string|object $form the name of the form class instance that should be returned.
+   *                              or an actual instance of the form_class that will be populated
+   *                              with the values. A form class is any class that extends montage_form         
+   *  @return montage_form  a child of montage_form, null if none was found
    */
-  function getForm(){
-  
-    $ret_instance = null;
+  function getForm($form){
     
-    // get the form values and namespace...
-    $field_key = $this->getField('montage_request_form','');
-    $field_map = $this->getField($field_key,array());
+    if($form instanceof montage_form){
     
-    // make sure the namespace is a valid form class...
-    if(montage_core::isForm($field_key)){
+      $form->set($this->getField($form->getName(),array()));
+    
+    }else{
       
-      // create the form isntance to wrap the values...
-      $form_class_name = montage_core::getClassName($field_key);
-      $ret_instance = new $form_class_name($field_map);
+      $form_name = (string)$form;
+      $form = null;
+      
+      // make sure the namespace is a valid form class...
+      if(montage_core::isForm($form_name)){
+        
+        // create the form isntance to wrap the values...
+        $field_map = $this->getField($form_name,array());
+        $form_class_name = montage_core::getClassName($form_name);
+        $form = new $form_class_name($field_map);
+        
+      }//if
+      
+    }//if/else
     
-    }//if
-    
-    return $ret_instance;
+    return $form;
     
   }//method
-  function hasForm(){ return $this->hasField('montage_request_form'); }//method
+  function hasForm($form_name){ return $this->hasField($form_name); }//method
   
   final function getController(){ return $this->getField(self::FIELD_CONTROLLER,''); }//method
   final function getEnvironment(){ return $this->getField(self::FIELD_ENVIRONMENT,''); }//method

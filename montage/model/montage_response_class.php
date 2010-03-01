@@ -34,6 +34,7 @@ class montage_response extends montage_base {
     $this->template_instance->setPath($template_path);
   
     $this->start();
+    
   }//method
   
   /**
@@ -95,6 +96,8 @@ class montage_response extends montage_base {
   
     if(empty($url)){ return; }//if
   
+    montage::getSession()->resetFlash();
+  
     if(headers_sent()){
   
       // http://en.wikipedia.org/wiki/Meta_refresh
@@ -108,11 +111,10 @@ class montage_response extends montage_base {
     }//if/else
 
     // I'm honestly not sure if this does anything...
-    if(session_id() !== ''){ session_write_close(); }//if
+    ///if(session_id() !== ''){ session_write_close(); }//if
     
     throw new montage_redirect_exception();
   
   }//method
-  
 
 }//class     
