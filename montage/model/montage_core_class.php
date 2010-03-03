@@ -1,7 +1,9 @@
 <?php
 
 /**
- *  handle autoloading duties    
+ *  handle autoloading duties. While montage is the master class, this class does
+ *  all the internal heavy lifting and can be mostly left alone unless you want to
+ *  set more class paths (use {@link setPath()}) than what are used by default.   
  *   
  *  @version 0.1
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -27,8 +29,8 @@ final class montage_core extends montage_base_static {
   static private $class_map = array();
   
   /**
-   *  hold the mapped core classes with their best defined class_keys being the value
-   *  
+   *  hold the mapped core classes with their best defined class_keys being the value   
+   *      
    *  @var  array
    */
   static private $core_class_map = array(
@@ -51,8 +53,6 @@ final class montage_core extends montage_base_static {
    */
   static private $parent_class_map = array();
   
-  static function isStarted(){ return self::$is_started; }//method
-  
   /**
    *  start the wizard
    *  
@@ -70,6 +70,9 @@ final class montage_core extends montage_base_static {
     if($debug){ montage_profile::start(__METHOD__); }//if
   
     // canary...
+    if(self::isStarted()){
+      throw new RuntimeException('The framework core was already started, no point in starting it again');
+    }//if
     if(empty($controller)){
       throw new UnexpectedValueException('$controller cannot be empty');
     }//if
@@ -175,7 +178,7 @@ final class montage_core extends montage_base_static {
     if($debug){ montage_profile::start('initialize core classes'); }//if
     
     // officially start the framework...
-    montage::start($controller,$environment,$debug,$charset,$timezone);
+    self::startCoreClasses($controller,$environment,$debug,$charset,$timezone);
     
     // profile...
     if($debug){ montage_profile::stop(); }//if
@@ -201,6 +204,14 @@ final class montage_core extends montage_base_static {
     if($debug){ montage_profile::stop(); }//if
     
   }//method
+  
+  /**
+   *  if {@link start()} has been called then this will be true, it provides a public
+   *  facing way to see if the core has been started previously
+   *  
+   *  @return boolean
+   */
+  static function isStarted(){ return self::$is_started; }//method
   
   /**
    *  create and return an instance of $class_name
@@ -701,6 +712,11 @@ final class montage_core extends montage_base_static {
       
   }//method
   
+  /**
+   *  try to load all the core information from cache
+   *  
+   *  @return boolean if core info was loaded return true      
+   */
   private static function loadCore(){
   
     $ret_bool = false;
@@ -725,6 +741,10 @@ final class montage_core extends montage_base_static {
   
   }//method
   
+  /**
+   *  set all the compiled core information into the cache so it can be loaded
+   *  with {@link loadCore()}
+   */        
   private static function setCore(){
   
     // save all the class maps into cache...
@@ -738,6 +758,74 @@ final class montage_core extends montage_base_static {
       )
     );
   
+  }//method
+  
+  /**
+   *  start the core classes and store them in the montage class, this will allow 
+   *  access to most of the montage features
+   *
+   *  @param  string  $controller the requested controller name
+   *  @param  string  $environment  the env that will be used
+   *  @param  boolean if debug is on or not
+   *  @param  string  $charset
+   *  @param  string  $timezone               
+   */
+  private static function startCoreClasses($controller,$environment,$debug,$charset,$timezone){
+  
+    // log starts first so startup problems can be logged...
+    $class_name = self::getCoreClassName('montage_log');
+    montage::setField('montage_log',new $class_name());
+    
+    $class_name = self::getCoreClassName('montage_request');
+    montage::setField(
+      'montage_request',
+      new $class_name(
+        $controller,
+        $environment,
+        self::getCustomPath(
+          self::getAppPath(),
+          'web'
+        )
+      )
+    );
+    
+    $class_name = self::getCoreClassName('montage_response');
+    montage::setField(
+      'montage_response',
+      new $class_name(
+        self::getCustomPath(
+          self::getAppPath(),
+          'view'
+        )
+      )
+    );
+    
+    $class_name = self::getCoreClassName('montage_settings');
+    montage::setField(
+      'montage_settings',
+      new $class_name(
+        $debug,
+        $charset,
+        $timezone
+      )
+    );
+    
+    $class_name = self::getCoreClassName('montage_url');
+    montage::setField('montage_url',new $class_name());
+    
+    // this will start the session...
+    $class_name = self::getCoreClassName('montage_session');
+    montage::setField(
+      'montage_session',
+      new $class_name(
+        self::getCustomPath(
+          self::getAppPath(),
+          'cache',
+          'session'
+        )
+      )
+    );
+
   }//method
 
 }//class     

@@ -13,77 +13,6 @@
 final class montage extends montage_base_static {
   
   /**
-   *  start the main montage instance, this will allow access to most of the montage features
-   *
-   *  @param  string  $controller the requested controller name
-   *  @param  string  $environment  the env that will be used
-   *  @param  boolean if debug is on or not
-   *  @param  string  $charset
-   *  @param  string  $timezone               
-   */
-  static function start($controller,$environment,$debug,$charset,$timezone){
-  
-    if(montage_core::isStarted()){
-      throw new RuntimeException('The framework was already started, no point in starting it again');
-    }//if
-    
-    // log starts first so startup problems can be logged...
-    $class_name = montage_core::getCoreClassName('montage_log');
-    self::setField('montage_log',new $class_name());
-    
-    $class_name = montage_core::getCoreClassName('montage_request');
-    self::setField(
-      'montage_request',
-      new $class_name(
-        $controller,
-        $environment,
-        montage_core::getCustomPath(
-          montage_core::getAppPath(),
-          'web'
-        )
-      )
-    );
-    
-    $class_name = montage_core::getCoreClassName('montage_response');
-    self::setField(
-      'montage_response',
-      new $class_name(
-        montage_core::getCustomPath(
-          montage_core::getAppPath(),
-          'view'
-        )
-      )
-    );
-    
-    $class_name = montage_core::getCoreClassName('montage_settings');
-    self::setField(
-      'montage_settings',
-      new $class_name(
-        $debug,
-        $charset,
-        $timezone
-      )
-    );
-    
-    $class_name = montage_core::getCoreClassName('montage_url');
-    self::setField('montage_url',new $class_name());
-    
-    // this will start the session...
-    $class_name = montage_core::getCoreClassName('montage_session');
-    self::setField(
-      'montage_session',
-      new $class_name(
-        montage_core::getCustomPath(
-          montage_core::getAppPath(),
-          'cache',
-          'session'
-        )
-      )
-    );
-    
-  }//method
-  
-  /**
    *  this is what will actually handle the request, 
    *  
    *  called from the main index.php
@@ -115,7 +44,7 @@ final class montage extends montage_base_static {
         
         }catch(montage_forward_exception $e){
           // we ignore the forward because the controller hasn't been called yet, but people
-          // might want to do the forward instead of all the montage_request::set* methods
+          // might want to do the forward instead of all the montage_request::setController* methods
         }//try/catch
         
       }//foreach
