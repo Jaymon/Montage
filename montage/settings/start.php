@@ -60,13 +60,23 @@ if(MONTAGE_DEBUG){
   require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_profile_class.php')));
 }//if
 
-// start the auto-loader...
-montage_core::start(
-  MONTAGE_CONTROLLER,
-  MONTAGE_ENVIRONMENT,
-  MONTAGE_DEBUG,
-  MONTAGE_CHARSET,
-  MONTAGE_TIMEZONE,
-  MONTAGE_PATH,
-  MONTAGE_APP_PATH
-);
+try{
+  
+  // start the auto-loader...
+  montage_core::start(
+    MONTAGE_CONTROLLER,
+    MONTAGE_ENVIRONMENT,
+    MONTAGE_DEBUG,
+    MONTAGE_CHARSET,
+    MONTAGE_TIMEZONE,
+    MONTAGE_PATH,
+    MONTAGE_APP_PATH
+  );
+  
+}catch(Exception $e){
+
+  // something failed in the core initialization, so get rid of cache...
+  montage_cache::kill();
+  throw $e;
+
+}//try/catch

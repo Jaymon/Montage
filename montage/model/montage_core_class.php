@@ -85,73 +85,91 @@ final class montage_core extends montage_base_static {
   
     // set the default autoloader...
     self::set(array(__CLASS__,'load'));
-    
-    // now we need to use all the start classes to initialize the app...
-    // the start classes follow a precedence order: Global, controller, and environment...
-    // we're looking for a class named "app" that is a child of montage_start...
-    // next, load the controller's "start" class...
-    // next, load all the plugins...
-    // finally, load the environment's "start" class...
-    $start_class_list = array('app',$controller);
-  
-    // profile...
-    if($debug){ montage_profile::start('set paths'); }//if
   
     // save the important paths...
     self::setFrameworkPath($framework_path);
     self::setAppPath($app_path);
     montage_cache::setPath(self::getCustomPath($app_path,'cache'));
     
-    // load the cache...
-    $cache_maps = montage_cache::get('montage_core:class_maps');
-    if(!empty($cache_maps)){
-      self::$core_class_map = $cache_maps['core_class_map'];
-      self::$parent_class_map = $cache_maps['parent_class_map'];
-      self::$class_map = $cache_maps['class_map'];
-    }//if
+    $loaded_from_cache = self::loadCore();
+    if(!$loaded_from_cache){
     
-    // load the default model directories...
-    self::setPath(self::getCustomPath($framework_path,'model'));
+      // profile...
+      if($debug){ montage_profile::start('build paths'); }//if
     
-    // include all the plugin paths, save all the start class names.
-    // We include these here before the app model path because they can extend core 
-    // but plugin classes should never extend app classes, but app classes can extend
-    // plugin classes...
-    $plugin_path_list = self::getPaths(self::getCustomPath($app_path,'plugins'),false);
-    foreach($plugin_path_list as $plugin_path){
+      // throughout building the paths, we need to compile a list of start classes.
+      // start classes are classes that extend montage_start.
+      // the start classes follow a precedence order: Global, plugins, controller, and environment...
+      // * Global is a class named "app"
+      // * plugins are name by what folder they are in (eg, [APP PATH]/plugins/foo/ the plugin is named foo)
+      // and the plugin start class is the class with the same name as the root folder
+      // (eg, class foo extends montage_start)
+      // * controller start class is a class with same name as $controller
+      // * environment controller is a class with the same name as $environment
+      $start_class_list = array('app');
       
-      $start_class_list[] = basename($plugin_path);
+      // load the default model directories...
+      self::setPath(self::getCustomPath($framework_path,'model'));
       
-      // find all the classes in the plugin path...
-      self::setPath($plugin_path);
-      
-    }//foreach
-    
-    self::setPath(self::getCustomPath($app_path,'model'));
-    
-    // load the controller...
-    $controller_path = self::getCustomPath($app_path,'controller',$controller);
-    self::setPath($controller_path);
-    
-    if(empty(self::$parent_class_map['MONTAGE_CONTROLLER'])){
-      throw new RuntimeException(
-        sprintf(
-          'the controller (%s) does not have any classes that extend "montage_controller" '
-          .'so no requests can be processed. Fix this by adding some classes that extend '
-          .'"montage_controller" in the "%s" directory. At the very least, you should have '
-          .'an index class that has a getIndex() method (eg, index::getIndex()) to fulfill '
-          .'default requests.',
-          $path,
-          $controller_path
-        )
+      // include all the plugin paths, save all the start class names.
+      // We include these here before the app model path because they can extend core 
+      // but plugin classes should never extend app classes, but app classes can extend
+      // plugin classes...
+      $plugin_path_list = array_merge(
+        self::getPaths(self::getCustomPath($framework_path,'plugins'),false),
+        self::getPaths(self::getCustomPath($app_path,'plugins'),false)
       );
+      foreach($plugin_path_list as $plugin_path){
+        
+        $plugin_name = basename($plugin_path);
+        
+        // find all the classes in the plugin path...
+        self::setPath($plugin_path);
+        
+        $start_class_name = self::getClassName($plugin_name);
+        if(!empty($start_class_name)){ $start_class_list[] = $start_class_name; }//if
+        
+      }//foreach
+      
+      // load the app model directory...
+      self::setPath(self::getCustomPath($app_path,'model'));
+    
+      // load the controller...
+      $controller_path = self::getCustomPath($app_path,'controller',$controller);
+      self::setPath($controller_path);
+      
+      if(empty(self::$parent_class_map['MONTAGE_CONTROLLER'])){
+        throw new RuntimeException(
+          sprintf(
+            'the controller (%s) does not have any classes that extend "montage_controller" '
+            .'so no requests can be processed. Fix this by adding some classes that extend '
+            .'"montage_controller" in the "%s" directory. At the very least, you should have '
+            .'an index class that has a getIndex() method (eg, index::getIndex()) to fulfill '
+            .'default requests.',
+            $controller,
+            $controller_path
+          )
+        );
+      }//if
+      
+      // set the main settings path...
+      self::setPath(self::getCustomPath($app_path,'settings'));
+      
+      $start_class_name = self::getClassName($controller);
+      if(!empty($start_class_name)){ $start_class_list[] = $start_class_name; }//if
+      
+      $start_class_name = self::getClassName($environment);
+      if(!empty($start_class_name)){ $start_class_list[] = $start_class_name; }//if
+      
+      self::setField('montage_core_start_class_list',$start_class_list);
+      
+      // save all the compiled core classes/paths into the cache...
+      self::setCore();
+      
+      // profile...
+      if($debug){ montage_profile::stop(); }//if
+    
     }//if
-    
-    // set the main settings path...
-    self::setPath(self::getCustomPath($app_path,'settings'));
-    
-    // profile...
-    if($debug){ montage_profile::stop(); }//if
     
     // profile...
     if($debug){ montage_profile::start('initialize core classes'); }//if
@@ -167,8 +185,8 @@ final class montage_core extends montage_base_static {
     // profile...
     if($debug){ montage_profile::start('settings'); }//if
     
-    // now actually start to get all the settings...
-    $start_class_list[] = $environment;
+    // now actually start the settings/start classes...
+    $start_class_list = self::getField('montage_core_start_class_list',array());
     $start_class_parent_key = 'MONTAGE_START';
     foreach($start_class_list as $start_class_name){
       self::getInstance($start_class_name,$start_class_parent_key);
@@ -397,15 +415,7 @@ final class montage_core extends montage_base_static {
       // now cache away...
       montage_cache::set($path,$class_map);
       
-      // save all the class maps into cache...
-      montage_cache::set(
-        'montage_core:class_maps',
-        array(
-          'core_class_map' => self::$core_class_map,
-          'parent_class_map' => self::$parent_class_map,
-          'class_map' => self::$class_map
-        )
-      );
+      self::setCore();
       
     }//if
     
@@ -497,7 +507,28 @@ final class montage_core extends montage_base_static {
     if(empty($class_map)){ return; }//if
   
     // first merge the $class_map into the global class map in case the autoloader is called...
-    self::$class_map = array_merge(self::$class_map,$class_map);
+    ///self::$class_map = array_merge(self::$class_map,$class_map);
+    foreach($class_map as $class_key => $map){
+    
+      if(isset(self::$class_map[$class_key])){
+      
+        throw new RuntimeException(
+          sprintf(
+            'The class (%s) at "%s" has the same name as the class (%s) at "%s"',
+            self::$class_map[$class_key]['class_name'],
+            self::$class_map[$class_key]['path'],
+            $class_map[$class_key]['class_name'],
+            $class_map[$class_key]['class_name']
+          )
+        );
+      
+      }else{
+      
+        self::$class_map[$class_key] = $map;
+      
+      }//if/else
+    
+    }//foreach
   
     foreach($class_map as $class_key => $map){
   
@@ -651,6 +682,7 @@ final class montage_core extends montage_base_static {
   
     // canary...
     if(empty($path)){ return array(); }//if
+    if(!is_dir($path)){ return array(); }//if
     
     $ret_list = glob(join(DIRECTORY_SEPARATOR,array($path,'*')),GLOB_ONLYDIR);
     if($go_deep){
@@ -664,9 +696,48 @@ final class montage_core extends montage_base_static {
       }//if
       
     }//if
-      
+    
     return $ret_list;
       
+  }//method
+  
+  private static function loadCore(){
+  
+    $ret_bool = false;
+  
+    // load the cache...
+    $cache_maps = montage_cache::get('montage_core:class_maps');
+    if(!empty($cache_maps)){
+    
+      // core primary...
+      self::$core_class_map = $cache_maps['core_class_map'];
+      self::$parent_class_map = $cache_maps['parent_class_map'];
+      self::$class_map = $cache_maps['class_map'];
+      
+      // core secondary...
+      self::setField('montage_core_start_class_list',$cache_maps['start_class_list']);
+      
+      $ret_bool = true;
+      
+    }//if
+  
+    return $ret_bool;
+  
+  }//method
+  
+  private static function setCore(){
+  
+    // save all the class maps into cache...
+    montage_cache::set(
+      'montage_core:class_maps',
+      array(
+        'core_class_map' => self::$core_class_map,
+        'parent_class_map' => self::$parent_class_map,
+        'class_map' => self::$class_map,
+        'start_class_list' => self::getField('montage_core_start_class_list',array())
+      )
+    );
+  
   }//method
 
 }//class     
