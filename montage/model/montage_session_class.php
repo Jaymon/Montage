@@ -261,30 +261,7 @@ class montage_session {
    */
   protected function setPath($path){
   
-    // make sure path isn't empty...
-    if(empty($path)){
-      throw new UnexpectedValueException('cannot save session to an empty $path');
-    }//if
-    
-    // make sure path is directory, try to create it if it isn't...
-    if(!is_dir($path)){
-      if(!mkdir($path,0755,true)){
-        throw new UnexpectedValueException(
-          sprintf('"%s" is not a valid directory and the attempt to create it failed.',$path)
-        );
-      }//if
-    }//if
-  
-    // make sure the path is writable...
-    if(!is_writable($path)){
-      throw new RuntimeException(sprintf('cannot write to $path (%s)',$path));
-    }//if
-      
-    // make sure path doesn't end with a slash...
-    if(mb_substr($path,-1) == DIRECTORY_SEPARATOR){
-      $path = mb_substr($path,0,-1);
-    }//if
-  
+    $path = montage_path::assure($path);
     $this->path = $path;
     return $path;
   

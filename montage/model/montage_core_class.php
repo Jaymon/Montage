@@ -90,9 +90,10 @@ final class montage_core extends montage_base_static {
     self::set(array(__CLASS__,'load'));
   
     // save the important paths...
-    self::setFrameworkPath($framework_path);
-    self::setAppPath($app_path);
-    montage_cache::setPath(self::getCustomPath($app_path,'cache'));
+    montage_path::setFramework($framework_path);
+    montage_path::setApp($app_path);
+    montage_path::setCache(montage_path::get($app_path,'cache'));
+    montage_cache::setPath(montage_path::getCache());
     
     $loaded_from_cache = self::loadCore();
     if(!$loaded_from_cache){
@@ -112,15 +113,15 @@ final class montage_core extends montage_base_static {
       $start_class_list = array('app');
       
       // load the default model directories...
-      self::setPath(self::getCustomPath($framework_path,'model'));
+      self::setPath(montage_path::get($framework_path,'model'));
       
       // include all the plugin paths, save all the start class names.
       // We include these here before the app model path because they can extend core 
       // but plugin classes should never extend app classes, but app classes can extend
       // plugin classes...
       $plugin_path_list = array_merge(
-        self::getPaths(self::getCustomPath($framework_path,'plugins'),false),
-        self::getPaths(self::getCustomPath($app_path,'plugins'),false)
+        montage_path::getDirectories(montage_path::get($framework_path,'plugins'),false),
+        montage_path::getDirectories(montage_path::get($app_path,'plugins'),false)
       );
       foreach($plugin_path_list as $plugin_path){
         
@@ -135,10 +136,10 @@ final class montage_core extends montage_base_static {
       }//foreach
       
       // load the app model directory...
-      self::setPath(self::getCustomPath($app_path,'model'));
+      self::setPath(montage_path::get($app_path,'model'));
     
       // load the controller...
-      $controller_path = self::getCustomPath($app_path,'controller',$controller);
+      $controller_path = montage_path::get($app_path,'controller',$controller);
       self::setPath($controller_path);
       
       if(empty(self::$parent_class_map['MONTAGE_CONTROLLER'])){
@@ -156,7 +157,7 @@ final class montage_core extends montage_base_static {
       }//if
       
       // set the main settings path...
-      self::setPath(self::getCustomPath($app_path,'settings'));
+      self::setPath(montage_path::get($app_path,'settings'));
       
       $start_class_name = self::getClassName($controller);
       if(!empty($start_class_name)){ $start_class_list[] = $start_class_name; }//if
@@ -368,34 +369,6 @@ final class montage_core extends montage_base_static {
     return $ret_bool;
   
   }//method
-  
-  /**
-   *  set the montage root path
-   *  
-   *  @param  string  $val
-   */
-  static private function setFrameworkPath($val){ self::setField('montage_framework_path',$val); }//method
-  
-  /**
-   *  get the montage root path
-   *  
-   *  @return string
-   */
-  static private function getFrameworkPath(){ return self::getField('montage_framework_path',''); }//method
-  
-  /**
-   *  set the montage app root path
-   *  
-   *  @param  string  $val
-   */
-  static private function setAppPath($val){ self::setField('montage_app_path',$val); }//method
-  
-  /**
-   *  get the montage app root path
-   *  
-   *  @return string
-   */
-  static function getAppPath(){ return self::getField('montage_app_path',''); }//method
 
   /**
    *  set a path that will be used to auto load classes
@@ -432,19 +405,6 @@ final class montage_core extends montage_base_static {
     
     return $path;
   
-  }//method
-
-  /**
-   *  given multiple path bits, build a custom path
-   *  
-   *  @example  self::getCustomPath('foo','bar'); // -> foo/bar
-   *  
-   *  @param  $args,... one or more path bits
-   *  @return string
-   */
-  static function getCustomPath(){
-    $path_bits = func_get_args();
-    return join(DIRECTORY_SEPARATOR,$path_bits);
   }//method
 
   /**
@@ -682,37 +642,6 @@ final class montage_core extends montage_base_static {
   }//method
   
   /**
-   *  recursively get all the child directories in a given directory
-   *  
-   *  @param  string  $path a valid directory path
-   *  @param  boolean $go_deep  if true, then get all the directories   
-   *  @return array an array of sub-directories, 1 level deep if $go_deep = false, otherwise
-   *                all directories   
-   */
-  private static function getPaths($path,$go_deep = true){
-  
-    // canary...
-    if(empty($path)){ return array(); }//if
-    if(!is_dir($path)){ return array(); }//if
-    
-    $ret_list = glob(join(DIRECTORY_SEPARATOR,array($path,'*')),GLOB_ONLYDIR);
-    if($go_deep){
-    
-      if(!empty($ret_list)){
-        
-        foreach($ret_list as $path){
-          $ret_list = array_merge($ret_list,$this->getPaths($path));
-        }//foreach
-        
-      }//if
-      
-    }//if
-    
-    return $ret_list;
-      
-  }//method
-  
-  /**
    *  try to load all the core information from cache
    *  
    *  @return boolean if core info was loaded return true      
@@ -782,8 +711,8 @@ final class montage_core extends montage_base_static {
       new $class_name(
         $controller,
         $environment,
-        self::getCustomPath(
-          self::getAppPath(),
+        montage_path::get(
+          montage_path::getApp(),
           'web'
         )
       )
@@ -793,8 +722,8 @@ final class montage_core extends montage_base_static {
     montage::setField(
       'montage_response',
       new $class_name(
-        self::getCustomPath(
-          self::getAppPath(),
+        montage_path::get(
+          montage_path::getApp(),
           'view'
         )
       )
@@ -818,8 +747,8 @@ final class montage_core extends montage_base_static {
     montage::setField(
       'montage_session',
       new $class_name(
-        self::getCustomPath(
-          self::getAppPath(),
+        montage_path::get(
+          montage_path::getApp(),
           'cache',
           'session'
         )

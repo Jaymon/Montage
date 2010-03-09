@@ -51,8 +51,9 @@ if(!defined('MONTAGE_APP_PATH')){
 }//if
 
 // include the autoloader (and supporting files)...
-require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_cache_class.php')));
 require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_base_static_class.php')));
+require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','help','montage_path_class.php')));
+require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_cache_class.php')));
 require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_core_class.php')));
 
 // include the profile cache so we can see how long core takes to run...
