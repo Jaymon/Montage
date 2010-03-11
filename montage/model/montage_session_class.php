@@ -76,6 +76,9 @@ class montage_session {
         // save it back into the session...
         $this->setField('montage_session_flash',$flash_map);
         
+        // load any request vars back in...
+        $this->loadRequest();
+        
       }//if/else
       
     }//if
@@ -216,43 +219,41 @@ class montage_session {
    *  be better off in request, the key is figuring out when to load. I'm thinking urls
    *  to see if something needs to be loaded
    */
-  /* function setRequest(){
+  function setRequest(){
   
     $field_map = array();
     if(!empty($_GET)){ $field_map['_GET'] = $_GET; }//if
     if(!empty($_POST)){ $field_map['_POST'] = $_POST; }//if
-    if(!empty($field_map)){ $this->setField(self::FIELD_REQUEST,$field_map); }//if
+    if(!empty($field_map)){ $this->setFlash(self::FIELD_REQUEST,$field_map); }//if
   
-  }//method */
+  }//method
   
   /**
    *  restore get and post vars that could've been set with {@link setRequest()}
    */
-  /* protected function loadRequest(){
+  protected function loadRequest(){
     
-    // canary...
-    if(!$this->hasField(self::FIELD_REQUEST)){ return; }//if
+    $field_map = $this->getFlash(self::FIELD_REQUEST,array());
     
-    $field_map = $this->getField(self::FIELD_REQUEST,array());
-    
-    if(!empty($field_map['_GET'])){
-      foreach($field_map['_GET'] as $key => $val){
-        // only reset the value if isn't set...
-        if(!isset($_GET[$key])){ $_GET[$key] = $val; }//if
-      }//foreach
+    if(!empty($field_map)){
+      
+      if(!empty($field_map['_GET'])){
+        foreach($field_map['_GET'] as $key => $val){
+          // only reset the value if isn't set...
+          if(!isset($_GET[$key])){ $_GET[$key] = $val; }//if
+        }//foreach
+      }//if
+      
+      if(!empty($field_map['_POST'])){
+        foreach($field_map['_POST'] as $key => $val){
+          // only reset the value if isn't set...
+          if(!isset($_POST[$key])){ $_POST[$key] = $val; }//if
+        }//foreach
+      }//if
+      
     }//if
     
-    if(!empty($field_map['_POST'])){
-      foreach($field_map['_POST'] as $key => $val){
-        // only reset the value if isn't set...
-        if(!isset($_POST[$key])){ $_POST[$key] = $val; }//if
-      }//foreach
-    }//if
-    
-    // get rid of the now restored request...
-    $this->killField(self::REQUEST);
-    
-  }//method */
+  }//method
   
   /**
    *  set the cache path, make sure it's valid

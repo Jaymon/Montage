@@ -75,7 +75,7 @@ class montage_response extends montage_base {
     // canary...
     if(!$this->hasTemplate()){
       throw UnexpectedValueException(
-        sprintf('%s has no template set and it is trying to create the template',__CLASS__)
+        sprintf('%s has no template set and it is trying to instantiate the template class',__CLASS__)
       );
     }//if
     
@@ -96,7 +96,9 @@ class montage_response extends montage_base {
   
     if(empty($url)){ return; }//if
   
-    montage::getSession()->resetFlash();
+    $session = montage::getSession();
+    $session->setRequest();
+    $session->resetFlash();
   
     if(headers_sent()){
   

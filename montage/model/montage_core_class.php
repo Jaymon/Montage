@@ -264,6 +264,52 @@ final class montage_core extends montage_base_static {
   }//method
   
   /**
+   *  get the absolute most child for the given parent 
+   *  (eg, the last class to extend any class that extends the passed in $parent_class_key)
+   *  
+   *  @param  string  $parent_class_key
+   *  @return string  the child class name
+   */
+  static function getChildClassName($parent_class_key){
+  
+    $ret_str = '';
+  
+    $parent_class_key = self::getClassKey($parent_class_key);
+    if(isset(self::$parent_class_map[$parent_class_key])){
+    
+      $child_class_list = self::$parent_class_map[$parent_class_key];
+      foreach($child_class_list as $child_class_key){
+      
+        if(!isset(self::$parent_class_map[$child_class_key])){
+        
+          if(empty($ret_str)){
+            $ret_str = $child_class_key;
+          }else{
+            throw new DomainException(
+              sprintf(
+                'the given $parent_class_key (%s) has divergent children (eg, two child classes that are not related)',
+                $parent_class_key
+              )
+            );
+          }//if/else
+        
+        }//if
+      
+      }//foreach
+    
+    }else{
+    
+      throw new RuntimeException(
+        sprintf('no class extends $parent_class_key (%s)',$parent_class_key)
+      );
+      
+    }//if/else
+  
+    return self::getClassName($ret_str);
+  
+  }//method
+  
+  /**
    *  get the class name for a key core class
    *  
    *  the reason why this method exists is because you can extend certain core classes
@@ -705,6 +751,28 @@ final class montage_core extends montage_base_static {
     $class_name = self::getCoreClassName('montage_log');
     montage::setField('montage_log',new $class_name());
     
+    // this will start the session...
+    $si_instance = null;
+    try{
+    
+      $si_class_name = self::getChildClassName('montage_session_interface');
+      ///$si_instance = new $si_class_name();
+      
+    }catch(RuntimeException $e){}//try/catch
+    
+    $class_name = self::getCoreClassName('montage_session');
+    montage::setField(
+      'montage_session',
+      new $class_name(
+        montage_path::get(
+          montage_path::getApp(),
+          'cache',
+          'session'
+        )
+      )
+    );
+    
+    
     $class_name = self::getCoreClassName('montage_request');
     montage::setField(
       'montage_request',
@@ -741,19 +809,6 @@ final class montage_core extends montage_base_static {
     
     $class_name = self::getCoreClassName('montage_url');
     montage::setField('montage_url',new $class_name());
-    
-    // this will start the session...
-    $class_name = self::getCoreClassName('montage_session');
-    montage::setField(
-      'montage_session',
-      new $class_name(
-        montage_path::get(
-          montage_path::getApp(),
-          'cache',
-          'session'
-        )
-      )
-    );
 
   }//method
 
