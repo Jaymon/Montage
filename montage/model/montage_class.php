@@ -33,7 +33,8 @@ final class montage extends montage_base_static {
       // profile...
       if($debug){ montage_profile::start('filters start'); }//if
       
-      $filter_list = montage_core::getFilters();
+      $filter_list = montage_core::getFilterClassNames();
+      
       // get all the filters and start them...
       ///$filter_list = array_map(array('montage_core','getInstance'),montage_core::getFilters());
       foreach($filter_list as $key => $filter_class_name){

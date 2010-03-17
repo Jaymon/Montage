@@ -3,7 +3,14 @@
 /**
  *  handle autoloading duties. While montage is the master class, this class does
  *  all the internal heavy lifting and can be mostly left alone unless you want to
- *  set more class paths (use {@link setPath()}) than what are used by default.   
+ *  set more class paths (use {@link setPath()}) than what are used by default.
+ *  
+ *  class paths checked by default:
+ *    [MONTAGE DIRECTORY]/model
+ *    [MONTAGE DIRECTORY]/plugins
+ *    [APP DIRECTORY]/plugins  
+ *    [APP DIRECTORY]/model
+ *    [APP DIRECTORY]/controller  
  *   
  *  @version 0.1
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -348,11 +355,13 @@ final class montage_core extends montage_base_static {
   }//method
   
   /**
-   *  get all the filters that the app has defined
+   *  get all the filter classes that the app has defined
    *  
+   *  this will only return final filters (eg, nothing extends it)
+   *      
    *  @return array a list of class names that extend montage_filter
    */
-  static function getFilters(){
+  static function getFilterClassNames(){
   
     // canary...
     if(empty(self::$parent_class_map['MONTAGE_FILTER'])){ return array(); }//if
@@ -361,7 +370,9 @@ final class montage_core extends montage_base_static {
   
     $filter_list = self::$parent_class_map['MONTAGE_FILTER'];
     foreach($filter_list as $class_key){
-      $ret_list[] = self::$class_map[$class_key]['class_name'];
+      if(!isset(self::$parent_class_map[$class_key])){
+        $ret_list[] = self::$class_map[$class_key]['class_name'];
+      }//if
     }//method
   
     return $ret_list;
