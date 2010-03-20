@@ -11,6 +11,33 @@
 class montage_text {
 
   /**
+   *  return true if a string is binary
+   *   
+   *  this method is a cross between http://bytes.com/topic/php/answers/432633-how-tell-if-file-binary
+   *  and this: http://groups.google.co.uk/group/comp.lang.php/msg/144637f2a611020c?dmode=source
+   *  but I'm still not completely satisfied that it is 100% accurate, though it seems to be
+   *  accurate for my purposes.
+   *  
+   *  @param  string  $val  the val to check to see if contains binary characters
+   *  @return boolean true if binary, false if not
+   */
+  static function isBinary($val){
+  
+    $val = (string)$val;
+    $ret_bool = false;
+    $not_printable_count = 0;
+    for($i = 0, $max = strlen($val); $i < $max ;$i++){
+      if(ord($val[$i]) === 0){ $ret_bool = true; break; }//if
+      if(!ctype_print($val[$i])){
+        if(++$not_printable_count > 5){ $ret_bool = true; break; }//if
+      }//if 
+    }//for
+    
+    return $ret_bool;
+  
+  }//method
+
+  /**
    *  recursively strip all the slashes from a $val
    *  
    *  @param  mixed $val
