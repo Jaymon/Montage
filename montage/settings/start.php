@@ -81,3 +81,6 @@ try{
   throw $e;
 
 }//try/catch
+
+// actually handle the request...
+montage::handle();

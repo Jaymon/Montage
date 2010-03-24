@@ -21,6 +21,55 @@ class montage_response extends montage_base {
   const CONTENT_ATOM = 'application/atom+xml';
   
   /**
+   *  hold the status code mapped to the default message
+   *  
+   *  @var  array
+   */
+  protected $status_map = array(
+    100 => 'Continue',
+    101 => 'Switching Protocols',
+    200 => 'OK',
+    201 => 'Created',
+    202 => 'Accepted',
+    203 => 'Non-Authoritative Information',
+    204 => 'No Content',
+    205 => 'Reset Content',
+    206 => 'Partial Content',
+    300 => 'Multiple Choices',
+    301 => 'Moved Permanently',
+    302 => 'Found',
+    303 => 'See Other',
+    304 => 'Not Modified',
+    305 => 'Use Proxy',
+    306 => '(Unused)',
+    307 => 'Temporary Redirect',
+    400 => 'Bad Request',
+    401 => 'Unauthorized',
+    402 => 'Payment Required',
+    403 => 'Forbidden',
+    404 => 'Not Found',
+    405 => 'Method Not Allowed',
+    406 => 'Not Acceptable',
+    407 => 'Proxy Authentication Required',
+    408 => 'Request Timeout',
+    409 => 'Conflict',
+    410 => 'Gone',
+    411 => 'Length Required',
+    412 => 'Precondition Failed',
+    413 => 'Request Entity Too Large',
+    414 => 'Request-URI Too Long',
+    415 => 'Unsupported Media Type',
+    416 => 'Requested Range Not Satisfiable',
+    417 => 'Expectation Failed',
+    500 => 'Internal Server Error',
+    501 => 'Not Implemented',
+    502 => 'Bad Gateway',
+    503 => 'Service Unavailable',
+    504 => 'Gateway Timeout',
+    505 => 'HTTP Version Not Supported'
+  );
+  
+  /**
    *  holds the template instance that will be used to render the response
    *
    *  @var  montage_template   
@@ -43,7 +92,48 @@ class montage_response extends montage_base {
   function setContentType($val){ return $this->setField('mn_response_content_type',$val); }//method
   function getContentType(){ return $this->getField('mn_response_content_type',self::CONTENT_HTML); }//method
   function hasContentType(){ return $this->hasField('mn_response_content_type'); }//method
-
+  
+  /**
+   *  the status code and message
+   *  
+   *  @param  integer $code one of the $status_map keys
+   *  @param  string  $msg  if you want something different than the default message, set this            
+   */
+  function setStatus($code,$msg = ''){
+    
+    // canary...
+    if(empty($code)){ throw new InvalidArgumentException('$code cannot be empty'); }//if
+    if(!isset($this->status_map[$code])){
+      throw new UnexpectedValueException(
+        sprintf(
+          '$code: %s does not match any key in $status_map: %s',
+          $code,
+          print_r($this->status_map,1)
+        )
+      );
+    }//if
+    
+    if(empty($msg)){
+      $msg = $this->status_map[$code];
+    }//if
+    
+    $this->setField('mn_response_status_code',$code);
+    $this->setField('mn_response_status_msg',$msg);
+    return $code;
+    
+  }//method
+  
+  function getStatus(){
+    return sprintf(
+      '%s %s',
+      $this->getStatusCode(),
+      $this->getField('mn_response_status_msg',$this->status_map[200])
+    );
+  }//method
+  
+  function getStatusCode(){ return $this->getField('mn_response_status_code',200); }//method
+  function isStatusCode($val){ return $this->isField('mn_response_status_code',$val); }//method
+  
   /**
    *  hold the template the response will use to render the response
    */

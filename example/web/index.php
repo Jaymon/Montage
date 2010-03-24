@@ -18,16 +18,6 @@ $start_path = join(
 );
 require($start_path);
 
-try{
-
-  montage::handle();
-  
-}catch(Exception $e){
-
-  out::e($e);
-
-}//try/catch
-
 /*
 // clear the cache while we are developing...
 montage_profile::start('kill cache');

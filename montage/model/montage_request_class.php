@@ -28,20 +28,31 @@ class montage_request extends montage_base {
     $this->setField(self::FIELD_CONTROLLER,$controller);
     $this->setField(self::FIELD_ENVIRONMENT,$environment);
     $this->setRequestRoot($request_root_path);
+    $path_list = array();
     
     // are we in CLI?
     if(strncasecmp(PHP_SAPI, 'cli', 3) === 0){
     
       $this->setMethod('CLI');
-      throw new exception('in CLI, tbi');
       
       // make all the command line arguments available through the field methods...
       if(!empty($_SERVER['argv'])){
-        $this->setFields($_SERVER['argv']);
+        
+        $arg_map = array_slice($_SERVER['argv'],1); // get rid of the script that was called
+        if(!empty($arg_map)){
+        
+          if($arg_map[0][0] != '-'){
+            $path_list = preg_split('#\\/#u',$arg_map[0]);
+            $arg_map = array_slice($arg_map,1); // strip off the controller path
+          }//if
+        
+          $arg_map = $this->parseArgv($arg_map);
+          $this->setFields($arg_map);
+
+        }//if
+        
       }//if
-      
-      // @todo  you can use the server args to set the controller, method, and args
-      
+
     }else{
       
       // get the root of the request...
@@ -58,42 +69,6 @@ class montage_request extends montage_base {
       // this will contain no fake path parts like controller class and controller method...
       $base_path_list = preg_split('#\\/#u',$this->getServerField('DOCUMENT_ROOT'));
       $base_path_list = array_values(array_filter(array_diff($base_path_list,$root_path_list)));
-
-      // find the controller, method, and method arguments...
-      $controller_method_args = $path_list;
-      if(!empty($path_list[0])){
-        
-        $controller_class = montage_core::getClassName($path_list[0]);
-        
-        if(montage_core::isController($controller_class)){
-          
-          $this->setControllerClass($controller_class);
-          
-          if(!empty($path_list[1])){
-          
-            $controller_method = $this->getControllerMethodName($path_list[1]);
-          
-            // if the controller method does not exist then use the default...
-            if(method_exists($controller_class,$controller_method)){
-            
-              $this->setControllerMethod($controller_method);
-              $controller_method_args = array_slice($path_list,2);
-              
-              
-            }else{
-              $controller_method_args = array_slice($path_list,1);
-            }//if/else
-            
-          }else{
-            $controller_method_args = array_slice($path_list,1);
-          }//if/else
-          
-        }//if/else
-        
-      }//if
-      
-      $this->setControllerMethodArgs($controller_method_args);
-      $this->setFields($path_list);
       
       // make all the different vars available through the field methods...
       if(!empty($_COOKIE)){ $this->setFields($_COOKIE); }//if
@@ -113,33 +88,10 @@ class montage_request extends montage_base {
       
       }//if/else
       
-      /*
-      // go through looking for form classes so we can wrap them in a form instance...
-      foreach($field_map as $field_key => $field_val){
-      
-        if(is_array($field_val)){
-        
-          if(montage_core::isForm($field_key)){
-          
-            $this->setField('montage_request_form',$field_key);
-          
-          }//if
-        
-        }//if
-      
-      }//method
-      
-      $this->setFields($field_map);
-      */
-      
-      $this->setField('montage_request_path_list',$path_list);
-      
       if(!$this->hasHost()){
         $host = $this->getServerField(array('HTTP_X_FORWARDED_HOST','HTTP_HOST'),'');
         $this->setHost($host);
       }//if
-      
-      $this->setPath(join('/',$path_list));
       
       // NOTE: REQUEST_URI is the best since it includes any query string, you can't just append
       // the query string to the others either because if you use mod_rewrite, everything will get
@@ -166,8 +118,72 @@ class montage_request extends montage_base {
       
     }//if/else
     
+    $this->setField('montage_request_path_list',$path_list);
+    $this->setPath(join('/',$path_list));
+    
+    // find the controller, method, and method arguments...
+    $controller_method_args = $path_list;
+    if(!empty($path_list[0])){
+      
+      $controller_class = montage_core::getClassName($path_list[0]);
+      
+      if(montage_core::isController($controller_class)){
+        
+        $this->setControllerClass($controller_class);
+        
+        if(!empty($path_list[1])){
+        
+          $controller_method = $this->getControllerMethodName($path_list[1]);
+        
+          // if the controller method does not exist then use the default...
+          if(method_exists($controller_class,$controller_method)){
+          
+            $this->setControllerMethod($controller_method);
+            $controller_method_args = array_slice($path_list,2);
+            
+          }else{
+          
+            $controller_method_args = array_slice($path_list,1);
+            
+          }//if/else
+          
+        }else{
+          $controller_method_args = array_slice($path_list,1);
+        }//if/else
+        
+      }//if/else
+      
+    }//if
+    
+    $this->setControllerMethodArgs($controller_method_args);
+    $this->setFields($path_list);
+    
     $this->start();
     
+  }//method
+  
+  /**
+   *  handle the request
+   *  
+   *  this will use the set controller, method, and args to instantiate the controller
+   *  and handle the request. Basically calling: 
+   *  getControllerClass()::getControllerMethodName()(getControllerMethodArgs) or
+   *  $controller::$method($args)
+   *  
+   *  @return boolean|string  if boolean, true will mean response was successful
+   *                          if string, what to return to the user
+   */
+  function handle(){
+  
+    // create the controller and call its requested method...
+    $controller_class_name = $this->getControllerClass();
+    $controller_method = $this->getControllerMethod();
+    $controller_method_args = $this->getControllerMethodArgs();
+    $controller = new $controller_class_name();
+    $ret_mixed = call_user_func_array(array($controller,$controller_method),$controller_method_args);
+    $controller->stop();
+    return $ret_mixed;
+  
   }//method
   
   /**
@@ -206,7 +222,21 @@ class montage_request extends montage_base {
   }//method
   function hasForm($form_name){ return $this->hasField($form_name); }//method
   
+  /**
+   *  returns the controller that will be used in this request
+   *  
+   *  the controller is usually the folder in the /controller folder where all the
+   *  controller classes are found
+   *  
+   *  @return string  the controller name
+   */
   final function getController(){ return $this->getField(self::FIELD_CONTROLLER,''); }//method
+  
+  /**
+   *  the environment is usually something like: prod, dev, debug, etc.
+   *  
+   *  @return string  the name of the environment being used
+   */
   final function getEnvironment(){ return $this->getField(self::FIELD_ENVIRONMENT,''); }//method
 
   /**
@@ -252,6 +282,18 @@ class montage_request extends montage_base {
   function getControllerClass(){ return $this->getField('montage_request_controller_class',$this->getDefaultControllerClass()); }//method
   function hasControllerClass(){ return $this->hasField('montage_request_controller_class'); }//method
   protected function getDefaultControllerClass(){ return 'index'; }//method
+  
+  /**
+   *  return true if the passed in $val is the name of the right type of controller for the request
+   *  
+   *  @param  string  $val  a potential controller class name      
+   *  @return boolean true if $val is the right type of controller
+   */
+  protected function isControllerClass($val){
+    return $this->isCli()
+      ? montage_core::isCliController($val)
+      : montage_core::isWebController($val);
+  }//method
   
   /**
    *  the requested controller method that will be used to answer this request
@@ -448,14 +490,30 @@ class montage_request extends montage_base {
    *  forwards this request to another $controller::$method
    *  
    *  this is internally (ie, browser url will not change). If you want to send the visitor
-   *  to another url then call montage_response::redirect()
+   *  to another url then call {@link montage_response::redirect()}
    *
+   *  @see  setHandler()   
    *  @param  string  $controller the name of the controller child to forward to (this can be a class_key also)
    *  @param  string  $method the method of $controller that will be called
    *  @param  array $args a list of values to pass into the $controller::$method     
    *  @throws montage_forward_exception if $controller and $method are valid
    */
   function forward($controller,$method,$args = array()){
+  
+    if($this->setHandler($controller,$method,$args)){
+      throw new montage_forward_exception();
+    }//if
+  
+  }//method
+  
+  /**
+   *  sets the $controller::$method
+   *  
+   *  @param  string  $controller the name of the controller child (this can be a class_key also)
+   *  @param  string  $method the method of $controller that will be called
+   *  @param  array $args a list of values to pass into the $controller::$method
+   */
+  function setHandler($controller,$method,$args = array()){
   
     // canary...
     if(empty($controller)){
@@ -464,8 +522,12 @@ class montage_request extends montage_base {
     if(empty($method)){
       throw new UnexpectedValueException('$method cannot be empty');
     }//if
-    if(!montage_core::isController($controller)){
-      throw new DomainException('$controller is not a valid montage_controller child');
+    if(!$this->isControllerClass($controller)){
+      throw new DomainException(
+        '$controller is not the right type, if this is a WEB request it needs to '
+        .'extend montage_web_controller. If it is a CLI request, then it needs to '
+        .'extend montage_cli_controller.'
+      );
     }//if
     if(!method_exists($controller,$method)){
       throw new BadMethodCallException(sprintf('%s::%s does not exist',$controller,$method));
@@ -474,7 +536,7 @@ class montage_request extends montage_base {
     $this->setControllerClass($controller);
     $this->setControllerMethod($this->getControllerMethodName($method));
     $this->setControllerMethodArgs($args);
-    throw new montage_forward_exception();
+    return true;
   
   }//method
   
@@ -537,6 +599,41 @@ class montage_request extends montage_base {
     }//if/else
   
     return $method_name;
+  
+  }//method
+  
+  /**
+   *  function to make passing arguments into a CLI script easier
+   *  
+   *  an argument has to be in the form: --name=val or --name if you want name to be true
+   *  
+   *  @param  array $argv the values passed into php from the commmand line 
+   *  @return array the key/val mappings that were parsed from --name=val command line arguments
+   */
+  private function parseArgv($argv)
+  {
+    // canary...
+    if(empty($argv)){ return array(); }//if
+  
+    $ret_map = array();
+  
+    foreach($argv as $arg){
+      // canary...
+      if((!isset($arg[0]) || !isset($arg[1])) || ($arg[0] != '-') || ($arg[1] != '-')){
+        throw new InvalidArgumentException(
+          sprintf('%s does not conform to the --name=value convention',$arg)
+        );
+      }//if
+    
+      $arg_bits = explode('=',$arg,2);
+      // strip off the dashes...
+      $name = mb_substr($arg_bits[0],2);
+      $val = isset($arg_bits[1]) ? $arg_bits[1] : true;
+      $ret_map[$name] = $val;
+    
+    }//foreach
+  
+    return $ret_map;
   
   }//method
 

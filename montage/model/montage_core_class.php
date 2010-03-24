@@ -386,9 +386,27 @@ final class montage_core extends montage_base_static {
    *  @return boolean true if $class_name is the name of a controller child
    */
   static function isController($class_name){
-    // canary...
-    if(empty(self::$parent_class_map['MONTAGE_CONTROLLER'])){ return false; }//if
     return self::isChild($class_name,'MONTAGE_CONTROLLER');
+  }//method
+  
+  /**
+   *  return true if the given $class_name extends the montage_web_controller class
+   *  
+   *  @param  string  $class_name
+   *  @return boolean true if $class_name is the name of a controller child
+   */
+  static function isWebController($class_name){
+    return self::isChild($class_name,'MONTAGE_WEB_CONTROLLER');
+  }//method
+  
+  /**
+   *  return true if the given $class_name extends the montage_cli_controller class
+   *  
+   *  @param  string  $class_name
+   *  @return boolean true if $class_name is the name of a controller child
+   */
+  static function isCliController($class_name){
+    return self::isChild($class_name,'MONTAGE_CLI_CONTROLLER');
   }//method
   
   /**
@@ -398,8 +416,6 @@ final class montage_core extends montage_base_static {
    *  @return boolean true if $class_name is the name of a montage_form child
    */
   static function isForm($class_name){
-    // canary...
-    if(empty(self::$parent_class_map['MONTAGE_FORM'])){ return false; }//if
     return self::isChild($class_name,'MONTAGE_FORM');
   }//method
   
@@ -415,6 +431,7 @@ final class montage_core extends montage_base_static {
     // canary...
     if(empty($child_class_name)){ return false; }//if
     if(empty($parent_class_name)){ return false; }//if
+    if(empty(self::$parent_class_map[$parent_class_name])){ return false; }//if
   
     $ret_bool = false;
     $child_class_key = self::getClassKey($child_class_name);
