@@ -222,8 +222,12 @@ class montage_session {
   function setRequest(){
   
     $field_map = array();
-    if(!empty($_GET)){ $field_map['_GET'] = $_GET; }//if
-    if(!empty($_POST)){ $field_map['_POST'] = $_POST; }//if
+    if(!empty($_GET)){
+      $field_map['_GET'] = empty($field_map['_GET']) ? $_GET : array_merge($field_map['_GET'],$_GET);
+    }//if
+    if(!empty($_POST)){
+      $field_map['_POST'] = empty($field_map['_POST']) ? $_POST : array_merge($field_map['_POST'],$_POST);
+    }//if
     if(!empty($field_map)){ $this->setFlash(self::FIELD_REQUEST,$field_map); }//if
   
   }//method

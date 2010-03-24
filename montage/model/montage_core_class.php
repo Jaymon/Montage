@@ -96,13 +96,16 @@ final class montage_core extends montage_base_static {
     // set the default autoloader...
     self::set(array(__CLASS__,'load'));
   
+    // save important fields...
+    self::setField('montage_core_controller',$controller); // for caching
+  
     // save the important paths...
     montage_path::setFramework($framework_path);
     montage_path::setApp($app_path);
     montage_path::setCache(montage_path::get($app_path,'cache'));
     montage_cache::setPath(montage_path::getCache());
     
-    $loaded_from_cache = self::loadCore();
+    $loaded_from_cache = self::loadCore($controller);
     if(!$loaded_from_cache){
     
       // profile...
@@ -111,7 +114,7 @@ final class montage_core extends montage_base_static {
       // throughout building the paths, we need to compile a list of start classes.
       // start classes are classes that extend montage_start.
       // the start classes follow a precedence order: Global, plugins, controller, and environment...
-      // * Global is a class named "app"
+      // * Global is a class named "app" it can't be named "start" because of the start() method trying to override __construct()
       // * plugins are name by what folder they are in (eg, [APP PATH]/plugins/foo/ the plugin is named foo)
       // and the plugin start class is the class with the same name as the root folder
       // (eg, class foo extends montage_start)
@@ -175,7 +178,7 @@ final class montage_core extends montage_base_static {
       self::setField('montage_core_start_class_list',$start_class_list);
       
       // save all the compiled core classes/paths into the cache...
-      self::setCore();
+      self::setCore($controller);
       
       // profile...
       if($debug){ montage_profile::stop(); }//if
@@ -271,20 +274,20 @@ final class montage_core extends montage_base_static {
   }//method
   
   /**
-   *  get the absolute most child for the given parent 
-   *  (eg, the last class to extend any class that extends the passed in $parent_class_key)
+   *  get the absolute most child for the given class
+   *  (eg, the last class to extend any class that extends the passed in $class_key)
    *  
    *  @param  string  $parent_class_key
    *  @return string  the child class name
    */
-  static function getChildClassName($parent_class_key){
+  static function getBestClassName($class_key){
   
     $ret_str = '';
   
-    $parent_class_key = self::getClassKey($parent_class_key);
-    if(isset(self::$parent_class_map[$parent_class_key])){
+    $class_key = self::getClassKey($class_key);
+    if(isset(self::$parent_class_map[$class_key])){
     
-      $child_class_list = self::$parent_class_map[$parent_class_key];
+      $child_class_list = self::$parent_class_map[$class_key];
       foreach($child_class_list as $child_class_key){
       
         if(!isset(self::$parent_class_map[$child_class_key])){
@@ -294,8 +297,8 @@ final class montage_core extends montage_base_static {
           }else{
             throw new DomainException(
               sprintf(
-                'the given $parent_class_key (%s) has divergent children (eg, two child classes that are not related)',
-                $parent_class_key
+                'the given $class_key (%s) has divergent children (eg, two child classes that are not related)',
+                $class_key
               )
             );
           }//if/else
@@ -306,9 +309,7 @@ final class montage_core extends montage_base_static {
     
     }else{
     
-      throw new RuntimeException(
-        sprintf('no class extends $parent_class_key (%s)',$parent_class_key)
-      );
+      $ret_str = $class_key;
       
     }//if/else
   
@@ -390,26 +391,6 @@ final class montage_core extends montage_base_static {
   }//method
   
   /**
-   *  return true if the given $class_name extends the montage_web_controller class
-   *  
-   *  @param  string  $class_name
-   *  @return boolean true if $class_name is the name of a controller child
-   */
-  static function isWebController($class_name){
-    return self::isChild($class_name,'MONTAGE_WEB_CONTROLLER');
-  }//method
-  
-  /**
-   *  return true if the given $class_name extends the montage_cli_controller class
-   *  
-   *  @param  string  $class_name
-   *  @return boolean true if $class_name is the name of a controller child
-   */
-  static function isCliController($class_name){
-    return self::isChild($class_name,'MONTAGE_CLI_CONTROLLER');
-  }//method
-  
-  /**
    *  return true if the given $class_name extends the form class
    *  
    *  @param  string  $class_name
@@ -471,7 +452,10 @@ final class montage_core extends montage_base_static {
       self::addClasses($class_map);
       
       // now cache away...
-      montage_cache::set($path,$class_map);
+      montage_cache::set(
+        array(self::getField('montage_core_controller'),$path),
+        $class_map
+      );
       
       self::setCore();
       
@@ -725,7 +709,7 @@ final class montage_core extends montage_base_static {
     $ret_bool = false;
   
     // load the cache...
-    $cache_maps = montage_cache::get('montage_core:class_maps');
+    $cache_maps = montage_cache::get(array(self::getField('montage_core_controller'),'montage_core:class_maps'));
     if(!empty($cache_maps)){
     
       // core primary...
@@ -752,7 +736,7 @@ final class montage_core extends montage_base_static {
   
     // save all the class maps into cache...
     montage_cache::set(
-      'montage_core:class_maps',
+      array(self::getField('montage_core_controller'),'montage_core:class_maps'),
       array(
         'core_class_map' => self::$core_class_map,
         'parent_class_map' => self::$parent_class_map,
@@ -779,27 +763,16 @@ final class montage_core extends montage_base_static {
     $class_name = self::getCoreClassName('montage_log');
     montage::setField('montage_log',new $class_name());
     
-    // this will start the session...
-    $si_instance = null;
-    try{
-    
-      $si_class_name = self::getChildClassName('montage_session_interface');
-      ///$si_instance = new $si_class_name();
-      
-    }catch(RuntimeException $e){}//try/catch
-    
     $class_name = self::getCoreClassName('montage_session');
     montage::setField(
       'montage_session',
       new $class_name(
         montage_path::get(
-          montage_path::getApp(),
-          'cache',
+          montage_path::getCache(),
           'session'
         )
       )
     );
-    
     
     $class_name = self::getCoreClassName('montage_request');
     montage::setField(

@@ -284,18 +284,6 @@ class montage_request extends montage_base {
   protected function getDefaultControllerClass(){ return 'index'; }//method
   
   /**
-   *  return true if the passed in $val is the name of the right type of controller for the request
-   *  
-   *  @param  string  $val  a potential controller class name      
-   *  @return boolean true if $val is the right type of controller
-   */
-  protected function isControllerClass($val){
-    return $this->isCli()
-      ? montage_core::isCliController($val)
-      : montage_core::isWebController($val);
-  }//method
-  
-  /**
    *  the requested controller method that will be used to answer this request
    */
   function setControllerMethod($val){ return $this->setField('montage_request_controller_method',$val); }//method
@@ -501,7 +489,8 @@ class montage_request extends montage_base {
   function forward($controller,$method,$args = array()){
   
     if($this->setHandler($controller,$method,$args)){
-      throw new montage_forward_exception();
+      $exception_name = montage_core::getBestClassName('montage_forward_exception');
+      throw new $exception_name();
     }//if
   
   }//method
@@ -522,12 +511,8 @@ class montage_request extends montage_base {
     if(empty($method)){
       throw new UnexpectedValueException('$method cannot be empty');
     }//if
-    if(!$this->isControllerClass($controller)){
-      throw new DomainException(
-        '$controller is not the right type, if this is a WEB request it needs to '
-        .'extend montage_web_controller. If it is a CLI request, then it needs to '
-        .'extend montage_cli_controller.'
-      );
+    if(!montage::isController($controller)){
+      throw new DomainException('$controller does not extend montage_controller.');
     }//if
     if(!method_exists($controller,$method)){
       throw new BadMethodCallException(sprintf('%s::%s does not exist',$controller,$method));
@@ -586,7 +571,7 @@ class montage_request extends montage_base {
    *                                that will be made into the full name (eg, foo gets turned into getFoo)      
    *  @return string
    */
-  private function getControllerMethodName($method_name){
+  function getControllerMethodName($method_name){
   
     // canary...
     if(empty($method_name)){

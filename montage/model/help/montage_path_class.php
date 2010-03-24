@@ -56,8 +56,16 @@ class montage_path extends montage_base_static {
    *  @return string
    */
   static function get(){
+    $ret_list = array();
     $path_bits = func_get_args();
-    return join(DIRECTORY_SEPARATOR,$path_bits);
+    foreach($path_bits as $path_bit){
+      if(is_array($path_bit)){
+        $ret_list = array_merge($ret_list,$path_bit);
+      }else{
+        $ret_list[] = $path_bit;
+      }//if/else
+    }//foreach
+    return join(DIRECTORY_SEPARATOR,$ret_list);
   }//method
   
   /**

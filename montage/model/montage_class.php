@@ -73,7 +73,7 @@ final class montage extends montage_base_static {
         
       }//while
       
-      // profile...
+      // profile, stop controller...
       if($debug){ montage_profile::stop(); }//if
       
       // profile...
@@ -93,8 +93,6 @@ final class montage extends montage_base_static {
       $result = false;
     
     }catch(Exception $e){
-    
-      ///self::getLog()->setException($e);
       
       $controller_class = montage_core::getClassName('error');
       if(montage_core::isController($controller_class)){
@@ -112,7 +110,7 @@ final class montage extends montage_base_static {
         
         throw new RuntimeException(
           sprintf(
-            'No error controller so the exception %e (code: %s, message: %s) could not be resolved: %s',
+            'No error controller so the exception %s (code: %s, message: %s) could not be resolved: %s',
             get_class($e),
             $e->getCode(),
             $e->getMessage(),

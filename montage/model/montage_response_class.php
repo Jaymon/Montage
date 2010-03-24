@@ -23,6 +23,8 @@ class montage_response extends montage_base {
   /**
    *  hold the status code mapped to the default message
    *  
+   *  @link http://en.wikipedia.org/wiki/List_of_HTTP_status_codes
+   *      
    *  @var  array
    */
   protected $status_map = array(
@@ -189,6 +191,7 @@ class montage_response extends montage_base {
     $session = montage::getSession();
     $session->setRequest();
     $session->resetFlash();
+    $this->setStatus(302); // would 303 or 307 be better?
   
     if(headers_sent()){
   
@@ -205,7 +208,8 @@ class montage_response extends montage_base {
     // I'm honestly not sure if this does anything...
     ///if(session_id() !== ''){ session_write_close(); }//if
     
-    throw new montage_redirect_exception();
+    $exception_name = montage_core::getBestClassName('montage_redirect_exception');
+    throw new $exception_name();
   
   }//method
 

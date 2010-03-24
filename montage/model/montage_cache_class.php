@@ -19,6 +19,8 @@ final class montage_cache {
    *  @var  string
    */
   static private $path = '';
+  
+  static private $namespace_map = array();
 
   /**
    *  set the cache path, make sure it's valid
@@ -28,6 +30,7 @@ final class montage_cache {
   static function setPath($path){
   
     $path = montage_path::assure($path);
+    self::$namespace_map[$path] = true;
     self::$path = $path;
     return $path;
   
@@ -60,7 +63,7 @@ final class montage_cache {
    *  @param  string  $key
    *  @return mixed the cached whatever (eg, array, object)
    */
-  static function get($key){
+  static function get($key,$namespace = ''){
   
     $path = self::getPath($key);
     if(!self::exists($path)){ return null; }//if
@@ -144,7 +147,9 @@ final class montage_cache {
   /**
    *  get the full file cache path
    *  
-   *  @param  string  $key
+   *  @param  string|array  $key  if string, then just the filename, if array, then it will be
+   *                              the path and the last element will be the filename
+   *                              (eg, array('foo','bar') becomes: self::getPath()/foo/self::getKey(bar))      
    *  @return string  the full path
    */
   static private function getPath($key){
@@ -152,8 +157,27 @@ final class montage_cache {
     if(empty(self::$path)){
       throw new RuntimeException(sprintf('cache path is not set, call %s::setPath()',__CLASS__));
     }//if
+    
+    $base_path = self::$path;
+    
+    if(is_array($key)){
+      
+      $namespace = array_slice($key,0,-1);
+      if(!empty($namespace)){
+        $base_path = montage_path::get(self::$path,$namespace);
+        if(!isset(self::$namespace_map[$base_path])){
+          $base_path = montage_path::assure($base_path);
+          self::$namespace_map[$base_path] = true;
+        }//if
+      }//if
+      
+      $key = end($key);
+      
+    }//if
+    
     $key = self::getKey($key);
-    return join(DIRECTORY_SEPARATOR,array(self::$path,$key));
+    
+    return montage_path::get($base_path,$key);
   }//method
   
   /**
@@ -182,25 +206,27 @@ final class montage_cache {
       
       $file_path = $file->getRealPath();
       
-      // make sure we only kill files that are montage cache files since we don't
-      // want to accidently nuke an app's personal cache...
-      if(preg_match(sprintf('#^%s#u',self::PREFIX),$file->getFilename())){
+      if($file->isDir()){
         
-        if($file->isDir()){
-          
-          $ret_bool = self::clear($file_path);
-          if($ret_bool){
-            rmdir($file_path);
-          }//if
-        
-        }else{
-        
-          unlink($file_path);
-        
-        }//if/else
-        
-      }//if
+        $ret_bool = self::clear($file_path);
+        if($ret_bool){
+          rmdir($file_path);
+        }//if
       
+      }else{
+    
+        // make sure we only kill files that are montage cache files since we don't
+        // want to accidently nuke an app's personal cache...
+        if(preg_match(sprintf('#^%s#u',self::PREFIX),$file->getFilename())){
+      
+          unlink($file_path);
+          
+        }else{
+          $ret_bool = false;
+        }//if/else
+      
+      }//if/else
+
     }//foreach
     
     return $ret_bool;

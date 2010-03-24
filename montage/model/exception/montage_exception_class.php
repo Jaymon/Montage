@@ -1,7 +1,7 @@
 <?php
 
 /**
- *  all montage objects throw this exception or a child of it
+ *  all montage objects throw this exception or throw a child of this exception
  *
  *  @version 0.1
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -26,7 +26,7 @@ class montage_exception extends Exception {
    *  @param  string|integer  $code
    *  @param  Exception $previous
    */
-  function __construct($message = '',$code = 0,Exception $previous = null){
+  final function __construct($message = '',$code = 0,Exception $previous = null){
   
     if(method_exists($this,'getPrevious')){
       parent::__construct($message,0,$previous); // php >5.3
@@ -35,8 +35,16 @@ class montage_exception extends Exception {
     }//if/else
     $this->code = $code;
     $this->previous = $previous;
+    
+    $this->start();
   
   }//method
+  
+  /**
+   *  here to keep things consistent, child classes can call this and do things
+   *  but __construct() is assured to have set everything before this is called   
+   */
+  protected function start(){}//method
   
   function __toString(){
   
