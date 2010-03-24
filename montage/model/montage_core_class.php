@@ -48,7 +48,8 @@ final class montage_core extends montage_base_static {
     'MONTAGE_ESCAPE' => '',
     'MONTAGE_TEMPLATE' => '',
     'MONTAGE_LOG' => '',
-    'MONTAGE_SESSION' => ''
+    'MONTAGE_SESSION' => '',
+    'MONTAGE_COOKIE' => ''
   );
   
   /**
@@ -105,7 +106,7 @@ final class montage_core extends montage_base_static {
     montage_path::setCache(montage_path::get($app_path,'cache'));
     montage_cache::setPath(montage_path::getCache());
     
-    $loaded_from_cache = self::loadCore($controller);
+    $loaded_from_cache = self::loadCore();
     if(!$loaded_from_cache){
     
       // profile...
@@ -178,7 +179,7 @@ final class montage_core extends montage_base_static {
       self::setField('montage_core_start_class_list',$start_class_list);
       
       // save all the compiled core classes/paths into the cache...
-      self::setCore($controller);
+      self::setCore();
       
       // profile...
       if($debug){ montage_profile::stop(); }//if
