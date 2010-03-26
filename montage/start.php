@@ -2,6 +2,8 @@
 
 /**
  *  Start the main montage controller
+ *  
+ *  including this from another file will start, configure, and run montage
  *   
  *  @version 0.1
  *  @author Jay Marcyes
@@ -33,9 +35,7 @@ if(!defined('MONTAGE_TIMEZONE')){ define('MONTAGE_TIMEZONE','UTC'); }//if
 date_default_timezone_set(MONTAGE_TIMEZONE);
 
 // where the framework's core can be found...
-if(!defined('MONTAGE_PATH')){
-  define('MONTAGE_PATH',realpath(join(DIRECTORY_SEPARATOR,array(dirname(__FILE__),'..'))));
-}//if
+if(!defined('MONTAGE_PATH')){ define('MONTAGE_PATH',realpath(dirname(__FILE__))); }//if
 
 // where the applications core can be found...
 // this can be set in the app before calling this file for a very slight speed boost...
@@ -83,4 +83,4 @@ try{
 }//try/catch
 
 // actually handle the request...
-montage::handle();
+montage_core::handle();
