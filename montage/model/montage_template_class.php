@@ -134,7 +134,7 @@ class montage_template extends montage_base {
     
     if($this->in_template){
       if($this->existsField($key)){
-        $class_name = montage_core::getCoreClassName('MONTAGE_ESCAPE');
+        $class_name = montage_core::getBestClassName('montage_escape');
         $ret_mix = new $class_name($this->field_map[$key]);
       }//if
     }else{

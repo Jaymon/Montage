@@ -80,7 +80,7 @@ class montage_response extends montage_base {
 
   final function __construct($template_path){
     
-    $class_name = montage_core::getCoreClassName('MONTAGE_TEMPLATE');
+    $class_name = montage_core::getBestClassName('montage_template');
     $this->template_instance = new $class_name();
     $this->template_instance->setPath($template_path);
   

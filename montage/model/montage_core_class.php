@@ -477,7 +477,11 @@ final class montage_core extends montage_base_static {
           }else{
             throw new DomainException(
               sprintf(
-                'the given $class_key (%s) has divergent children (eg, two child classes that are not related)',
+                'the given $class_key (%s) has divergent children %s and %s (those 2 classes extend ' 
+                .'%s but are not related to each other) so a best class cannot be found.',
+                $class_key,
+                $ret_str,
+                $child_class_key,
                 $class_key
               )
             );
@@ -495,33 +499,6 @@ final class montage_core extends montage_base_static {
   
     return self::getClassName($ret_str);
   
-  }//method
-  
-  /**
-   *  get the class name for a key core class
-   *  
-   *  the reason why this method exists is because you can extend certain core classes
-   *  (the ones found in the {@link $core_class_map}) and there needs to be a way for
-   *  the framework to get the core class that is going to be used
-   *  
-   *  @param  string  $core_class_key the core class you want to get the best matching class
-   *                                  for
-   *  @return string  the class name that is going to be used as the core class
-   */
-  static function getCoreClassName($core_class_key){
-    // sanity, make sure the class key is in the right format...
-    $core_class_key = self::getClassKey($core_class_key);
-    
-    $ret_str = '';
-    
-    if(isset(self::$core_class_map[$core_class_key])){
-    
-      $ret_str = self::getClassName(self::$core_class_map[$core_class_key]);
-    
-    }//if
-    
-    return $ret_str;
-    
   }//method
   
   /**
@@ -740,7 +717,7 @@ final class montage_core extends montage_base_static {
   
     foreach($class_map as $class_key => $map){
   
-      // @note  this depends on the autoloader...
+      // @note  the class_parents call depends on the autoloader...
       $parent_list = class_parents($map['class_name'],true);
             
       // save the children mappings...
@@ -753,60 +730,6 @@ final class montage_core extends montage_base_static {
         self::$parent_class_map[$parent_class_key][] = $class_key;
       
       }//if
-    
-      // check if we have a core class override...
-      if(isset(self::$core_class_map[$class_key])){
-    
-        self::$core_class_map[$class_key] = $class_key;
-      
-      }else{
-        
-        foreach($parent_list as $parent_class_name){
-        
-          $parent_class_key = self::getClassKey($parent_class_name);
-          if(isset(self::$core_class_map[$parent_class_key])){
-
-            if(empty(self::$core_class_map[$parent_class_key])){
-            
-              // we don't have a class defined for this core yet, so set it...
-              self::$core_class_map[$parent_class_key] = $class_key;
-              break;
-              
-            }else{
-              
-              // see if the current core set class is a child of the current $class
-              if(self::isChild($class_key,self::$core_class_map[$parent_class_key])){
-              
-                self::$core_class_map[$parent_class_key] = $class_key;
-                break;
-              
-              }else{
-              
-                // check to make sure the current core class is a child of the one being checked.
-                // If it isn't then we have 2 classes that extend the same core but aren't 
-                // related (eg, parent/child) so error out...
-                if(!self::isChild(self::$core_class_map[$parent_class_key],$class_key)){
-                
-                  throw new RuntimeException(
-                    sprintf(
-                      'There are 2 classes that are extending the same core class: "%s" and "%s". Please fix this.',
-                      $map['class_name'],
-                      self::$class_map[self::$core_class_map[$parent_class_key]]['class_name']
-                    )
-                  );
-                  
-                }//if
-              
-              
-              }//if/else
-              
-            }//if/else
-            
-          }//if
-          
-        }//foreach
-        
-      }//if/else
       
     }//foreach
   
@@ -883,7 +806,6 @@ final class montage_core extends montage_base_static {
     if(!empty($cache_maps)){
     
       // core primary...
-      self::$core_class_map = $cache_maps['core_class_map'];
       self::$parent_class_map = $cache_maps['parent_class_map'];
       self::$class_map = $cache_maps['class_map'];
       
@@ -908,7 +830,6 @@ final class montage_core extends montage_base_static {
     montage_cache::set(
       array(self::getField('montage_core_controller'),'montage_core:class_maps'),
       array(
-        'core_class_map' => self::$core_class_map,
         'parent_class_map' => self::$parent_class_map,
         'class_map' => self::$class_map,
         'start_class_list' => self::getField('montage_core_start_class_list',array())
@@ -930,10 +851,10 @@ final class montage_core extends montage_base_static {
   private static function startCoreClasses($controller,$environment,$debug,$charset,$timezone){
   
     // log starts first so startup problems can be logged...
-    $class_name = self::getCoreClassName('montage_log');
+    $class_name = self::getBestClassName('montage_log');
     montage::setField('montage_log',new $class_name());
     
-    $class_name = self::getCoreClassName('montage_session');
+    $class_name = self::getBestClassName('montage_session');
     montage::setField(
       'montage_session',
       new $class_name(
@@ -944,7 +865,7 @@ final class montage_core extends montage_base_static {
       )
     );
     
-    $class_name = self::getCoreClassName('montage_request');
+    $class_name = self::getBestClassName('montage_request');
     montage::setField(
       'montage_request',
       new $class_name(
@@ -957,7 +878,7 @@ final class montage_core extends montage_base_static {
       )
     );
     
-    $class_name = self::getCoreClassName('montage_response');
+    $class_name = self::getBestClassName('montage_response');
     montage::setField(
       'montage_response',
       new $class_name(
@@ -968,7 +889,7 @@ final class montage_core extends montage_base_static {
       )
     );
     
-    $class_name = self::getCoreClassName('montage_settings');
+    $class_name = self::getBestClassName('montage_settings');
     montage::setField(
       'montage_settings',
       new $class_name(
@@ -978,7 +899,7 @@ final class montage_core extends montage_base_static {
       )
     );
     
-    $class_name = self::getCoreClassName('montage_url');
+    $class_name = self::getBestClassName('montage_url');
     montage::setField('montage_url',new $class_name());
 
   }//method
