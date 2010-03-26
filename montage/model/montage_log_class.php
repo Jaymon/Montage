@@ -8,8 +8,8 @@
  *  
  *  Basically, a developer should extend this class and then implement the set() method
  *  to log how they want it to (eg, save to a db, or send an email). You can use the
- *  supporting methods getBacktrace() and getInfo() to get detailed information about
- *  the request and what went wrong  
+ *  supporting methods montage_util::getBacktrace() and $this->getInfo() to get 
+ *  detailed information about the request and what went wrong  
  *  
  *  @version 0.1
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -217,69 +217,6 @@ class montage_log extends montage_base {
    *  @param  string  $type usually the name of the error (eg, E_USER_ERROR or MESSAGE)   
    */
   protected function set($errno,$errstr,$errfile,$errline,$type){}//method
-  
-  /**
-   *  generate a backtrace list
-   *  
-   *  @return array a list of method calls from first to latest (default, debug_backtrace gives latest to first)
-   */
-  protected function getBacktrace(){
-  
-    // set the backtrace...
-    $backtrace = debug_backtrace();
-    $backtrace = array_reverse(array_slice($backtrace,2));
-    $ret_list = array();
-    
-    foreach($backtrace as $key => $bt_map){
-    
-      $class = empty($bt_map['class']) ? '' : $bt_map['class'];
-      $method = empty($bt_map['function']) ? '' : $bt_map['function'];
-      $file = empty($bt_map['file']) ? 'unknown' : $bt_map['file'];
-      $line = empty($bt_map['line']) ? 'unknown' : $bt_map['line'];
-      
-      $method_call = '';
-      if(empty($class)){
-        if(!empty($method)){ $method_call = $method; }//if
-      }else{
-        if(empty($method)){
-          $method_call = $class;
-        }else{
-          $method_call = sprintf('%s::%s',$class,$method);
-        }//if/else
-      }//if/else
-      
-      $arg_list = array();
-      if(!empty($bt_map['args'])){
-      
-        foreach($bt_map['args'] as $arg){
-        
-          if(is_object($arg)){
-            $arg_list[] = get_class($arg);
-          }else{
-            if(is_array($arg)){
-              $arg_list[] = sprintf('Array(%s)',count($arg));
-            }else if(is_bool($arg)){
-              $arg_list[] = $arg ? 'TRUE' : 'FALSE';
-            }else if(is_null($arg)){
-              $arg_list[] = 'NULL';
-            }else if(is_string($arg)){
-              $arg_list[] = sprintf('"%s"',$arg);
-            }else{
-              $arg_list[] = $arg;
-            }//if/else
-          }//if/else
-        
-        }//foreach
-      
-      }//if
-      
-      $ret_list[] = sprintf('%s(%s) - %s:%s',$method_call,join(', ',$arg_list),$file,$line);
-      
-    }//foreach
-  
-    return $ret_list;
-  
-  }//method
   
   /**
    *  this function aggregates some information about the errored request

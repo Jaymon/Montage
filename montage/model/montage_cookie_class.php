@@ -1,151 +1,188 @@
 <?php
 
 /**
- *  cookie class
- *  
- *  basically a wrapper class for setting and getting cookie values.
- *  
- *  functions can be called from this class by cookie::function_name() so that I don't
- *  have to instantiate the class at all.
+ *  handle cookie stuff 
  *
- *  6-14-07 - initial writing of the class
- *  6-18-07 - fixed the set method so it worked. Added get, delete methods
- *  8-5-07 - cleaned this class up a bit, got rid of a few extraneous functions, etc..
- *    Added the has function
- *  2-7-08 -  fixed some bugs that had been there for forever evidently, like not setting .example.com in
- *    the domain function but just setting example.com. 
- *
- */         
+ *  @version 0.1
+ *  @author Jay Marcyes {@link http://marcyes.com}
+ *  @since 3-26-10
+ *  @package montage
+ ******************************************************************************/
 
 class montage_cookie {
-
-  // class constants...
-  const SIX_MONTHS = 15552000; // 6 months in seconds
-  const DEFAULT_PATH = '/';
-
-  final function __construct($domain){
   
-    $
+  /**
+   *  holds the default domain
+   *  
+   *  @var  string      
+   */
+  protected $domain = '';
+  
+  /**
+   *  holds the default expire time, this time is added onto current to decide when
+   *  the cookie should expire   
+   *
+   *  @var  integer   
+   */
+  protected $expire = 15552000; // 6 months
+  
+  /**
+   *  what path the cookie should be good for, honestly, this should almost always
+   *  be root (ie, /)
+   *  
+   *  @var  string
+   */
+  protected $path = '/';
+
+  final function __construct($default_domain = ''){
+  
+    $this->setDomain($this->getBroadestDomain($default_domain));
     
     $this->start();
   
   }//method
   
   protected function start(){}//method
-
-  //****************************************************************************
-  public static function set($name,$val,$expire_time = self::SIX_MONTHS,$domain = false){
   
-    // error checking...
-    if(empty($name)){ return false; }//if
-    if(empty($domain)){ $domain = self::domain(); }//if
-    if(empty($expire_time)){ $expire_time = self::SIX_MONTHS; }//if
-    if(is_bool($val)){
-      // cookies don't like booleans...
-      if($val){ $val = 1; }else{ $val = 0; }//if/else
-    }//if/else
+  public function setDomain($val){ $this->domain = $val; }//method
+  public function getDomain(){ return $this->domain; }//method
+  
+  public function setExpire($val){ $this->expire = (int)$val; }//method
+  public function getExpire(){ return $this->expire; }//method
+  
+  public function setPath($val){ $this->path = $val; }//method
+  public function getPath(){ return $this->path; }//method
+  
+  /**
+   *  save a field into the cookie
+   *  
+   *  @param  string  $key
+   *  @param  mixed $val
+   *  @param  integer $expire when the $key/$val should expire
+   *  @param  string  $domain what domain should be used
+   *  @param  string  $path what path should be used   
+   *  @return mixed $val  on success return $val, on failure return false
+   */
+  function setField($key,$val,$expire = 0,$domain = '',$path = ''){
+  
+    // canary...
+    if(headers_sent()){ return false; }//if
+  
+    // set defaults...
+    if(empty($expire)){ $expire = $this->getExpire(); }//if
+    if(empty($domain)){ $domain = $this->getDomain(); }//if
+    if(empty($path)){ $path = $this->getPath(); }//if
+  
+    // cookies don't like booleans...
+    if(is_bool($val)){ $val = empty($val) ? 0 : 1; }//if/else
     
-    $ret_bool = false;
-    $timeout = time() + $expire_time;
+    $timeout = time() + $expire;
     
-    if(!headers_sent()){
+    // using the secure switch for IE: http://us2.php.net/manual/en/function.setcookie.php#71743
+    if(setcookie($key,$val,$timeout,$path,$domain,0)){ $val = false; }//if
     
-      if(setcookie($name,$val,$timeout,self::DEFAULT_PATH,$domain)){ $ret_bool = true; }//if
-      
-    }//if
-    
-    return $ret_bool;
+    return $val;
   
   }//method
   
-  //****************************************************************************
-  static function get($name,$default_val = ''){
-    return isset($_COOKIE[$name]) ? $_COOKIE[$name] : $default_val;
+  /**
+   *  get a field from the cookie
+   *  
+   *  @param  string  $key
+   *  @param  mixed $default_val  if $key wasn't found, return this
+   *  @return mixed
+   */
+  function getField($key,$default_val = null){
+    return isset($_COOKIE[$key]) ? $_COOKIE[$key] : $default_val;
   }//method
   
-  //****************************************************************************
-  public static function has($name){
+  /**
+   *  remove a field from the cookie
+   *  
+   *  @param  string  $key
+   *  @param  string  $domain what domain should be used
+   *  @param  string  $path what path should be used   
+   *  @return boolean true on success, false on failure
+   */
+  function killField($key,$domain = '',$path = ''){
   
-    $ret_bool = false;
-    
-    if($result = self::get($name)){ $ret_bool = true; }//if
+    // canary...
+    if(headers_sent()){ return false; }//if
   
-    return $ret_bool;
+    // get defaults...
+    if(empty($domain)){ $domain = $this->getDomain(); }//if
+    if(empty($path)){ $path = $this->getPath(); }//if
   
-  }//method
-  
-  //****************************************************************************
-  public static function delete($name,$domain = false){
-  
-    // error checking...
-    if(empty($domain)){ $domain = self::domain(); }//if
-  
-    $ret_bool = false;
     $val = false;
-    $timeout = time() - self::SIX_MONTHS;
+    $timeout = time() - 15552000;
     
-    if(!headers_sent()){
-    
-      if(setcookie($name,$val,$timeout,self::DEFAULT_PATH,$domain)){ $ret_bool = true; }//if
-      
-    }//if
-  
-    return $ret_bool;
+    return setcookie($key,$val,$timeout,$path,$domain,0);
   
   }//method
   
-  //****************************************************************************
-  public static function getCookieDomain(){ return self::domain(); }//method alias
-  public static function domain(){
+  /**
+   *  does a field exist in the cookie and is non-empty
+   *  
+   *  @param  string  $key
+   *  @return boolean   
+   */
+  function hasField($key){
+    return !empty($_COOKIE[$key]);
+  }//method
   
-    // WARNING 6-17-07: this function will fail on any subdomain with a period in it like: sub.domain.example.com
-    //  because I can't think of a good way to differentiate that from: subdomain.example.co.uk
+  /**
+   *  does a field exist in the cookie
+   *  
+   *  @param  string  $key
+   *  @return boolean   
+   */
+  function existsField($key){
+    return array_key_exists($key,$_COOKIE);
+  }//method
   
-    $ret_str = false; // domain should be set to false if it is localhost.
-    $full_domain = '';
-    $host = false;
+  /**
+   *  convert a domain to its broadest form, eg: sub.domain.com would become .domain.com so
+   *  that the cookies will be good for all of domain.com, including all its subdomains   
+   *
+   *  WARNING 6-17-07: this function will fail on any subdomain with a period in it like: sub.domain.example.com
+   *  because I can't think of a good way to differentiate that from: subdomain.example.co.uk   
+   *
+   *  @param  string  $domain the domain to check and make broad
+   *  @return string|boolean  it will return false if localhost   
+   */              
+  public function getBroadestDomain($domain){
+  
+    // canary...
+    if(empty($domain)){ return ''; }//if
+  
+    $ret_str = ''; // domain should be set to false if it is localhost.
     $matched = array();
-  
-    // get the full domain...
-    if(isset($_SERVER['SERVER_NAME'])){
+    $period_count = mb_substr_count($domain,'.');
     
-      $full_domain = $_SERVER['SERVER_NAME'];
+    if($period_count > 0){
     
-    }else if(isset($_ENV['SERVER_NAME'])){
+      if($period_count > 1){
     
-      $full_domain = $_ENV['SERVER_NAME'];
-    
-    }else if(isset($_SERVER['HTTP_HOST'])){
+        $domain_bits = explode('.',$domain,2);
+        $ret_str = $domain_bits[1];
       
-      $full_domain = $_SERVER['HTTP_HOST'];
-    
-    }else if(isset($_ENV['HTTP_HOST'])){
-    
-      $full_domain = $_ENV['HTTP_HOST'];
+      }else{
       
-    }//if/else if
-    
-    // you could use substr_count here instead but would then have to use strpos to get the substr start position...
-    if(preg_match_all("/\.{1}/u",$full_domain,$matched,PREG_OFFSET_CAPTURE) > 1){
-    
-      ///out::e($matched,get_defined_vars());
+        // assume example.com...
+        $ret_str = $domain;
       
-      if(isset($matched[0][0][1])){
+      }//if/else
       
-        if($host = mb_substr($full_domain,($matched[0][0][1]+1))){
-        
-          $ret_str = '.'.$host;
-        
-        }//if
-      
-      }//if
+      $ret_str = sprintf('.%s',$ret_str);
     
     }else{
     
-      // assume example.com...
-      $ret_str = '.'.$full_domain;
+      // localhost problems, should set domain to false if localhost...
+      // http://us2.php.net/manual/en/function.setcookie.php#74231
+      // http://us2.php.net/manual/en/function.setcookie.php#73107
+      $ret_str = false;
     
-    }//if
+    }//if/else
     
     return $ret_str;
   

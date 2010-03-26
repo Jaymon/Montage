@@ -7,6 +7,7 @@
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 2-23-10
  *  @package montage 
+ *  @subpackage help  
  ******************************************************************************/
 class montage_text {
 

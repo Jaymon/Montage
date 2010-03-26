@@ -6,7 +6,8 @@
  *  @version 0.1
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 3-8-10
- *  @package montage 
+ *  @package montage
+ *  @subpackage help  
  ******************************************************************************/
 class montage_path extends montage_base_static {
 

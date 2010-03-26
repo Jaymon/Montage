@@ -6,7 +6,8 @@
  *  @version 0.1
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 2-23-10
- *  @package montage 
+ *  @package montage
+ *  @subpackage help  
  ******************************************************************************/
 class montage_html {
 

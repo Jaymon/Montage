@@ -26,6 +26,12 @@ final class montage_core extends montage_base_static {
   static private $is_started = false;
   
   /**
+   *  switched to true in the handle() function
+   *  @var  boolean
+   */
+  static private $is_handled = false;
+  
+  /**
    *  hold all the classes that could possibly be loadable
    *  
    *  the structure is: each key is a the class_key name, with path and name key/vals for
@@ -78,7 +84,7 @@ final class montage_core extends montage_base_static {
     if($debug){ montage_profile::start(__METHOD__); }//if
   
     // canary...
-    if(self::isStarted()){
+    if(self::$is_started){
       throw new RuntimeException('The framework core was already started, no point in starting it again');
     }//if
     if(empty($controller)){
@@ -225,6 +231,12 @@ final class montage_core extends montage_base_static {
    */
   static function handle(){
   
+    // canary...
+    if(self::$is_handled){
+      throw new RuntimeException('The framework core already handled the request, no point in handling it again');
+    }//if
+  
+    self::$is_handled = true;
     $debug = montage::getSettings()->getDebug();
     
     // profile...
@@ -397,14 +409,6 @@ final class montage_core extends montage_base_static {
   }//method
   
   /**
-   *  if {@link start()} has been called then this will be true, it provides a public
-   *  facing way to see if the core has been started previously
-   *  
-   *  @return boolean
-   */
-  static function isStarted(){ return self::$is_started; }//method
-  
-  /**
    *  create and return an instance of $class_name
    *  
    *  this only works for classes that don't take any arguments in their constructor
@@ -459,6 +463,7 @@ final class montage_core extends montage_base_static {
    *  
    *  @param  string  $parent_class_key
    *  @return string  the child class name
+   *  @throws DomainException if the class_key is extended by more than one unrelated child   
    */
   static function getBestClassName($class_key){
   
@@ -852,11 +857,11 @@ final class montage_core extends montage_base_static {
   
     // log starts first so startup problems can be logged...
     $class_name = self::getBestClassName('montage_log');
-    montage::setField('montage_log',new $class_name());
+    montage::setField('montage::montage_log',new $class_name());
     
     $class_name = self::getBestClassName('montage_session');
     montage::setField(
-      'montage_session',
+      'montage::montage_session',
       new $class_name(
         montage_path::get(
           montage_path::getCache(),
@@ -867,7 +872,7 @@ final class montage_core extends montage_base_static {
     
     $class_name = self::getBestClassName('montage_request');
     montage::setField(
-      'montage_request',
+      'montage::montage_request',
       new $class_name(
         $controller,
         $environment,
@@ -880,7 +885,7 @@ final class montage_core extends montage_base_static {
     
     $class_name = self::getBestClassName('montage_response');
     montage::setField(
-      'montage_response',
+      'montage::montage_response',
       new $class_name(
         montage_path::get(
           montage_path::getApp(),
@@ -891,7 +896,7 @@ final class montage_core extends montage_base_static {
     
     $class_name = self::getBestClassName('montage_settings');
     montage::setField(
-      'montage_settings',
+      'montage::montage_settings',
       new $class_name(
         $debug,
         $charset,
@@ -900,7 +905,13 @@ final class montage_core extends montage_base_static {
     );
     
     $class_name = self::getBestClassName('montage_url');
-    montage::setField('montage_url',new $class_name());
+    montage::setField('montage::montage_url',new $class_name());
+    
+    $class_name = self::getBestClassName('montage_cookie');
+    montage::setField(
+      'montage::montage_cookie',
+      new $class_name(montage::getRequest()->getHost())
+    );
 
   }//method
 

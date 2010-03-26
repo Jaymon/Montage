@@ -41,12 +41,20 @@ class montage_request extends montage_base {
         $arg_map = array_slice($_SERVER['argv'],1); // get rid of the script that was called
         if(!empty($arg_map)){
         
-          if($arg_map[0][0] != '-'){
-            $path_list = preg_split('#\\/#u',$arg_map[0]);
+          if($arg_map[0][0] == '-'){
+          
+            throw UnexpectedValueException(
+              'You are missing class/method (class should extend montage_controller). '
+              .'A cli request must be made the following way: '
+              .' php path/to/script.php class/method --key=val --key2=val2 ...'
+            ); 
+          
+          }else{
+            $path_list = array_values(array_filter(preg_split('#\\/#u',$arg_map[0])));
             $arg_map = array_slice($arg_map,1); // strip off the controller path
           }//if
         
-          $arg_map = $this->parseArgv($arg_map);
+          $arg_map = montage_util::parseArgv($arg_map);
           $this->setFields($arg_map);
 
         }//if
@@ -584,41 +592,6 @@ class montage_request extends montage_base {
     }//if/else
   
     return $method_name;
-  
-  }//method
-  
-  /**
-   *  function to make passing arguments into a CLI script easier
-   *  
-   *  an argument has to be in the form: --name=val or --name if you want name to be true
-   *  
-   *  @param  array $argv the values passed into php from the commmand line 
-   *  @return array the key/val mappings that were parsed from --name=val command line arguments
-   */
-  private function parseArgv($argv)
-  {
-    // canary...
-    if(empty($argv)){ return array(); }//if
-  
-    $ret_map = array();
-  
-    foreach($argv as $arg){
-      // canary...
-      if((!isset($arg[0]) || !isset($arg[1])) || ($arg[0] != '-') || ($arg[1] != '-')){
-        throw new InvalidArgumentException(
-          sprintf('%s does not conform to the --name=value convention',$arg)
-        );
-      }//if
-    
-      $arg_bits = explode('=',$arg,2);
-      // strip off the dashes...
-      $name = mb_substr($arg_bits[0],2);
-      $val = isset($arg_bits[1]) ? $arg_bits[1] : true;
-      $ret_map[$name] = $val;
-    
-    }//foreach
-  
-    return $ret_map;
   
   }//method
 
