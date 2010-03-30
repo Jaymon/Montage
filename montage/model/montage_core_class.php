@@ -105,6 +105,7 @@ final class montage_core extends montage_base_static {
   
     // save important fields...
     self::setField('montage_core_controller',$controller); // for caching
+    self::setField('montage_core_environment',$environment); // for caching
   
     // save the important paths...
     montage_path::setFramework($framework_path);
@@ -615,7 +616,11 @@ final class montage_core extends montage_base_static {
       
       // now cache away...
       montage_cache::set(
-        array(self::getField('montage_core_controller'),$path),
+        array(
+          self::getField('montage_core_controller'),
+          self::getField('montage_core_environment'),
+          $path
+        ),
         $class_map
       );
       
@@ -807,7 +812,13 @@ final class montage_core extends montage_base_static {
     $ret_bool = false;
   
     // load the cache...
-    $cache_maps = montage_cache::get(array(self::getField('montage_core_controller'),'montage_core:class_maps'));
+    $cache_maps = montage_cache::get(
+      array(
+        self::getField('montage_core_controller'),
+        self::getField('montage_core_environment'),
+        'montage_core:class_maps'
+      )
+    );
     if(!empty($cache_maps)){
     
       // core primary...
@@ -833,7 +844,11 @@ final class montage_core extends montage_base_static {
   
     // save all the class maps into cache...
     montage_cache::set(
-      array(self::getField('montage_core_controller'),'montage_core:class_maps'),
+      array(
+        self::getField('montage_core_controller'),
+        self::getField('montage_core_environment'),
+        'montage_core:class_maps'
+      ),
       array(
         'parent_class_map' => self::$parent_class_map,
         'class_map' => self::$class_map,

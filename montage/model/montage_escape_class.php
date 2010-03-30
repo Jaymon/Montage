@@ -7,7 +7,7 @@
  *    http://us2.php.net/manual/en/function.class-implements.php so you can check if
  *    a class is iterable and stuff when you escape it  
  *  
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 12-28-09
  *  @package montage
@@ -112,7 +112,7 @@ class montage_escape implements ArrayAccess,Iterator,Countable {
    */
   function getRawVal(){
   
-    if($this->isType(self::TYPE_OBJECT)){
+    if($this->assureType(self::TYPE_OBJECT)){
       if(method_exists($this->val,__FUNCTION__)){
         throw new BadMethodCallException(
           sprintf(
@@ -155,6 +155,8 @@ class montage_escape implements ArrayAccess,Iterator,Countable {
   function offsetSet($key,$val){
     
     $this->assureAccess(self::ACCESS_ARRAY,'this escaped $val cannot be treated like an array');
+    
+    $val = $this->assureRawVal($val);
     
     if($key === null){
       // they are trying to do a $obj[] = $val so let's append the $val
@@ -223,11 +225,16 @@ class montage_escape implements ArrayAccess,Iterator,Countable {
   function __call($method,$args){
   
     // canary...
-    if(!$this->isType(self::TYPE_OBJECT)){
+    if(!$this->assureType(self::TYPE_OBJECT)){
       throw new RuntimeException('cannot call a method since the escaped $val is not an object');
     }//if
   
     $class_name = $this->class_name;
+    $base_class_name = __CLASS__; // should always be the name of this class
+    
+    // go through and get the raw values of each of the arguments to pass to the method...
+    foreach($args as $key => $arg){ $args[$key] = $this->assureRawVal($arg); }//method
+    
     return new $class_name(call_user_func_array(array($this->val,$method),$args));
   
   }//method
@@ -238,7 +245,7 @@ class montage_escape implements ArrayAccess,Iterator,Countable {
   function __set($name,$val){
   
     // canary...
-    if(!$this->isType(self::TYPE_OBJECT)){
+    if(!$this->assureType(self::TYPE_OBJECT)){
       throw new RuntimeException('cannot do things like $instance->foo since escaped $val is not an object');
     }//if
     if(!method_exists($this->val,'__set')){
@@ -247,19 +254,22 @@ class montage_escape implements ArrayAccess,Iterator,Countable {
       );
     }//if
     
-    return $this->val->__set($key,$val);
+    return $this->val->__set($key,$this->assureRawVal($val));
   
   }//method
   
   function __get($name){
   
     // canary...
-    if(!$this->isType(self::TYPE_OBJECT)){
+    if(!$this->assureType(self::TYPE_OBJECT)){
       throw new RuntimeException('cannot do things like $instance->foo since escaped $val is not an object');
     }//if
     if(!method_exists($this->val,'__set')){
       throw new RuntimeException(
-        'cannot do things like $instance->foo since escaped $val does not support __get() magic method'
+        sprintf(
+          'Cannot do $instance->foo since escaped $val of type %s does not support __get() magic method',
+          gettype($this->val)
+        )
       );
     }//if
     
@@ -271,12 +281,15 @@ class montage_escape implements ArrayAccess,Iterator,Countable {
   function __isset($name){
   
     // canary...
-    if(!$this->isType(self::TYPE_OBJECT)){
+    if(!$this->assureType(self::TYPE_OBJECT)){
       throw new RuntimeException('cannot do things like isset($instance->foo) since escaped $val is not an object');
     }//if
     if(!method_exists($this->val,'__isset')){
       throw new RuntimeException(
-        'cannot do things like isset($instance->foo) since escaped $val does not support __isset() magic method'
+        sprintf(
+          'Cannot do isset($instance->foo) since escaped $val of type %s does not support __isset() magic method',
+          gettype($this->val)
+        )
       );
     }//if
     
@@ -287,12 +300,15 @@ class montage_escape implements ArrayAccess,Iterator,Countable {
   function __unset($name){
   
     // canary...
-    if(!$this->isType(self::TYPE_OBJECT)){
+    if(!$this->assureType(self::TYPE_OBJECT)){
       throw new RuntimeException('cannot do things like unset($instance->foo) since escaped $val is not an object');
     }//if
     if(!method_exists($this->val,'__isset')){
       throw new RuntimeException(
-        'cannot do things like unset($instance->foo) since escaped $val does not support __unset() magic method'
+        sprintf(
+          'Cannot do unset($instance->foo) since escaped $val of type does not support __unset() magic method',
+          gettype($this->val)
+        )
       );
     }//if
     
@@ -368,6 +384,22 @@ class montage_escape implements ArrayAccess,Iterator,Countable {
    *  
    *  @param  integer $type one of the TYPE_* constants
    */
-  protected function isType($type){ return $this->type === $type; }//if
+  protected function assureType($type){ return $this->type === $type; }//if
+  
+  /**
+   *  if the passed in $val is an instance of this class, then return the raw value it wraps 
+   *   
+   *  this assures that methods that have type checks will still work without problems.
+   *  Also, this makes sure this class doesn't wrap another instance
+   *  
+   *  @param  mixed $val
+   *  @return mixed the absolute raw $val
+   */
+  protected function assureRawVal($val){
+  
+    $base_class_name = __CLASS__; // should always be the name of this class
+    return ($val instanceof $base_class_name) ? $val->getRawValue(); : $val;
+    
+  }//method
 
 }//class     
