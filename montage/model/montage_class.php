@@ -10,55 +10,62 @@
  *  @since 12-28-09
  *  @package montage 
  ******************************************************************************/
-final class montage extends montage_base_static {
+class montage extends montage_base_static {
 
   /**
    *  return the montage_request instance
    *  
    *  @return montage_request      
    */
-  static function getRequest(){ return self::getField('montage::montage_request'); }//method
+  final static function getRequest(){ return self::getField('montage::montage_request'); }//method
 
   /**
    *  return the montage_response instance
    *  
    *  @return montage_response      
    */
-  static function getResponse(){ return self::getField('montage::montage_response'); }//method
+  final static function getResponse(){ return self::getField('montage::montage_response'); }//method
   
   /**
    *  return the montage_settings instance
    *  
    *  @return montage_settings      
    */
-  static function getSettings(){ return self::getField('montage::montage_settings'); }//method
+  final static function getSettings(){ return self::getField('montage::montage_settings'); }//method
   
   /**
    *  return the montage_url instance
    *  
    *  @return montage_url      
    */
-  static function getUrl(){ return self::getField('montage::montage_url'); }//method
+  final static function getUrl(){ return self::getField('montage::montage_url'); }//method
   
   /**
    *  return the montage_log instance
    *  
    *  @return montage_log      
    */
-  static function getLog(){ return self::getField('montage::montage_log'); }//method
+  final static function getLog(){ return self::getField('montage::montage_log'); }//method
   
   /**
    *  return the montage_session instance
    *  
    *  @return montage_session      
    */
-  static function getSession(){ return self::getField('montage::montage_session'); }//method
+  final static function getSession(){ return self::getField('montage::montage_session'); }//method
   
   /**
    *  return the montage_cookie instance
    *  
    *  @return montage_cookie    
    */
-  static function getCookie(){ return self::getField('montage::montage_cookie'); }//method
+  final static function getCookie(){ return self::getField('montage::montage_cookie'); }//method
+  
+  /**
+   *  return the montage_event instance
+   *  
+   *  @return montage_event
+   */
+  final static function getEvent(){ return self::getField('montage::montage_event'); }//method
 
 }//class     

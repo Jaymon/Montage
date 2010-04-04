@@ -89,6 +89,102 @@ class montage_response extends montage_base {
   }//method
   
   /**
+   *  handle the response returned from the controller::method
+   */
+  function handle($controller_ret_bool){
+  
+    // canary, don't do anything if the controller returned false...
+    if(empty($controller_ret_bool)){ return; }//if
+  
+    $request = montage::getRequest();
+    $event = montage::getEvent();
+  
+    if(!headers_sent()){
+      
+      // send the content type header... 
+      header(
+        sprintf(
+          'Content-Type: %s; charset=%s',
+          $this->getContentType(),
+          MONTAGE_CHARSET
+        )
+      );
+      
+      // send the status code header...
+      header(
+        sprintf(
+          '%s %s',
+          $request->getServerField('SERVER_PROTOCOL','HTTP/1.0'),
+          $this->getStatus()
+        )
+      );
+      
+      if($this->isStatusCode(401)){
+        header('WWW-Authenticate: Basic realm="Please Log In"');
+      }//if
+      
+    }//if
+    
+    $ret_str = $this->get();
+    if(empty($ret_str)){
+    
+      // actually render the view using the template info...
+    
+      $template = $this->getTemplateInstance();
+      
+      $event->broadcast(
+        montage_event::KEY_INFO,
+        array('msg' => 
+          sprintf(
+            '%s::get() returned empty string so echoing template "%s" to user',
+            get_class($this),
+            $template->getTemplate()
+          )
+        )
+      );
+      
+      $template->out(montage_template::OPTION_OUT_STD);
+    
+    }else{
+    
+      // it's a string, so just echo it to the screen and be done...
+      
+      $event->broadcast(
+        montage_event::KEY_INFO,
+        array('msg' => 
+          sprintf(
+            '%s::get() returned a string so echoing it to user',
+            get_class($this)
+          )
+        )
+      );
+      
+      echo $ret_str;
+    
+    }//if/else
+  
+  }//method
+  
+  /**
+   *  set the response from the controller::method so that things like the filter::stop() methods
+   *  can access/manipulate it
+   *  
+   *  the controller::method response can either be boolean (true for a 200 response that checks
+   *  templates or false for a 200 response that doesn't check templates or a string that will be
+   *  placed here in set
+   *  
+   *  @param  mixed $val  the result
+   */        
+  function set($val){ return $this->setField('mn_response::response',$val); }//method
+  
+  /**
+   *  get the response
+   *  
+   *  @return mixed
+   */
+  function get(){ return $this->getField('mn_response::response',''); }//method
+  
+  /**
    *  the content type header
    */        
   function setContentType($val){ return $this->setField('mn_response_content_type',$val); }//method
@@ -209,7 +305,7 @@ class montage_response extends montage_base {
     ///if(session_id() !== ''){ session_write_close(); }//if
     
     $exception_name = montage_core::getBestClassName('montage_redirect_exception');
-    throw new $exception_name();
+    throw new $exception_name($url);
   
   }//method
 

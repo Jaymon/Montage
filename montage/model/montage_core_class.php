@@ -55,7 +55,8 @@ final class montage_core extends montage_base_static {
     'MONTAGE_TEMPLATE' => '',
     'MONTAGE_LOG' => '',
     'MONTAGE_SESSION' => '',
-    'MONTAGE_COOKIE' => ''
+    'MONTAGE_COOKIE' => '',
+    'MONTAGE_EVENT' => ''
   );
   
   /**
@@ -66,6 +67,35 @@ final class montage_core extends montage_base_static {
    *  @var  array
    */
   static private $parent_class_map = array();
+  
+  /**
+   *  these are the errors that are handled with handleRuntime().
+   */        
+  private static $ERRORS_RUNTIME = array(
+    E_RECOVERABLE_ERROR => 'E_RECOVERABLE_ERROR',
+    E_WARNING => 'E_WARNING',
+    E_NOTICE => 'E_NOTICE',
+    E_STRICT => 'E_STRICT',
+    E_USER_NOTICE => 'E_USER_NOTICE',
+    E_USER_WARNING => 'E_USER_WARNING',
+    E_USER_ERROR => 'E_USER_ERROR'
+    ///E_DEPRECATED => 'E_DEPRECATED', // >=5.3.0 
+    ///E_USER_DEPRECATED => 'E_USER_DEPRECATED' // >=5.3.0
+  );
+  
+  /**
+   *  these errors are handled by the handleFatal() function
+   *  
+   *  use get_defined_constants() to see their values.
+   */        
+  private static $ERRORS_FATAL = array(
+    E_ERROR => 'E_ERROR',
+    E_PARSE => 'E_PARSE',
+    E_CORE_ERROR => 'E_CORE_ERROR',
+    E_CORE_WARNING => 'E_CORE_WARNING',
+    E_COMPILE_ERROR => 'E_COMPILE_ERROR',
+    E_COMPILE_WARNING => '_COMPILE_WARNING'
+  );
   
   /**
    *  start the wizard
@@ -199,6 +229,10 @@ final class montage_core extends montage_base_static {
     // officially start the framework...
     self::startCoreClasses($controller,$environment,$debug,$charset,$timezone);
     
+    // set error handlers...
+    set_error_handler(array(__CLASS__,'handleErrorRuntime'));
+    register_shutdown_function(array(__CLASS__,'handleErrorFatal'));
+    
     // profile...
     if($debug){ montage_profile::stop(); }//if
     
@@ -242,9 +276,11 @@ final class montage_core extends montage_base_static {
     
     // profile...
     if($debug){ montage_profile::start(__METHOD__); }//if
-  
+
+    $controller_ret_bool = false;
     $request = montage::getRequest();
-    $controller_class_name = $controller_method = '';
+    $response = montage::getResponse();
+    $event = montage::getEvent();
   
     try{
       
@@ -260,11 +296,29 @@ final class montage_core extends montage_base_static {
         
         try{
           
-          $filter_list = self::getInstance($filter_class_name);
+          $event->broadcast(
+            montage_event::KEY_INFO,
+            array('msg' => sprintf('starting filter %s',$filter_class_name))
+          );
+          
+          $filter_list[$key] = self::getInstance($filter_class_name);
         
         }catch(montage_forward_exception $e){
+        
           // we ignore the forward because the controller hasn't been called yet, but people
           // might want to do the forward instead of all the montage_request::setController* methods
+          $event->broadcast(
+            montage_event::KEY_INFO,
+            array('msg' => 
+              sprintf(
+                'filter %s forwarded to controller %s::%s',
+                $filter_class_name,
+                $request->getControllerClass(),
+                $request->getControllerMethod()
+              )
+            )
+          );
+          
         }//try/catch
         
       }//foreach
@@ -279,13 +333,23 @@ final class montage_core extends montage_base_static {
         
         try{
           
-          $result = $request->handle();
+          $controller_ret_bool = $request->handle();
           break;
           
         }catch(montage_forward_exception $e){
     
           // we want to go another round in the while loop since the original
           // controller is being forwarded to another controller
+          $event->broadcast(
+            montage_event::KEY_INFO,
+            array('msg' => 
+              sprintf(
+                'original controller forwarded to controller %s::%s',
+                $request->getControllerClass(),
+                $request->getControllerMethod()
+              )
+            )
+          );
     
         }//try/catch
         
@@ -299,30 +363,79 @@ final class montage_core extends montage_base_static {
       
       // run all the filters again to stop them...
       foreach($filter_list as $filter_instance){
+      
+        $event->broadcast(
+          montage_event::KEY_INFO,
+          array('msg' => sprintf('stopping filter %s',get_class($filter_instance)))
+        );
+        
         $filter_instance->stop();
+        
       }//foreach
       
       // profile...
       if($debug){ montage_profile::stop(); }//if
+    
+    }catch(montage_stop_exception $e){
+      
+      $controller_ret_bool = true;
+      
+      // do nothing, we've stopped execution so we'll go ahead and let the response take over
+      $event->broadcast(
+        montage_event::KEY_INFO,
+        array('msg' => 
+          sprintf(
+            'execution stopped via exception at %s:%s',
+            $e->getFile(),
+            $e->getLine()
+          )
+        )
+      );
       
     }catch(montage_redirect_exception $e){
     
       // we don't really need to do anything since the redirect header should have been called
-      $result = false;
+      $controller_ret_bool = false;
+      $response->set('');
+      
+      $event->broadcast(
+        montage_event::KEY_INFO,
+        array('msg' => 
+          sprintf(
+            'redirect to %s',
+            $e->getMessage()
+          )
+        )
+      );
     
     }catch(Exception $e){
       
-      $controller_class = self::getClassName('error');
-      if(self::isController($controller_class)){
+      $e_name = get_class($e);
       
-        $request->setControllerClass($controller_class);
-        $controller_method = $request->getControllerMethodName(get_class($e));
-        if(method_exists($controller_class,$controller_method)){
+      $controller_class_name = self::getClassName('error');
+      if(self::isController($controller_class_name)){
+      
+        $request->setControllerClass($controller_class_name);
+        $controller_method = $request->getControllerMethodName($e_name);
+        
+        $event->broadcast(
+          montage_event::KEY_INFO,
+          array('msg' => 
+            sprintf(
+              'Attempting to forward to controller %s::%s to handle thrown exception "%s"',
+              $controller_class_name,
+              $controller_method,
+              $e_name
+            )
+          )
+        );
+        
+        if(method_exists($controller_class_name,$controller_method)){
           $request->setControllerMethod($controller_method);
         }//if
         
         $request->setControllerMethodArgs(array($e));
-        $result = $request->handle();
+        $controller_ret_bool = $request->handle();
         
       }else{
         
@@ -343,69 +456,80 @@ final class montage_core extends montage_base_static {
     // profile...
     if($debug){ montage_profile::start('Response'); }//if
     
-    $response = montage::getResponse();
-     
-    if(!headers_sent()){
+    if(!is_bool($controller_ret_bool)){
       
-      // send the content type header... 
-      header(
+      throw new UnexpectedValueException(
         sprintf(
-          'Content-Type: %s; charset=%s',
-          $response->getContentType(),
-          MONTAGE_CHARSET
+          'the controller method (%s::%s) returned a non-boolean value, it was a %s',
+          $request->getControllerClass(),
+          $request->getControllerMethod(),
+          gettype($controller_ret_bool)
         )
       );
-      
-      // send the status code header...
-      header(
-        sprintf(
-          '%s %s',
-          $request->getServerField('SERVER_PROTOCOL','HTTP/1.0'),
-          $response->getStatus()
-        )
-      );
-      
-      if($response->isStatusCode(401)){
-        header('WWW-Authenticate: Basic realm="Please Log In"');
-      }//if
       
     }//if
     
-    if(is_bool($result)){
+    $response->handle($controller_ret_bool);
     
-      if($result === true){
+    // profile...
+    if($debug){ montage_profile::stop(); }//if
     
-        // actually render the view using the template info...
-        $template = $response->getTemplateInstance();
-        $template->out(montage_template::OPTION_OUT_STD);
+    // profile...
+    if($debug){ montage_profile::stop(); }//if
+    
+  }//method
+  
+  /**
+   *  handles runtime errors, basically the warnings, and the E_USER_* stuff
+   *  
+   *  http://us2.php.net/manual/en/function.set_error_handler      
+   *
+   *  @param  integer $errno  the error number, this will be a constant (eg, E_USER_NOTICE)
+   *  @param  string  $errstr the actual error description
+   *  @param  string  $errfile  the file path of the file that triggered the error
+   *  @param  integer $errline  the line number the error occured on the $errfile         
+   *  @return boolean false to pass the error through, true to block it from the normal handler
+   */        
+  static function handleErrorRuntime($errno,$errstr,$errfile,$errline){
+  
+    $error_map = array();
+    $error_map['type'] = $errno;
+    $error_map['message'] = $errstr;
+    $error_map['file'] = $errfile;
+    $error_map['line'] = $errline;
+    $error_map['name'] = self::getErrorName($error_map['type']);
+    
+    // broadcast the error to anyone that is listening...
+    montage::getEvent()->broadcast(montage_event::KEY_ERROR,$error_map);
+    
+    // still pass the errors through, change to true if you want to block errors...
+    return false;
+    
+  }//method
+  
+  /**
+   *  this handles the fatal errors, the E_COMPILE, etc.
+   *  
+   *  http://us2.php.net/manual/en/function.register_shutdown_function
+   *      
+   *  "The following error types cannot be handled with a user defined error function: 
+   *  E_ERROR, E_PARSE, E_CORE_ERROR, E_CORE_WARNING, E_COMPILE_ERROR, E_COMPILE_WARNING, 
+   *  and most of E_STRICT raised in the file where set_error_handler() is called."
+   */        
+  static function handleErrorFatal(){
+  
+    if($error_map = error_get_last()){
+    
+      if(!isset(self::$ERRORS_RUNTIME[$error_map['type']])){
+    
+        $error_map['name'] = self::getErrorName($error_map['type']);
+      
+        // broadcast the error to anyone that is listening...
+        montage::getEvent()->broadcast(montage_event::KEY_ERROR,$error_map);
         
-      }else{
-        // no output is sent if controller returns false
-      }//if/else
-    
-    }else if(is_string($result)){
-    
-      // it's a string, so just echo it to the screen and be done...
-      echo $result;
-    
-    }else{
-    
-      throw new UnexpectedValueException(
-        sprintf(
-          'the controller method (%s::%s) returned a value that was neither a boolean or a string, it was a %s',
-          $controller_class_name,
-          $controller_method,
-          gettype($result)
-        )
-      );
-    
-    }//if/else if/else
-    
-    // profile...
-    if($debug){ montage_profile::stop(); }//if
-    
-    // profile...
-    if($debug){ montage_profile::stop(); }//if
+      }//if
+      
+    }//if
     
   }//method
   
@@ -870,9 +994,8 @@ final class montage_core extends montage_base_static {
    */
   private static function startCoreClasses($controller,$environment,$debug,$charset,$timezone){
   
-    // log starts first so startup problems can be logged...
-    $class_name = self::getBestClassName('montage_log');
-    montage::setField('montage::montage_log',new $class_name());
+    $class_name = self::getBestClassName('montage_event');
+    montage::setField('montage::montage_event',new $class_name());
     
     $class_name = self::getBestClassName('montage_session');
     montage::setField(
@@ -928,6 +1051,25 @@ final class montage_core extends montage_base_static {
       new $class_name(montage::getRequest()->getHost())
     );
 
+  }//method
+  
+  /**
+   *  return the error name that corresponds to the $errno
+   *  
+   *  @param  integer $errno
+   *  @return string
+   */
+  private static function getErrorName($errno){
+  
+    $ret_str = 'UNKNOWN';
+    if(isset(self::$ERRORS_RUNTIME[$errno])){
+      $ret_str = self::$ERRORS_RUNTIME[$errno];
+    }else if(isset(self::$ERRORS_FATAL)){
+      $ret_str = self::$ERRORS_FATAL[$errno];
+    }//if/else if
+  
+    return $ret_str;
+  
   }//method
 
 }//class     

@@ -178,8 +178,7 @@ class montage_request extends montage_base {
    *  getControllerClass()::getControllerMethodName()(getControllerMethodArgs) or
    *  $controller::$method($args)
    *  
-   *  @return boolean|string  if boolean, true will mean response was successful
-   *                          if string, what to return to the user
+   *  @return boolean
    */
   function handle(){
   
@@ -187,9 +186,23 @@ class montage_request extends montage_base {
     $controller_class_name = $this->getControllerClass();
     $controller_method = $this->getControllerMethod();
     $controller_method_args = $this->getControllerMethodArgs();
+    
+    $event = montage::getEvent();
+    $event->broadcast(
+      montage_event::KEY_INFO,
+      array('msg' => 
+        sprintf(
+          'controller %s::%s called',
+          $controller_class_name,
+          $controller_method
+        )
+      )
+    );
+    
     $controller = new $controller_class_name();
     $ret_mixed = call_user_func_array(array($controller,$controller_method),$controller_method_args);
     $controller->stop();
+    
     return $ret_mixed;
   
   }//method
@@ -594,6 +607,67 @@ class montage_request extends montage_base {
     return $method_name;
   
   }//method
+  
+  /**
+   *  this function aggregates some information about the current request, handy for
+   *  getting detailed info in case of error or something           
+   *
+   *  @return string  information about the request
+   */
+  function getInfo(){
+  
+    $ret_map = array();
+    
+    // save some general info about the request...
+    $ret_map['request'] = array();
+    
+    $ret_map['request']['url'] = $this->getUrl();
+    $ret_map['request']['referrer'] = $this->getReferer();
+    $ret_map['request']['controller_class'] = $this->getControllerClass();
+    $ret_map['request']['controller_method'] = $this->getControllerMethod();
+    $ret_map['request']['host'] = $this->getHost();
+    $ret_map['request']['ajax'] = $this->isAjax() ? 'TRUE' : 'FALSE';
+    $ret_map['request']['script'] = $this->getFile();
+    $ret_map['request']['cli'] = $this->isCli() ? 'TRUE' : 'FALSE';
+    $ret_map['request']['User-Agent'] = $this->getUserAgent();
+    
+    if($this->hasServerField('REQUEST_URI')){
+      $ret_map['request']['REQUEST_URI'] = $this->getServerField('REQUEST_URI','');
+    }//if
+    
+    if($this->isCli()){
+    
+      if(!empty($_SERVER['argv'])){
+        $ret_map['argv'] = $_SERVER['argv'];
+      }//if
+      
+    }else{
+    
+      $ret_map['request']['ip_address'] = $this->getIp();
+    
+    }//if/else
+    
+    // add the variables...
+  
+    if(!empty($_GET)){
+      $ret_map['_GET'] = $this->getGetFields();
+    }//if
+    
+    if(!empty($_POST)){
+      $ret_map['_POST'] = $this->getPostFields();
+    }//if
+    
+    if(!empty($_SESSION)){
+      $ret_map['_SESSION'] = $this->getSessionFields();
+    }//if
+    
+    if(!empty($_COOKIE)){
+      $ret_map['_COOKIE'] = $this->getCookieFields();
+    }//if
+      
+    return $ret_map;
+  
+  }//method */
 
 }//class     
 

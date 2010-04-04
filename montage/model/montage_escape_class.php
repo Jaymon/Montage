@@ -398,7 +398,7 @@ class montage_escape implements ArrayAccess,Iterator,Countable {
   protected function assureRawVal($val){
   
     $base_class_name = __CLASS__; // should always be the name of this class
-    return ($val instanceof $base_class_name) ? $val->getRawValue(); : $val;
+    return ($val instanceof $base_class_name) ? $val->getRawValue() : $val;
     
   }//method
 
