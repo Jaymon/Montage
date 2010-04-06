@@ -19,8 +19,8 @@ abstract class montage_controller extends montage_base {
    *  
    *  this method is called if this controller is activated but no other method is given
    *      
-   *  @return boolean|string  if true, then the template will be rendered, if string, then the
-   *                          string will be echoed
+   *  @return boolean like all controller methods if true, then the template will be rendered, 
+   *                  if false, then montage::getResponse()->get() will be used instead of the template
    */
   abstract function getIndex();
   

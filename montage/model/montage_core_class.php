@@ -7,17 +7,30 @@
  *  
  *  class paths checked by default:
  *    [MONTAGE DIRECTORY]/model
+ *    [APP DIRECTORY]/settings
  *    [MONTAGE DIRECTORY]/plugins
  *    [APP DIRECTORY]/plugins  
  *    [APP DIRECTORY]/model
- *    [APP DIRECTORY]/controller  
+ *    [APP DIRECTORY]/controller/$controller
  *   
- *  @version 0.1
+ *  @version 0.3
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 12-28-09
  *  @package montage 
  ******************************************************************************/
 final class montage_core extends montage_base_static {
+  
+  /**
+   *  in case of exception while handling a request, the class with this name will be called
+   *  
+   *  class must extend montage_controller      
+   */
+  const CLASS_NAME_ERROR_CONTROLLER = 'error';
+  
+  /**
+   *  the "global" settings will be a montage_start child extending class with this name
+   */
+  const CLASS_NAME_APP_START = 'app';
   
   /**
    *  switched to true in the start() function
@@ -69,7 +82,7 @@ final class montage_core extends montage_base_static {
   static private $parent_class_map = array();
   
   /**
-   *  these are the errors that are handled with handleRuntime().
+   *  these are the errors that are handled with {@link handleErrorRuntime()}.
    */        
   private static $ERRORS_RUNTIME = array(
     E_RECOVERABLE_ERROR => 'E_RECOVERABLE_ERROR',
@@ -84,10 +97,10 @@ final class montage_core extends montage_base_static {
   );
   
   /**
-   *  these errors are handled by the handleFatal() function
+   *  these errors are handled by the {@link handleErrorFatal()} function
    *  
    *  use get_defined_constants() to see their values.
-   */        
+   */
   private static $ERRORS_FATAL = array(
     E_ERROR => 'E_ERROR',
     E_PARSE => 'E_PARSE',
@@ -147,21 +160,32 @@ final class montage_core extends montage_base_static {
     if(!$loaded_from_cache){
     
       // profile...
-      if($debug){ montage_profile::start('build paths'); }//if
-    
+      if($debug){ montage_profile::start('check paths'); }//if
+      
+      // load the default model directories...
+      self::setPath(montage_path::get($framework_path,'model'));
+      
+      // set the main settings path...
+      self::setPath(montage_path::get($app_path,'settings'));
+      
+      $start_class_list = array();
+      
       // throughout building the paths, we need to compile a list of start classes.
       // start classes are classes that extend montage_start.
-      // the start classes follow a precedence order: Global, plugins, controller, and environment...
+      // the start classes follow a precedence order: Global, environment, plugins, and controller...
       // * Global is a class named "app" it can't be named "start" because of the start() method trying to override __construct()
+      // * environment controller is a class with the same name as $environment, it's before plugins to set db variables
+      //    and the like so that plugins (like a db plugin) can take advantage of connection settings
+      //    like db name, db username, and db password
       // * plugins are name by what folder they are in (eg, [APP PATH]/plugins/foo/ the plugin is named foo)
       // and the plugin start class is the class with the same name as the root folder
       // (eg, class foo extends montage_start)
       // * controller start class is a class with same name as $controller
-      // * environment controller is a class with the same name as $environment
-      $start_class_list = array('app');
+      $start_class_name = self::getClassName(self::CLASS_NAME_APP_START);
+      if(!empty($start_class_name)){ $start_class_list[] = $start_class_name; }//if
       
-      // load the default model directories...
-      self::setPath(montage_path::get($framework_path,'model'));
+      $start_class_name = self::getClassName($environment);
+      if(!empty($start_class_name)){ $start_class_list[] = $start_class_name; }//if
       
       // include all the plugin paths, save all the start class names.
       // We include these here before the app model path because they can extend core 
@@ -183,7 +207,12 @@ final class montage_core extends montage_base_static {
         
       }//foreach
       
-      // load the app model directory...
+      $start_class_name = self::getClassName($controller);
+      if(!empty($start_class_name)){ $start_class_list[] = $start_class_name; }//if
+      
+      self::setField('montage_core_start_class_list',$start_class_list);
+      
+      // load the app's model directory...
       self::setPath(montage_path::get($app_path,'model'));
     
       // load the controller...
@@ -204,17 +233,6 @@ final class montage_core extends montage_base_static {
         );
       }//if
       
-      // set the main settings path...
-      self::setPath(montage_path::get($app_path,'settings'));
-      
-      $start_class_name = self::getClassName($controller);
-      if(!empty($start_class_name)){ $start_class_list[] = $start_class_name; }//if
-      
-      $start_class_name = self::getClassName($environment);
-      if(!empty($start_class_name)){ $start_class_list[] = $start_class_name; }//if
-      
-      self::setField('montage_core_start_class_list',$start_class_list);
-      
       // save all the compiled core classes/paths into the cache...
       self::setCore();
       
@@ -226,7 +244,7 @@ final class montage_core extends montage_base_static {
     // profile...
     if($debug){ montage_profile::start('initialize core classes'); }//if
     
-    // officially start the framework...
+    // officially start the core global classes of the framework...
     self::startCoreClasses($controller,$environment,$debug,$charset,$timezone);
     
     // set error handlers...
@@ -273,57 +291,107 @@ final class montage_core extends montage_base_static {
   
     self::$is_handled = true;
     $debug = montage::getSettings()->getDebug();
+    $response = montage::getResponse();
+    
+    if($debug){ montage_profile::start(__METHOD__); }//if
+    
+    // get all the filters and start them...
+    ///$filter_list = array_map(array('montage_core','getInstance'),montage_core::getFilters());
+    $filter_list = self::getFilterClassNames();
+    $use_template = self::handleRequest($filter_list);
+    
+    // profile, response...
+    if($debug){ montage_profile::start('Response'); }//if
+    
+    if(!is_bool($use_template)){
+      
+      throw new UnexpectedValueException(
+        sprintf(
+          'the controller method (%s::%s) returned a non-boolean value, it was a %s',
+          $request->getControllerClass(),
+          $request->getControllerMethod(),
+          gettype($use_template)
+        )
+      );
+      
+    }//if
+    
+    $response->handle($use_template);
+    
+    // profile, response...
+    if($debug){ montage_profile::stop(); }//if
+    
+    // profile, method...
+    if($debug){ montage_profile::stop(); }//if
+    
+  }//method
+  
+  /**
+   *  handle a request, warts and all
+   *  
+   *  the reason this is separate from {@link handle()} so that it can call it again
+   *  to try and handle (in case of error or the like)
+   *  
+   *  @param  array $filter_list  a list of string names of classes that extend montage_filter
+   *  @return boolean $use_template to pass into the response handler
+   */
+  static private function handleRequest($filter_list = array()){
+  
+    $debug = montage::getSettings()->getDebug();
     
     // profile...
     if($debug){ montage_profile::start(__METHOD__); }//if
 
-    $controller_ret_bool = false;
+    $use_template = false;
     $request = montage::getRequest();
     $response = montage::getResponse();
     $event = montage::getEvent();
-  
+    
     try{
       
-      ///out::e($class,$method); return;
-      
-      // profile...
-      if($debug){ montage_profile::start('filters start'); }//if
-      
-      // get all the filters and start them...
-      ///$filter_list = array_map(array('montage_core','getInstance'),montage_core::getFilters());
-      $filter_list = self::getFilterClassNames();
-      foreach($filter_list as $key => $filter_class_name){
+      if(!empty($filter_list)){
         
-        try{
+        // profile, filters start...
+        if($debug){ montage_profile::start('filters start'); }//if
+
+        foreach($filter_list as $key => $filter_class_name){
           
-          $event->broadcast(
-            montage_event::KEY_INFO,
-            array('msg' => sprintf('starting filter %s',$filter_class_name))
-          );
-          
-          $filter_list[$key] = self::getInstance($filter_class_name);
+          if(is_string($filter_class_name)){
+            
+            try{
+              
+              $event->broadcast(
+                montage_event::KEY_INFO,
+                array('msg' => sprintf('starting filter %s',$filter_class_name))
+              );
+              
+              $filter_list[$key] = self::getInstance($filter_class_name);
+            
+            }catch(montage_forward_exception $e){
+            
+              // we ignore the forward because the controller hasn't been called yet, but people
+              // might want to do the forward instead of all the montage_request::setController* methods
+              $event->broadcast(
+                montage_event::KEY_INFO,
+                array('msg' => 
+                  sprintf(
+                    'filter %s forwarded to controller %s::%s',
+                    $filter_class_name,
+                    $request->getControllerClass(),
+                    $request->getControllerMethod()
+                  )
+                )
+              );
+              
+            }//try/catch
+            
+          }//if
+            
+        }//foreach
         
-        }catch(montage_forward_exception $e){
-        
-          // we ignore the forward because the controller hasn't been called yet, but people
-          // might want to do the forward instead of all the montage_request::setController* methods
-          $event->broadcast(
-            montage_event::KEY_INFO,
-            array('msg' => 
-              sprintf(
-                'filter %s forwarded to controller %s::%s',
-                $filter_class_name,
-                $request->getControllerClass(),
-                $request->getControllerMethod()
-              )
-            )
-          );
-          
-        }//try/catch
-        
-      }//foreach
+      }//if
       
-      // profile...
+      // profile, filters start...
       if($debug){ montage_profile::stop(); }//if
       
       // profile...
@@ -333,7 +401,7 @@ final class montage_core extends montage_base_static {
         
         try{
           
-          $controller_ret_bool = $request->handle();
+          $use_template = $request->handle();
           break;
           
         }catch(montage_forward_exception $e){
@@ -344,7 +412,7 @@ final class montage_core extends montage_base_static {
             montage_event::KEY_INFO,
             array('msg' => 
               sprintf(
-                'original controller forwarded to controller %s::%s',
+                'controller forwarded to controller %s::%s',
                 $request->getControllerClass(),
                 $request->getControllerMethod()
               )
@@ -361,24 +429,28 @@ final class montage_core extends montage_base_static {
       // profile...
       if($debug){ montage_profile::start('filters stop'); }//if
       
-      // run all the filters again to stop them...
-      foreach($filter_list as $filter_instance){
-      
-        $event->broadcast(
-          montage_event::KEY_INFO,
-          array('msg' => sprintf('stopping filter %s',get_class($filter_instance)))
-        );
+      if(!empty($filter_list)){
         
-        $filter_instance->stop();
+        // run all the filters again to stop them...
+        foreach($filter_list as $filter_instance){
         
-      }//foreach
+          $event->broadcast(
+            montage_event::KEY_INFO,
+            array('msg' => sprintf('stopping filter %s',get_class($filter_instance)))
+          );
+          
+          $filter_instance->stop();
+          
+        }//foreach
+        
+      }//if
       
       // profile...
       if($debug){ montage_profile::stop(); }//if
     
     }catch(montage_stop_exception $e){
       
-      $controller_ret_bool = true;
+      $use_template = false; // since a stop signal was caught we'll want to use $response->get()
       
       // do nothing, we've stopped execution so we'll go ahead and let the response take over
       $event->broadcast(
@@ -395,7 +467,7 @@ final class montage_core extends montage_base_static {
     }catch(montage_redirect_exception $e){
     
       // we don't really need to do anything since the redirect header should have been called
-      $controller_ret_bool = false;
+      $use_template = false;
       $response->set('');
       
       $event->broadcast(
@@ -412,7 +484,7 @@ final class montage_core extends montage_base_static {
       
       $e_name = get_class($e);
       
-      $controller_class_name = self::getClassName('error');
+      $controller_class_name = self::getClassName(self::CLASS_NAME_ERROR_CONTROLLER);
       if(self::isController($controller_class_name)){
       
         $request->setControllerClass($controller_class_name);
@@ -435,13 +507,17 @@ final class montage_core extends montage_base_static {
         }//if
         
         $request->setControllerMethodArgs(array($e));
-        $controller_ret_bool = $request->handle();
+        
+        // send it back through for another round...
+        $use_template = self::handleRequest();
         
       }else{
         
         throw new RuntimeException(
           sprintf(
-            'No error controller so the exception %s (code: %s, message: %s) could not be resolved: %s',
+            'No error controller so the exception %s (code: %s, message: %s) could not be resolved: %s. '
+            .' To remedy this, create an error class that extends montage_controller (eg, "class error '
+            .' extends montage_controller { ... }").',
             get_class($e),
             $e->getCode(),
             $e->getMessage(),
@@ -454,29 +530,10 @@ final class montage_core extends montage_base_static {
     }//try/catch
     
     // profile...
-    if($debug){ montage_profile::start('Response'); }//if
-    
-    if(!is_bool($controller_ret_bool)){
-      
-      throw new UnexpectedValueException(
-        sprintf(
-          'the controller method (%s::%s) returned a non-boolean value, it was a %s',
-          $request->getControllerClass(),
-          $request->getControllerMethod(),
-          gettype($controller_ret_bool)
-        )
-      );
-      
-    }//if
-    
-    $response->handle($controller_ret_bool);
-    
-    // profile...
     if($debug){ montage_profile::stop(); }//if
-    
-    // profile...
-    if($debug){ montage_profile::stop(); }//if
-    
+  
+    return $use_template;
+  
   }//method
   
   /**

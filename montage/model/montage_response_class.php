@@ -90,11 +90,11 @@ class montage_response extends montage_base {
   
   /**
    *  handle the response returned from the controller::method
+   *  
+   *  @param  boolean $use_template true if the templating system should be used, false
+   *                                if $this->get() should be output instead         
    */
-  function handle($controller_ret_bool){
-  
-    // canary, don't do anything if the controller returned false...
-    if(empty($controller_ret_bool)){ return; }//if
+  function handle($use_template = true){
   
     $request = montage::getRequest();
     $event = montage::getEvent();
@@ -125,8 +125,28 @@ class montage_response extends montage_base {
       
     }//if
     
-    $ret_str = $this->get();
-    if(empty($ret_str)){
+    if(empty($use_template)){
+    
+      $event->broadcast(
+        montage_event::KEY_INFO,
+        array('msg' => 
+          sprintf(
+            'echoing %s::get() to user because $use_template was false',
+            get_class($this)
+          )
+        )
+      );
+    
+      $ret_str = $this->get();
+      if(!empty($ret_str)){
+        
+        // it's a string, so just echo it to the screen and be done...
+      
+        echo $ret_str;
+        
+      }//if
+    
+    }else{
     
       // actually render the view using the template info...
     
@@ -136,7 +156,7 @@ class montage_response extends montage_base {
         montage_event::KEY_INFO,
         array('msg' => 
           sprintf(
-            '%s::get() returned empty string so echoing template "%s" to user',
+            'echoing template "%s" to user because $use_template was true',
             get_class($this),
             $template->getTemplate()
           )
@@ -144,22 +164,6 @@ class montage_response extends montage_base {
       );
       
       $template->out(montage_template::OPTION_OUT_STD);
-    
-    }else{
-    
-      // it's a string, so just echo it to the screen and be done...
-      
-      $event->broadcast(
-        montage_event::KEY_INFO,
-        array('msg' => 
-          sprintf(
-            '%s::get() returned a string so echoing it to user',
-            get_class($this)
-          )
-        )
-      );
-      
-      echo $ret_str;
     
     }//if/else
   

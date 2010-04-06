@@ -3,7 +3,7 @@
 /**
  *  a simple way to take script execution measurements (ie, profile a block of code)
  *
- *  @version 0.2
+ *  @version 0.3
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 2-25-10
  *  @package montage

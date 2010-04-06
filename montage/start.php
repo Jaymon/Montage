@@ -59,6 +59,7 @@ require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_core_class.
 // include the profile cache so we can see how long core takes to run...
 if(MONTAGE_DEBUG){
   require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','help','montage_profile_class.php')));
+  montage_profile::start('montage total');
 }//if
 
 try{
@@ -84,3 +85,5 @@ try{
 
 // actually handle the request...
 montage_core::handle();
+
+if(MONTAGE_DEBUG){ montage_profile::stop(); }//if
