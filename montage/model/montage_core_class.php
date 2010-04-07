@@ -21,13 +21,6 @@
 final class montage_core extends montage_base_static {
   
   /**
-   *  in case of exception while handling a request, the class with this name will be called
-   *  
-   *  class must extend montage_controller      
-   */
-  const CLASS_NAME_ERROR_CONTROLLER = 'error';
-  
-  /**
    *  the "global" settings will be a montage_start child extending class with this name
    */
   const CLASS_NAME_APP_START = 'app';
@@ -66,10 +59,10 @@ final class montage_core extends montage_base_static {
     'MONTAGE_URL' => '',
     'MONTAGE_ESCAPE' => '',
     'MONTAGE_TEMPLATE' => '',
-    'MONTAGE_LOG' => '',
     'MONTAGE_SESSION' => '',
     'MONTAGE_COOKIE' => '',
-    'MONTAGE_EVENT' => ''
+    'MONTAGE_EVENT' => '',
+    'MONTAGE_FORWARD' => ''
   );
   
   /**
@@ -261,7 +254,7 @@ final class montage_core extends montage_base_static {
     
     // now actually start the settings/start classes...
     $start_class_list = self::getField('montage_core_start_class_list',array());
-    $start_class_parent_key = 'MONTAGE_START';
+    $start_class_parent_key = 'montage_start';
     foreach($start_class_list as $start_class_name){
       self::getInstance($start_class_name,$start_class_parent_key);
     }//foreach
@@ -291,7 +284,6 @@ final class montage_core extends montage_base_static {
   
     self::$is_handled = true;
     $debug = montage::getSettings()->getDebug();
-    $response = montage::getResponse();
     
     if($debug){ montage_profile::start(__METHOD__); }//if
     
@@ -316,6 +308,7 @@ final class montage_core extends montage_base_static {
       
     }//if
     
+    $response = montage::getResponse();
     $response->handle($use_template);
     
     // profile, response...
@@ -358,32 +351,12 @@ final class montage_core extends montage_base_static {
           
           if(is_string($filter_class_name)){
             
-            try{
-              
-              $event->broadcast(
-                montage_event::KEY_INFO,
-                array('msg' => sprintf('starting filter %s',$filter_class_name))
-              );
-              
-              $filter_list[$key] = self::getInstance($filter_class_name);
+            $event->broadcast(
+              montage_event::KEY_INFO,
+              array('msg' => sprintf('starting filter %s',$filter_class_name))
+            );
             
-            }catch(montage_forward_exception $e){
-            
-              // we ignore the forward because the controller hasn't been called yet, but people
-              // might want to do the forward instead of all the montage_request::setController* methods
-              $event->broadcast(
-                montage_event::KEY_INFO,
-                array('msg' => 
-                  sprintf(
-                    'filter %s forwarded to controller %s::%s',
-                    $filter_class_name,
-                    $request->getControllerClass(),
-                    $request->getControllerMethod()
-                  )
-                )
-              );
-              
-            }//try/catch
+            $filter_list[$key] = self::getInstance($filter_class_name);
             
           }//if
             
@@ -397,31 +370,7 @@ final class montage_core extends montage_base_static {
       // profile...
       if($debug){ montage_profile::start('controller'); }//if
       
-      while(true){
-        
-        try{
-          
-          $use_template = $request->handle();
-          break;
-          
-        }catch(montage_forward_exception $e){
-    
-          // we want to go another round in the while loop since the original
-          // controller is being forwarded to another controller
-          $event->broadcast(
-            montage_event::KEY_INFO,
-            array('msg' => 
-              sprintf(
-                'controller forwarded to controller %s::%s',
-                $request->getControllerClass(),
-                $request->getControllerMethod()
-              )
-            )
-          );
-    
-        }//try/catch
-        
-      }//while
+      $use_template = $request->handle();
       
       // profile, stop controller...
       if($debug){ montage_profile::stop(); }//if
@@ -448,22 +397,24 @@ final class montage_core extends montage_base_static {
       // profile...
       if($debug){ montage_profile::stop(); }//if
     
-    }catch(montage_stop_exception $e){
-      
-      $use_template = false; // since a stop signal was caught we'll want to use $response->get()
-      
-      // do nothing, we've stopped execution so we'll go ahead and let the response take over
+    }catch(montage_forward_exception $e){
+    
       $event->broadcast(
         montage_event::KEY_INFO,
         array('msg' => 
           sprintf(
-            'execution stopped via exception at %s:%s',
+            'forwarding to controller %s::%s via forward exception at %s:%s',
+            $request->getControllerClass(),
+            $request->getControllerMethod(),
             $e->getFile(),
             $e->getLine()
           )
         )
       );
-      
+    
+      // we forwarded to another controller so we're going another round...
+      $use_template = self::handleRequest();
+    
     }catch(montage_redirect_exception $e){
     
       // we don't really need to do anything since the redirect header should have been called
@@ -480,52 +431,41 @@ final class montage_core extends montage_base_static {
         )
       );
     
+    }catch(montage_stop_exception $e){
+      
+      $use_template = false; // since a stop signal was caught we'll want to use $response->get()
+      
+      // do nothing, we've stopped execution so we'll go ahead and let the response take over
+      $event->broadcast(
+        montage_event::KEY_INFO,
+        array('msg' => 
+          sprintf(
+            'execution stopped via stop exception at %s:%s',
+            $e->getFile(),
+            $e->getLine()
+          )
+        )
+      );
+      
     }catch(Exception $e){
       
-      $e_name = get_class($e);
+      $request->setErrorHandler($e);
       
-      $controller_class_name = self::getClassName(self::CLASS_NAME_ERROR_CONTROLLER);
-      if(self::isController($controller_class_name)){
-      
-        $request->setControllerClass($controller_class_name);
-        $controller_method = $request->getControllerMethodName($e_name);
-        
-        $event->broadcast(
-          montage_event::KEY_INFO,
-          array('msg' => 
-            sprintf(
-              'Attempting to forward to controller %s::%s to handle thrown exception "%s"',
-              $controller_class_name,
-              $controller_method,
-              $e_name
-            )
-          )
-        );
-        
-        if(method_exists($controller_class_name,$controller_method)){
-          $request->setControllerMethod($controller_method);
-        }//if
-        
-        $request->setControllerMethodArgs(array($e));
-        
-        // send it back through for another round...
-        $use_template = self::handleRequest();
-        
-      }else{
-        
-        throw new RuntimeException(
+      $event->broadcast(
+        montage_event::KEY_INFO,
+        array('msg' => 
           sprintf(
-            'No error controller so the exception %s (code: %s, message: %s) could not be resolved: %s. '
-            .' To remedy this, create an error class that extends montage_controller (eg, "class error '
-            .' extends montage_controller { ... }").',
-            get_class($e),
-            $e->getCode(),
-            $e->getMessage(),
-            $e
+            'forwarding to controller %s::%s to handle exception at %s:%s',
+            $request->getControllerClass(),
+            $request->getControllerMethod(),
+            $e->getFile(),
+            $e->getLine()
           )
-        );
+        )
+      );
       
-      }//if/else
+      // send it back through for another round...
+      $use_template = self::handleRequest();
     
     }//try/catch
     
@@ -601,19 +541,23 @@ final class montage_core extends montage_base_static {
    *  @return object
    */
   static function getInstance($class_name,$parent_name = ''){
-    
-    $class_name = self::getClassName($class_name);
-  
-    if(!empty($parent_name)){
-    
-      if(!self::isChild($class_name,$parent_name)){
-        $class_name = '';
-      }//if
-    
-    }//if
-    
+    $class_name = self::getClassName($class_name,$parent_name);
     return empty($class_name) ? null : new $class_name();
-    
+  }//method
+  
+  /**
+   *  create and return the best instance of $class_name
+   *  
+   *  this only works for classes that don't take any arguments in their constructor
+   *      
+   *  @param  string  $class_name the name of the class whose instance should be returned
+   *  @param  string  $parent_name  the name of the parent class, if not empty then $class_name
+   *                                must be a child of $parent_name, otherwise null is returned
+   *  @return object
+   */
+  static function getBestInstance($class_name,$parent_name = ''){
+    $class_name = self::getBestClassName($class_name,$parent_name);
+    return empty($class_name) ? null : new $class_name();
   }//method
   
   /**
@@ -623,10 +567,12 @@ final class montage_core extends montage_base_static {
    *  a class whether we pass in ClassName Classname className. Basically, montage
    *  classes are case-insensitive            
    *  
-   *  @param  string  $class_key      
+   *  @param  string  $class_key  
+   *  @param  string  $parent_name  the name of the parent class, if not empty then $class_name
+   *                                must be a child of $parent_name       
    *  @return string
    */
-  static function getClassName($class_key){
+  static function getClassName($class_key,$parent_name = ''){
     
     // sanity, make sure the class key is in the right format...
     $class_key = self::getClassKey($class_key);
@@ -634,7 +580,15 @@ final class montage_core extends montage_base_static {
     $ret_str = '';
     if(isset(self::$class_map[$class_key])){
       $ret_str = self::$class_map[$class_key]['class_name'];
+      
+      if(!empty($parent_name)){
+        if(!self::isChild($class_key,$parent_name)){
+          $ret_str = '';
+        }//if
+      }//if
+      
     }//if
+    
     return $ret_str;
     
   }//method
@@ -643,11 +597,13 @@ final class montage_core extends montage_base_static {
    *  get the absolute most child for the given class
    *  (eg, the last class to extend any class that extends the passed in $class_key)
    *  
-   *  @param  string  $parent_class_key
-   *  @return string  the child class name
+   *  @param  string  $class_key
+   *  @param  string  $parent_name  the name of the parent class, if not empty then $class_name
+   *                                must be a child of $parent_name   
+   *  @return string  the child class name   
    *  @throws DomainException if the class_key is extended by more than one unrelated child   
    */
-  static function getBestClassName($class_key){
+  static function getBestClassName($class_key,$parent_name = ''){
   
     $ret_str = '';
   
@@ -684,7 +640,7 @@ final class montage_core extends montage_base_static {
       
     }//if/else
   
-    return self::getClassName($ret_str);
+    return self::getClassName($ret_str,$parent_name);
   
   }//method
   
@@ -731,7 +687,25 @@ final class montage_core extends montage_base_static {
    *  @return boolean true if $class_name is the name of a controller child
    */
   static function isController($class_name){
-    return self::isChild($class_name,'MONTAGE_CONTROLLER');
+    
+    $class_key = self::getClassKey($class_name);
+    
+    $ret_bool = self::isChild($class_key,'MONTAGE_CONTROLLER');
+    if($ret_bool){
+    
+      if(isset(self::$parent_class_map[$class_key])){
+      
+        // since this class is also a parent, let's make sure it's not abstract or whatnot...
+        $class_name = self::getClassName($class_name);
+        $reflector = new ReflectionClass($class_name);
+        $ret_bool = $reflector->isInstantiable();
+      
+      }//if
+    
+    }//if
+    
+    return $ret_bool;
+    
   }//method
   
   /**
@@ -756,13 +730,15 @@ final class montage_core extends montage_base_static {
     // canary...
     if(empty($child_class_name)){ return false; }//if
     if(empty($parent_class_name)){ return false; }//if
-    if(empty(self::$parent_class_map[$parent_class_name])){ return false; }//if
   
     $ret_bool = false;
-    $child_class_key = self::getClassKey($child_class_name);
+    
     $parent_class_key = self::getClassKey($parent_class_name);
-    if(isset(self::$parent_class_map[$parent_class_key])){
+    if(!empty(self::$parent_class_map[$parent_class_key])){
+      
+      $child_class_key = self::getClassKey($child_class_name);
       $ret_bool = in_array($child_class_key,self::$parent_class_map[$parent_class_key],true);
+      
     }//if
     
     return $ret_bool;

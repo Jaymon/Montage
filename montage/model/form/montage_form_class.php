@@ -5,7 +5,8 @@
  *  
  *  if you override __construct(), remember to call parent::__cosntruct() somewhere
  *  in your new __construct() method      
- *   
+ *  
+ *  @abstract 
  *  @version 0.1
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 1-1-10

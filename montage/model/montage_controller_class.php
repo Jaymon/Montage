@@ -3,6 +3,7 @@
 /**
  *  all controller class should extend this class 
  *  
+ *  @abstract 
  *  @version 0.1
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 2-19-10

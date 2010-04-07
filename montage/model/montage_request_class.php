@@ -129,41 +129,14 @@ class montage_request extends montage_base {
     $this->setField('montage_request_path_list',$path_list);
     $this->setPath(join('/',$path_list));
     
-    // find the controller, method, and method arguments...
-    $controller_method_args = $path_list;
-    if(!empty($path_list[0])){
-      
-      $controller_class = montage_core::getClassName($path_list[0]);
-      
-      if(montage_core::isController($controller_class)){
-        
-        $this->setControllerClass($controller_class);
-        
-        if(!empty($path_list[1])){
-        
-          $controller_method = $this->getControllerMethodName($path_list[1]);
-        
-          // if the controller method does not exist then use the default...
-          if(method_exists($controller_class,$controller_method)){
-          
-            $this->setControllerMethod($controller_method);
-            $controller_method_args = array_slice($path_list,2);
-            
-          }else{
-          
-            $controller_method_args = array_slice($path_list,1);
-            
-          }//if/else
-          
-        }else{
-          $controller_method_args = array_slice($path_list,1);
-        }//if/else
-        
-      }//if/else
-      
-    }//if
+    // set the controller...
+    $forward = montage_core::getBestInstance('montage_forward');
+    $controller_map = $forward->find($path_list); 
+    ///$this->setHandler($controller_map[0],$controller_map[1],$controller_map[2]);
+    $this->setControllerClass($controller_map[0]);
+    $this->setControllerMethod($controller_map[1]);
+    $this->setControllerMethodArgs($controller_map[2]);
     
-    $this->setControllerMethodArgs($controller_method_args);
     $this->setFields($path_list);
     
     $this->start();
@@ -299,25 +272,21 @@ class montage_request extends montage_base {
   /**
    *  the requested controller class that will be used to answer this request
    */
-  function setControllerClass($val){ return $this->setField('montage_request_controller_class',$val); }//method
-  function getControllerClass(){ return $this->getField('montage_request_controller_class',$this->getDefaultControllerClass()); }//method
-  function hasControllerClass(){ return $this->hasField('montage_request_controller_class'); }//method
-  protected function getDefaultControllerClass(){ return 'index'; }//method
+  protected function setControllerClass($val){ return $this->setField('montage_request::controller_class',$val); }//method
+  function getControllerClass(){ return $this->getField('montage_request::controller_class',''); }//method
   
   /**
    *  the requested controller method that will be used to answer this request
    */
-  function setControllerMethod($val){ return $this->setField('montage_request_controller_method',$val); }//method
-  function getControllerMethod(){ return $this->getField('montage_request_controller_method',$this->getDefaultControllerMethod()); }//method
-  function hasControllerMethod(){ return $this->hasField('montage_request_controller_method'); }//method
-  protected function getDefaultControllerMethod(){ return 'getIndex'; }//method
+  protected function setControllerMethod($val){ return $this->setField('montage_request::controller_method',$val); }//method
+  function getControllerMethod(){ return $this->getField('montage_request::controller_method',''); }//method
   
   /**
    *  the arguments that will be passed into the controller::method
    */
-  function setControllerMethodArgs($val){ return $this->setField('montage_request_controller_method_args',$val); }//method
-  function getControllerMethodArgs(){ return $this->getField('montage_request_controller_method_args',array()); }//method
-  function hasControllerMethodArgs(){ return $this->hasField('montage_request_controller_method_args'); }//method
+  function setControllerMethodArgs($val){ return $this->setField('montage_request::controller_method_args',$val); }//method
+  function getControllerMethodArgs(){ return $this->getField('montage_request::controller_method_args',array()); }//method
+  function hasControllerMethodArgs(){ return $this->hasField('montage_request::controller_method_args'); }//method
   
   /**
    *  the method used for this request (eg, GET, POST, CLI)
@@ -507,11 +476,29 @@ class montage_request extends montage_base {
    *  @param  array $args a list of values to pass into the $controller::$method     
    *  @throws montage_forward_exception if $controller and $method are valid
    */
-  function forward($controller,$method,$args = array()){
+  function forward($controller_class_name,$method,$args = array()){
   
-    if($this->setHandler($controller,$method,$args)){
-      $exception_name = montage_core::getBestClassName('montage_forward_exception');
-      throw new $exception_name();
+    if($this->setHandler($controller_class_name,$method,$args)){
+    
+      throw montage_core::getBestInstance('montage_forward_exception');
+      
+    }//if
+  
+  }//method
+  
+  /**
+   *  forwards this request to the error handler for $e
+   *  
+   *  @see  setErrorHandler()
+   *  @param  Exception $e  the exception whose controller::method needs to be forwarded to     
+   *  @throws montage_forward_exception if $controller and $method are valid
+   */
+  function forwardError(Exception $e){
+  
+    if($this->setErrorHandler($e)){
+    
+      throw montage_core::getBestInstance('montage_forward_exception');
+      
     }//if
   
   }//method
@@ -519,29 +506,35 @@ class montage_request extends montage_base {
   /**
    *  sets the $controller::$method
    *  
-   *  @param  string  $controller the name of the controller child (this can be a class_key also)
+   *  @param  string  $controller_class_name the name of the controller child (this can be a class_key also)
    *  @param  string  $method the method of $controller that will be called
    *  @param  array $args a list of values to pass into the $controller::$method
    */
-  function setHandler($controller,$method,$args = array()){
+  function setHandler($controller_class_name,$method,$args = array()){
   
-    // canary...
-    if(empty($controller)){
-      throw new UnexpectedValueException('$controller cannot be empty');
-    }//if
-    if(empty($method)){
-      throw new UnexpectedValueException('$method cannot be empty');
-    }//if
-    if(!montage::isController($controller)){
-      throw new DomainException('$controller does not extend montage_controller.');
-    }//if
-    if(!method_exists($controller,$method)){
-      throw new BadMethodCallException(sprintf('%s::%s does not exist',$controller,$method));
-    }//if
+    $forward = montage_core::getBestInstance('montage_forward');
+    $controller_map = $forward->get($controller_class_name,$method);
   
-    $this->setControllerClass($controller);
-    $this->setControllerMethod($this->getControllerMethodName($method));
+    $this->setControllerClass($controller_map[0]);
+    $this->setControllerMethod($controller_map[1]);
     $this->setControllerMethodArgs($args);
+    return true;
+  
+  }//method
+  
+  /**
+   *  sets the $controller::$method that will handle the error
+   *  
+   *  @param  Exception $e  the exception that needs to be handled
+   */
+  function setErrorHandler(Exception $e){
+  
+    $forward = montage_core::getBestInstance('montage_forward');
+    $controller_map = $forward->getError($e);
+  
+    $this->setControllerClass($controller_map[0]);
+    $this->setControllerMethod($controller_map[1]);
+    $this->setControllerMethodArgs(array($e));
     return true;
   
   }//method
@@ -583,29 +576,6 @@ class montage_request extends montage_base {
    */
   function getFile(){
     return $this->getServerField(array('SCRIPT_FILENAME','SCRIPT_NAME','ORIG_SCRIPT_NAME'),'');
-  }//method
-  
-  /**
-   *  get the controller name that should be used
-   *  
-   *  @param  string  $method_name  can be the full method name (eg, getFoo) or a partial 
-   *                                that will be made into the full name (eg, foo gets turned into getFoo)      
-   *  @return string
-   */
-  function getControllerMethodName($method_name){
-  
-    // canary...
-    if(empty($method_name)){
-      throw new UnexpectedValueException('$method_name cannot be empty');
-    }//if
-    
-    // see if the method name starts with "get"...
-    if(mb_stripos($method_name,'get') !== 0){
-      $method_name = sprintf('get%s',ucfirst(mb_strtolower($method_name)));
-    }//if/else
-  
-    return $method_name;
-  
   }//method
   
   /**

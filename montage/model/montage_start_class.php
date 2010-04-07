@@ -3,6 +3,7 @@
 /**
  *  a start class is what will be used by a montage app to do configuration things
  *  
+ *  @abstract 
  *  @version 0.1
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 2-21-10

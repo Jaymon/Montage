@@ -3,6 +3,7 @@
 /**
  *  base class for lots of montage main objects
  *  
+ *  @abstract 
  *  @version 0.1
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 2-19-10

@@ -9,6 +9,7 @@
  *  if you want controller specific start/stop then just implement the controller's
  *  own start() and stop() methods      
  *  
+ *  @abstract 
  *  @version 0.1
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 2-20-10

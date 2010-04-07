@@ -266,7 +266,7 @@ class montage_response extends montage_base {
     
     // canary...
     if(!$this->hasTemplate()){
-      throw UnexpectedValueException(
+      throw new UnexpectedValueException(
         sprintf('%s has no template set and it is trying to instantiate the template class',__CLASS__)
       );
     }//if
