@@ -160,6 +160,22 @@ class montage_request extends montage_base {
     $controller_method = $this->getControllerMethod();
     $controller_method_args = $this->getControllerMethodArgs();
     
+    // make sure there are enough required method_args...
+    $arg_count = empty($controller_method_args) ? 0 : count($controller_method_args);
+    $rm = new ReflectionMethod($controller_class_name,$controller_method);
+    $arg_required_count = $rm->getNumberOfRequiredParameters();
+    if($arg_required_count > $arg_count){
+      throw new LengthException(
+        sprintf(
+          '%s::%s expects %s arguments to be passed to it, but only got %s args',
+          $controller_class_name,
+          $controller_method,
+          $arg_required_count,
+          $arg_count
+        )
+      );
+    }//if
+    
     $event = montage::getEvent();
     $event->broadcast(
       montage_event::KEY_INFO,

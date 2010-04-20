@@ -6,6 +6,7 @@
 define('MONTAGE_CONTROLLER','frontend');
 define('MONTAGE_DEBUG',true);
 define('MONTAGE_ENVIRONMENT','dev');
+define('MONTAGE_APP_PATH',realpath(join(DIRECTORY_SEPARATOR,array(__FILE__,'..'))));
 
 $start_path = join(
   DIRECTORY_SEPARATOR,

@@ -27,7 +27,13 @@ class montage_forward {
   /**
    *  hold the default controller method that will be called if no other method is found
    */
-  const CONTROLLER_METHOD = 'getIndex';
+  const CONTROLLER_METHOD = 'handleIndex';
+
+  /**
+   *  this prefix will be used to decide what a vanilla method name coming in will be
+   *  prefixed with when {@link getControllerMethodName()} is called
+   */
+  const CONTROLLER_METHOD_PREFIX = 'handle';
 
   /**
    *  set main contructor that can't be over-written            
@@ -179,20 +185,24 @@ class montage_forward {
   /**
    *  get the controller name that should be used
    *  
-   *  @param  string  $method_name  can be the full method name (eg, getFoo) or a partial 
-   *                                that will be made into the full name (eg, foo gets turned into getFoo)      
+   *  @param  string  $method_name  can be the full method name (eg, hanldeFoo) or a partial 
+   *                                that will be made into the full name (eg, foo gets turned into handleFoo)      
    *  @return string
    */
-  public function getControllerMethodName($method_name){
+  final public function getControllerMethodName($method_name){
   
     // canary...
     if(empty($method_name)){
       throw new UnexpectedValueException('$method_name cannot be empty');
     }//if
     
-    // see if the method name starts with "get"...
-    if(mb_stripos($method_name,'get') !== 0){
-      $method_name = sprintf('get%s',ucfirst(mb_strtolower($method_name)));
+    // see if the method name already has the prefix...
+    if(mb_stripos($method_name,self::CONTROLLER_METHOD_PREFIX) !== 0){
+      $method_name = sprintf(
+        '%s%s',
+        self::CONTROLLER_METHOD_PREFIX,
+        ucfirst(mb_strtolower($method_name))
+      );
     }//if/else
   
     return $method_name;

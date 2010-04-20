@@ -5,6 +5,8 @@
  *  all the internal heavy lifting and can be mostly left alone unless you want to
  *  set more class paths (use {@link setPath()}) than what are used by default.
  *  
+ *  this class could have easily been called montage_factory
+ *  
  *  class paths checked by default:
  *    [MONTAGE DIRECTORY]/model
  *    [APP DIRECTORY]/settings
@@ -215,13 +217,19 @@ final class montage_core extends montage_base_static {
       if(empty(self::$parent_class_map['MONTAGE_CONTROLLER'])){
         throw new RuntimeException(
           sprintf(
-            'the controller (%s) does not have any classes that extend "montage_controller" '
-            .'so no requests can be processed. Fix this by adding some classes that extend '
-            .'"montage_controller" in the "%s" directory. At the very least, you should have '
-            .'an index class that has a getIndex() method (eg, index::getIndex()) to fulfill '
-            .'default requests.',
+            join("\r\n",array(
+              'the controller (%s) does not have any classes that extend "montage_controller" '
+              .'so no requests can be processed. Fix this by adding some classes that extend '
+              .'"montage_controller" in the "%s" directory. At the very least, you should have '
+              .'an index class to fulfill default requests:',
+              '',
+              'class index extends montage_controller{',
+              '  function %s(){}',
+              '}'
+            )),
             $controller,
-            $controller_path
+            $controller_path,
+            montage_forward::CONTROLLER_METHOD
           )
         );
       }//if
@@ -681,6 +689,31 @@ final class montage_core extends montage_base_static {
   }//method
   
   /**
+   *  get all the controller classes that the app has defined
+   *  
+   *  this will only return final controllers (eg, nothing extends it)
+   *      
+   *  @return array a list of class names that extend montage_controller
+   */
+  static function getControllerClassNames(){
+  
+    // canary...
+    if(empty(self::$parent_class_map['MONTAGE_CONTROLLER'])){ return array(); }//if
+  
+    $ret_list = array();
+  
+    $class_key_list = self::$parent_class_map['MONTAGE_CONTROLLER'];
+    foreach($class_key_list as $class_key){
+      if(!isset(self::$parent_class_map[$class_key])){
+        $ret_list[] = self::$class_map[$class_key]['class_name'];
+      }//if
+    }//method
+  
+    return $ret_list;
+  
+  }//method
+  
+  /**
    *  return true if the given $class_name extends the controller class
    *  
    *  @param  string  $class_name
@@ -847,6 +880,9 @@ final class montage_core extends montage_base_static {
   
   }//method
   
+  ///static function getClassMap(){ return self::$class_map; }//method
+  ///static function getParentClassMap(){ return self::$parent_class_map; }//method
+  
   /**
    *  add the class map to the global class map
    *  
@@ -930,7 +966,7 @@ final class montage_core extends montage_base_static {
         
         // find the class declaration lines...
         $line_matches = array();
-        if(preg_match_all('#^[\w\s]*(?:class|interface)\s+[^{]+#sim',$file_contents,$line_matches)){
+        if(preg_match_all('#^[a-z\s]*(?:class|interface)\s+[^{]+#sim',$file_contents,$line_matches)){
         
           foreach($line_matches[0] as $line_match){
           

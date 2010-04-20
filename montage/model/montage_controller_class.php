@@ -23,7 +23,7 @@ abstract class montage_controller extends montage_base {
    *  @return boolean like all controller methods if true, then the template will be rendered, 
    *                  if false, then montage::getResponse()->get() will be used instead of the template
    */
-  abstract function getIndex();
+  abstract function handleIndex();
   
   /**
    *  after calling the get* method, run this method
