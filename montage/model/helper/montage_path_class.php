@@ -3,7 +3,7 @@
 /**
  *  holds path helper methods
  *  
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 3-8-10
  *  @package montage
@@ -22,7 +22,7 @@ class montage_path extends montage_base_static {
   
     // make sure path isn't empty...
     if(empty($path)){
-      throw new UnexpectedValueException('cannot verify an empty $path exists');
+      throw new UnexpectedValueException('cannot verify that an empty $path exists');
     }//if
     
     // make sure path is directory, try to create it if it isn't...
@@ -38,6 +38,23 @@ class montage_path extends montage_base_static {
     if(!is_writable($path)){
       throw new RuntimeException(sprintf('cannot write to $path (%s)',$path));
     }//if
+    
+    return self::format($path);
+  
+  }//method
+  
+  /**
+   *  format $path to a standard format so we can guarrantee that all paths are formatted
+   *  the same
+   *  
+   *  @since  4-20-10   
+   *  @param  string  $path
+   *  @return string  the $path, formatted for consistency
+   */
+  static function format($path){
+  
+    // canary...
+    if(empty($path)){ return ''; }//if
   
     // make sure path doesn't end with a slash...
     if(mb_substr($path,-1) == DIRECTORY_SEPARATOR){
@@ -105,7 +122,7 @@ class montage_path extends montage_base_static {
    *  
    *  @param  string  $val
    */
-  static function setFramework($val){ self::setField('montage_framework_path',$val); }//method
+  static function setFramework($val){ self::setField('montage_framework_path',self::format($val)); }//method
   
   /**
    *  get the montage root path
@@ -119,7 +136,7 @@ class montage_path extends montage_base_static {
    *  
    *  @param  string  $val
    */
-  static function setApp($val){ self::setField('montage_app_path',$val); }//method
+  static function setApp($val){ self::setField('montage_app_path',self::format($val)); }//method
   
   /**
    *  get the montage app root path
@@ -133,7 +150,7 @@ class montage_path extends montage_base_static {
    *  
    *  @param  string  $val
    */
-  static function setCache($val){ self::setField('montage_cache_path',$val); }//method
+  static function setCache($val){ self::setField('montage_cache_path',self::format($val)); }//method
   
   /**
    *  get the montage app's default cache path

@@ -13,13 +13,51 @@
 
 // canary, these constants must be set...
 if(!defined('MONTAGE_APP_PATH')){
-  throw new RuntimeException('MONTAGE_APP_PATH constant has not been set. Set this in your index.php file!');
+  $bt = debug_backtrace();
+  $bt_map = end($bt);
+  throw new RuntimeException(
+    sprintf(
+      join("\r\n",array(
+        'MONTAGE_APP_PATH constant has not been set. You need to define this constant in %s. '
+        .' Something like:',
+        '',
+        "define('MONTAGE_APP_PATH','/application/root/directory');"
+      )),
+      $bt_map['file']
+    )
+  );
 }//if
+
 if(!defined('MONTAGE_CONTROLLER')){
-  throw new RuntimeException('MONTAGE_CONTROLLER constant has not been set. Set this in your index.php file!');
+  $bt = debug_backtrace();
+  $bt_map = end($bt);
+  throw new RuntimeException(
+    sprintf(
+      join("\r\n",array(
+        'MONTAGE_CONTROLLER constant has not been set. (Usually something like "frontend" or "backend"). '
+        .' You need to define this constant in %s. Something like:',
+        '',
+        "define('MONTAGE_CONTROLLER','controller_name');"
+      )),
+      $bt_map['file']
+    )
+  );
 }//if
+
 if(!defined('MONTAGE_ENVIRONMENT')){
-  throw new RuntimeException('MONTAGE_ENVIRONMENT constant has not been set. Set this in your index.php file!');
+  $bt = debug_backtrace();
+  $bt_map = end($bt);
+  throw new RuntimeException(
+    sprintf(
+      join("\r\n",array(
+        'MONTAGE_ENVIRONMENT constant has not been set (usually something like "dev" or "prod". '
+        .'You need to define this constant in %s. Something like:',
+        '',
+        "define('MONTAGE_ENVIRONMENT','environment_name');"
+      )),
+      $bt_map['file']
+    )
+  );
 }//if
 
 // set some constants to default values if not previously set...
@@ -40,22 +78,6 @@ date_default_timezone_set(MONTAGE_TIMEZONE);
 
 // where the framework's core can be found...
 if(!defined('MONTAGE_PATH')){ define('MONTAGE_PATH',realpath(dirname(__FILE__))); }//if
-
-/* deprecated, I think I'm going to make the developer explicitely set this now
-// where the applications core can be found...
-// this can be set in the app before calling this file for a very slight speed boost...
-if(!defined('MONTAGE_APP_PATH')){
-  // auto-discover the app's root dir...
-  $bt = debug_backtrace();
-  $bt_map = end($bt);
-  if(!empty($bt_map)){
-    // this only works if the calling file is in the form [MONTAGE_APP_PATH]/web/index.php
-    define('MONTAGE_APP_PATH',realpath(join(DIRECTORY_SEPARATOR,array(dirname($bt_map['file']),'..'))));
-  }//if
-  unset($bt);
-  unset($bt_map);
-}//if
-*/
 
 // include the autoloader (and supporting files)...
 require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_base_static_class.php')));
