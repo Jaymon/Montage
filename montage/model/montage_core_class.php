@@ -223,7 +223,7 @@ final class montage_core extends montage_base_static {
               .'"montage_controller" in the "%s" directory. At the very least, you should have '
               .'an index class to fulfill default requests:',
               '',
-              'class index extends montage_controller{',
+              'class index extends montage_controller {',
               '  function %s(){}',
               '}'
             )),
