@@ -1,7 +1,7 @@
 <?php
 
 /**
- *  handle autoloading duties. While montage is the master class, this class does
+ *  handle autoloading duties. While {@link montage} is the master class, this class does
  *  all the internal heavy lifting and can be mostly left alone unless you want to
  *  set more class paths (use {@link setPath()}) than what are used by default.
  *  
@@ -21,6 +21,11 @@
  *  @package montage 
  ******************************************************************************/
 final class montage_core extends montage_base_static {
+  
+  /**
+   *  the current montage version
+   */
+  const VERSION = '0.6';
   
   /**
    *  the "global" settings will be a montage_start child extending class with this name

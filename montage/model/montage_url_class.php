@@ -41,7 +41,7 @@ class montage_url extends montage_base {
    *    $this->get('bar','foo'); // -> http://app.com/bar/foo
    *    $this->get('bar',array('foo' => 'baz')); // -> http://app.com/bar/?foo=baz
    *    $this->getCurrent(); // -> http://app.com/bar/foo/?che=baz
-   *    $this->get('http://example.com','bar'.'foo'); // -> http://example.com/bar/foo   
+   *    $this->get('http://example.com','bar','foo'); // -> http://example.com/bar/foo   
    *            
    *  @param  mixed $arg,...  first argument can be a root last argument can be
    *                          an array of key/val mappings that will be turned into
@@ -74,7 +74,7 @@ class montage_url extends montage_base {
   
     $args = func_get_args();
     list($base_url,$path_list,$var_map) = $this->parse($args);
-    list($base_url,$current_var_map) = $this->getSplit($this->getCurrent());
+    list($base_url,$current_var_map) = $this->split($this->getCurrent());
     return self::build($base_url,$path_list,$var_map);
   
   }//method
@@ -105,20 +105,43 @@ class montage_url extends montage_base {
    *  @param  array $var_map the vars that will be appended in key => val mappings
    *  @return string  the url with the vars attached
    */
-  function getAppended($url,$var_map = array()){
+  function append($url,$var_map = array()){
     
     // sanity...
     if(empty($var_map)){ return $url; }//if
     
-    list($url,$query_vars) = $this->getSplit($url);
+    list($url,$query_vars) = $this->split($url);
     if(!empty($query_vars)){
     
       $var_map = array_merge($query_vars,$var_map);
     
     }//if/else
     
-    $var_str = http_build_query($var_map,'','&');
-    if(!empty($var_str)){ $url .= '?'.$var_str; }//if
+    if(!empty($var_map)){
+    
+      $single_var_map = array();
+      foreach($var_map as $key => $val){
+      
+        if(($val === null) || ($val === '')){
+          $single_var_map[] = urlencode($key);
+          unset($var_map[$key]);
+        }//if
+      
+      }//foreach
+    
+      $var_str = http_build_query($var_map,'','&');
+      $single_var_str = empty($single_var_map) ? '' : join('&',$single_var_map);
+      if(empty($var_str)){
+        $var_str = $single_var_str; 
+      }else{
+        if(!empty($single_var_str)){
+          $var_str = sprintf('%s&%s',$var_str,$single_var_str);
+        }//if
+      }//if/else
+      
+      if(!empty($var_str)){ $url .= '?'.$var_str; }//if
+    
+    }//if
     
     return $url;
     
@@ -131,7 +154,7 @@ class montage_url extends montage_base {
    *  @return array array($url,$query_vars) where $url is the url without a ?... string, and $query_vars
    *                is an array of the key/value pairs the $url originally contained
    */
-  function getSplit($url){
+  function split($url){
     
     // canary...
     if(empty($url)){ return array('',array()); }//if
@@ -174,7 +197,7 @@ class montage_url extends montage_base {
   
     /* $current_url = $this->getCurrent();
     if($path_only){
-      list($current_url,$current_query_vars) = $this->getSplit($current_url);
+      list($current_url,$current_query_vars) = $this->split($current_url);
     }//if */
   
     // normalize the urls...
@@ -467,7 +490,7 @@ class montage_url extends montage_base {
     $ret_str .= $query_str; // add any query string back on
     
     // add any get vars to the url...
-    $ret_str = $this->getAppended($ret_str,$var_map);
+    $ret_str = $this->append($ret_str,$var_map);
     
     // fragment should always be at the end...
     $ret_str .= empty($base_bits['fragment']) ? '' : $base_bits['fragment'];
