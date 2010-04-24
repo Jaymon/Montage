@@ -288,40 +288,53 @@ class montage_html_cb extends montage_base {
   private function getActualUrl($url){
   
     $ret_str = $url;
+    $ret_last = '';
+    $strip_chars = 0;
   
-    // get the last character of the url...
-    $last_char = mb_substr($ret_str,-1);
     $possible_last_chars = ')]}"\'.,!';
     $opposite_last_chars = '([{"\'';
-    
-    $char_position = mb_strpos($possible_last_chars,$last_char); // is the last char a possible last char?
-    if($char_position !== false){
-      
-      $ret_str = mb_substr($ret_str,0,-1);
-      
-      if(isset($opposite_last_chars[$char_position])){
-        
-        $opposite_char_position = mb_strpos($ret_str,$opposite_last_chars[$char_position]);
-        
-        if($opposite_char_position !== false){
-        
-          // there is a starting paren or quote, so don't get rid of it...
-          $ret_str = $url;
-          $last_char = '';
-          
-        }//if
-        
-      }//if
-      
-    }else{
-      
-      $last_char = '';
-      
-    }//if/else
   
-    return array($ret_str,$last_char);
+    $url_len = mb_strlen($url);
+    for($i = ($url_len - 1); $i >= 0 ;$i--){
+    
+      // is the last char a possible last char?
+      $char_i = mb_strpos($possible_last_chars,$url[$i]);
+      if($char_i !== false){
+      
+        // check if the last char has a an opposite...
+        $opposite_char_i = isset($opposite_last_chars[$char_i]) 
+          ? mb_strpos(mb_substr($url,0,($strip_chars - 1)),$opposite_last_chars[$char_i])
+          : false;
+        
+        if($opposite_char_i !== false){
+          
+          // we found an opposite match, we don't need to look further or strip anymore...
+          break;
+          
+        }else{
+          
+          $strip_chars--;
+          
+        }//if/else
+      
+      }else{
+        
+        // we found a char that can't be a last char, so we're done...
+        break;
+        
+      }//if/else
+
+    }//for
+
+    if($strip_chars < 0){
+
+      $ret_str = mb_substr($url,0,$strip_chars);
+      $ret_last = mb_substr($url,$url_len + $strip_chars);
+      
+    }//if
+  
+    return array($ret_str,$ret_last);
   
   }//method
-
 
 }//class   
