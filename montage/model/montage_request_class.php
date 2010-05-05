@@ -130,7 +130,7 @@ class montage_request extends montage_base {
     $this->setPath(join('/',$path_list));
     
     // set the controller...
-    $forward = montage_core::getBestInstance('montage_forward');
+    $forward = montage_factory::getBestInstance('montage_forward');
     $controller_map = $forward->find($path_list); 
     ///$this->setHandler($controller_map[0],$controller_map[1],$controller_map[2]);
     $this->setControllerClass($controller_map[0]);
@@ -496,7 +496,7 @@ class montage_request extends montage_base {
   
     if($this->setHandler($controller_class_name,$method,$args)){
     
-      throw montage_core::getBestInstance('montage_forward_exception');
+      throw montage_factory::getBestInstance('montage_forward_exception');
       
     }//if
   
@@ -513,7 +513,7 @@ class montage_request extends montage_base {
   
     if($this->setErrorHandler($e)){
     
-      throw montage_core::getBestInstance('montage_forward_exception');
+      throw montage_factory::getBestInstance('montage_forward_exception');
       
     }//if
   
@@ -528,7 +528,7 @@ class montage_request extends montage_base {
    */
   function setHandler($controller_class_name,$method,$args = array()){
   
-    $forward = montage_core::getBestInstance('montage_forward');
+    $forward = montage_factory::getBestInstance('montage_forward');
     $controller_map = $forward->get($controller_class_name,$method);
   
     $this->setControllerClass($controller_map[0]);
@@ -545,7 +545,7 @@ class montage_request extends montage_base {
    */
   function setErrorHandler(Exception $e){
   
-    $forward = montage_core::getBestInstance('montage_forward');
+    $forward = montage_factory::getBestInstance('montage_forward');
     $controller_map = $forward->getError($e);
   
     $this->setControllerClass($controller_map[0]);

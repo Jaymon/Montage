@@ -270,7 +270,7 @@ final class montage_core extends montage_base_static {
     $start_class_list = self::getField('montage_core_start_class_list',array());
     $start_class_parent_key = 'montage_start';
     foreach($start_class_list as $start_class_name){
-      self::getInstance($start_class_name,$start_class_parent_key);
+      montage_factory::getInstance($start_class_name,array(),$start_class_parent_key);
     }//foreach
     
     // profile...
@@ -302,7 +302,6 @@ final class montage_core extends montage_base_static {
     if($debug){ montage_profile::start(__METHOD__); }//if
     
     // get all the filters and start them...
-    ///$filter_list = array_map(array('montage_core','getInstance'),montage_core::getFilters());
     $filter_list = self::getFilterClassNames();
     $use_template = self::handleRequest($filter_list);
     
@@ -370,7 +369,7 @@ final class montage_core extends montage_base_static {
               array('msg' => sprintf('starting filter %s',$filter_class_name))
             );
             
-            $filter_list[$key] = self::getInstance($filter_class_name);
+            $filter_list[$key] = montage_factory::getInstance($filter_class_name);
             
           }//if
             
@@ -542,38 +541,6 @@ final class montage_core extends montage_base_static {
       
     }//if
     
-  }//method
-  
-  /**
-   *  create and return an instance of $class_name
-   *  
-   *  this only works for classes that don't take any arguments in their constructor
-   *      
-   *  @param  string  $class_name the name of the class whose instance should be returned
-   *  @param  array $construct_args see {@link getNewInstance()} description   
-   *  @param  string  $parent_name  the name of the parent class, if not empty then $class_name
-   *                                must be a child of $parent_name, otherwise null is returned  
-   *  @return object
-   */
-  static function getInstance($class_name,$contruct_args = array(),$parent_name = ''){
-    $class_name = self::getClassName($class_name,$parent_name);
-    return self::getNewInstance($class_name,$construct_args);
-  }//method
-  
-  /**
-   *  create and return the best instance of $class_name
-   *  
-   *  this only works for classes that don't take any arguments in their constructor
-   *      
-   *  @param  string  $class_name the name of the class whose instance should be returned
-   *  @param  array $construct_args see {@link getNewInstance()} description    
-   *  @param  string  $parent_name  the name of the parent class, if not empty then $class_name
-   *                                must be a child of $parent_name, otherwise null is returned  
-   *  @return object
-   */
-  static function getBestInstance($class_name,$contruct_args = array(),$parent_name = ''){
-    $class_name = self::getBestClassName($class_name,$parent_name);
-    return self::getNewInstance($class_name,$construct_args);
   }//method
   
   /**
@@ -894,56 +861,6 @@ final class montage_core extends montage_base_static {
   }//method
   
   /**
-   *  create and return an instance of $class_name with the given $construct_args
-   *  
-   *  @param  string  $class_name the name of the class to instantiate
-   *  @param  array $construct_args similar to call_user_func_array, if the $class_name's
-   *                                __construct() method takes 2 arguments (eg, __construct($one,$two)
-   *                                then you would pass in array(1,2) and $one = 1, $two = 2               
-   *  @return object
-   */
-  static private function getNewInstance($class_name,$construct_args = array()){
-  
-    // canary...
-    if(empty($class_name)){ return null; }//if
-  
-    $ret_instance = null;
-    
-    if(empty($contstruct_args)){
-    
-      $ret_instance = new $class_name();
-    
-    }else{
-    
-      // http://www.php.net/manual/en/reflectionclass.newinstanceargs.php#95137
-    
-      $rclass = new ReflectionClass($class_name);
-      
-      // canary, make sure there is a __construct() method since we are passing in arguments...
-      $rconstruct = $rclass->getConstructor();
-      if(empty($rconstruct)){
-        throw new InvalidArgumentException(
-          sprintf(
-            'You tried to create an instance of %s with %s constructor arguments, but the class %s '
-            .'has no __construct() method, so no constructor arguments can be used to instantiate it. '
-            .'Please add %s::__construct(), or don\'t pass in any constructor arguments',
-            $class_name,
-            count($construct_args),
-            $class_name,
-            $class_name
-          )
-        );
-      }//if
-      
-      $ret_instance = $rclass->newInstanceArgs($construct_args);
-    
-    }//if/else
-  
-    return $ret_instance;
-  
-  }//method
-  
-  /**
    *  add the class map to the global class map
    *  
    *  also set all the other global class bindings like the core classes and parent map
@@ -1125,14 +1042,14 @@ final class montage_core extends montage_base_static {
   
     montage::setField(
       'montage::montage_event',
-      self::getBestInstance(
+      montage_factory::getBestInstance(
         'montage_event'
       )
     );
     
     montage::setField(
       'montage::montage_session',
-      self::getBestInstance(
+      montage_factory::getBestInstance(
         'montage_session',
         array(
           montage_path::get(montage_path::getCache(),'session')
@@ -1142,7 +1059,7 @@ final class montage_core extends montage_base_static {
     
     montage::setField(
       'montage::montage_request',
-      self::getBestInstance(
+      montage_factory::getBestInstance(
         'montage_request',
         array(
           $controller,
@@ -1154,7 +1071,7 @@ final class montage_core extends montage_base_static {
     
     montage::setField(
       'montage::montage_response',
-      self::getBestInstance(
+      montage_factory::getBestInstance(
         'montage_response',
         array(
           montage_path::get(montage_path::getApp(),'view')
@@ -1164,7 +1081,7 @@ final class montage_core extends montage_base_static {
     
     montage::setField(
       'montage::montage_settings',
-      self::getBestInstance(
+      montage_factory::getBestInstance(
         'montage_settings',
         array(
           $debug,
@@ -1176,7 +1093,7 @@ final class montage_core extends montage_base_static {
     
     montage::setField(
       'montage::montage_url',
-      self::getBestInstance(
+      montage_factory::getBestInstance(
         'montage_url',
         array()
       )
@@ -1184,7 +1101,7 @@ final class montage_core extends montage_base_static {
     
     montage::setField(
       'montage::montage_cookie',
-      self::getBestInstance(
+      montage_factory::getBestInstance(
         'montage_cookie',
         array(
           montage::getRequest()->getHost()
