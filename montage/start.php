@@ -3,7 +3,8 @@
 /**
  *  Start the main montage controller
  *  
- *  including this from another file will start, configure, and run montage
+ *  including this from another file will start, configure, and run montage. This is
+ *  literally the only thing you need to include to use montage.  
  *   
  *  @version 0.1
  *  @author Jay Marcyes
@@ -21,7 +22,7 @@ if(!defined('MONTAGE_APP_PATH')){
         'MONTAGE_APP_PATH constant has not been set. You need to define this constant in %s. '
         .' Something like:',
         '',
-        "define('MONTAGE_APP_PATH','/application/root/directory');"
+        "define('MONTAGE_APP_PATH','/your/application/root/directory');"
       )),
       $bt_map['file']
     )
@@ -62,7 +63,13 @@ if(!defined('MONTAGE_ENVIRONMENT')){
 
 // set some constants to default values if not previously set...
 if(!defined('MONTAGE_DEBUG')){ define('MONTAGE_DEBUG',true); }//if
-error_reporting((E_ALL | E_STRICT | E_PARSE)); // error reporting should always be on
+
+if(!defined('MONTAGE_ERROR_LEVEL')){
+  // be default, full error reporting should always be on...
+  define('MONTAGE_ERROR_LEVEL',(E_ALL | E_STRICT | E_PARSE));
+}//if
+error_reporting(MONTAGE_ERROR_LEVEL);
+
 if(MONTAGE_DEBUG){
   ini_set('display_errors','on');
 }else{
@@ -93,7 +100,8 @@ if(MONTAGE_DEBUG){
 
 try{
   
-  // start the auto-loader...
+  // start and configure the core (this does all the heavy lifting like find classes and
+  // configure the autoloader and run the defined montage_start classes)...
   montage_core::start(
     MONTAGE_CONTROLLER,
     MONTAGE_ENVIRONMENT,
