@@ -1,8 +1,24 @@
 <?php
 
 /**
- *  access class to get instances of other classes     
- *   
+ *  use to get instances of other classes
+ *  
+ *  this allows you to easily get class objects based on stuff like the parent so 
+ *  you can extend classes easily and then have the right class be used in all your
+ *  application
+ *  
+ *  {@link getBestInstance()} is used in the core to get the best request, response, etc. 
+ *  classes, allowing the developer to easily extend the base default classes and have all
+ *  the code still work    
+ *  
+ *  @example  
+ *    // class child extends parent...
+ *    echo get_class(montage_factory::getBestInstance('parent')); // 'child'
+ *    echo get_class(montage_factory::getInstance('parent')); // 'parent'
+ *    
+ *    // now, we create a third class, grandchild that extends child...   
+ *    echo get_class(montage_factory::getBestInstance('child')); // 'grandchild'   
+ * 
  *  @version 0.1
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 5-4-10
@@ -12,8 +28,6 @@ class montage_factory {
 
   /**
    *  create and return an instance of $class_name
-   *  
-   *  this only works for classes that don't take any arguments in their constructor
    *      
    *  @param  string  $class_name the name of the class whose instance should be returned
    *  @param  array $construct_args see {@link getNewInstance()} description   
@@ -21,7 +35,7 @@ class montage_factory {
    *                                must be a child of $parent_name, otherwise null is returned  
    *  @return object
    */
-  static function getInstance($class_name,$contruct_args = array(),$parent_name = ''){
+  static function getInstance($class_name,$construct_args = array(),$parent_name = ''){
     $class_name = montage_core::getClassName($class_name,$parent_name);
     return self::getNewInstance($class_name,$construct_args);
   }//method
@@ -29,7 +43,19 @@ class montage_factory {
   /**
    *  create and return the best instance of $class_name
    *  
-   *  this only works for classes that don't take any arguments in their constructor
+   *  the best instance is defined as the final child, eg, if you had three classes:
+   *    1 - grandchild extends child
+   *    2 - child extends parent
+   *    3 - parent
+   *    
+   *  and you passed in $class_name = child, then a grandchild instance would be returned,
+   *  if you actually wanted to get a child instance, you would use {@link getInstance()} instead.
+   *  
+   *  You can further restrict the returned class by passing in $parent_name, if it isn't empty
+   *  then the $class_name will have to inherit from $parent_name to be returned
+   *  
+   *  so, getBestInstance('grandchild',array(),'grandparent') would fail since child isn't a descendant
+   *  of grandparent.                    
    *      
    *  @param  string  $class_name the name of the class whose instance should be returned
    *  @param  array $construct_args see {@link getNewInstance()} description    
@@ -37,7 +63,7 @@ class montage_factory {
    *                                must be a child of $parent_name, otherwise null is returned  
    *  @return object
    */
-  static function getBestInstance($class_name,$contruct_args = array(),$parent_name = ''){
+  static function getBestInstance($class_name,$construct_args = array(),$parent_name = ''){
     $class_name = montage_core::getBestClassName($class_name,$parent_name);
     return self::getNewInstance($class_name,$construct_args);
   }//method
@@ -58,7 +84,7 @@ class montage_factory {
   
     $ret_instance = null;
     
-    if(empty($contstruct_args)){
+    if(empty($construct_args)){
     
       $ret_instance = new $class_name();
     
@@ -91,6 +117,5 @@ class montage_factory {
     return $ret_instance;
   
   }//method
-
 
 }//class     
