@@ -462,6 +462,23 @@ final class montage_core extends montage_base_static {
       
     }catch(Exception $e){
       
+      // canary, make sure we're not already in the error handler...
+      $in_error_state = self::isRelated(
+        $request->getControllerClass(),
+        montage_forward::CONTROLLER_ERROR_CLASS_NAME
+      );
+      if($in_error_state){
+        throw new UnexpectedValueException(
+          sprintf(
+            'The error handler threw an uncaught exception on %s:%s, which should '
+            .'never happen because that might lead to infinite recursion. '
+            .' Pleas catch the exception or fix the problem.',
+            $e->getFile(),
+            $e->getLine()
+          )
+        );
+      }//if
+      
       $request->setErrorHandler($e);
       
       $event->broadcast(
@@ -479,7 +496,7 @@ final class montage_core extends montage_base_static {
       
       // send it back through for another round...
       $use_template = self::handleRequest();
-    
+      
     }//try/catch
     
     // profile...
@@ -753,6 +770,39 @@ final class montage_core extends montage_base_static {
       $ret_bool = in_array($child_class_key,self::$parent_class_map[$parent_class_key],true);
       
     }//if
+    
+    return $ret_bool;
+  
+  }//method
+  
+  /**
+   *  return true if $child_class_name is a child of $parent_class_name or actually
+   *  is $parent_class_name   
+   *  
+   *  @param  string  $child_class_name
+   *  @param  string  $parent_class_name      
+   *  @return boolean
+   */
+  static function isRelated($child_class_name,$parent_class_name){
+  
+    // canary...
+    if(empty($child_class_name)){ return false; }//if
+    if(empty($parent_class_name)){ return false; }//if
+  
+    $ret_bool = false;
+    
+    $child_class_key = self::getClassKey($child_class_name);
+    
+    $parent_class_key = self::getClassKey($parent_class_name);
+    if(!empty(self::$parent_class_map[$parent_class_key])){
+      
+      $ret_bool = in_array($child_class_key,self::$parent_class_map[$parent_class_key],true);
+      
+    }else{
+    
+      $ret_bool = ($child_class_key === $parent_class_key);
+    
+    }//if/else
     
     return $ret_bool;
   

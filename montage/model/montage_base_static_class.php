@@ -17,6 +17,32 @@ abstract class montage_base_static {
    */
   protected static $field_map = array();
 
+  /**
+   *  here to throw an error if someone tries to instantiate a class that is marked
+   *  to be static
+   */
+  final public function __construct(){
+    
+    $class_name = get_class($this);
+    
+    $bt = debug_backtrace();
+    $file = empty($bt[0]['file']) ? 'unknown' : $bt[0]['file'];
+    $line = empty($bt[0]['line']) ? 'unknown' : $bt[0]['line'];
+  
+    throw new RuntimeException(
+      sprintf(
+        'You are trying to instantiate a static object (%s) at %s:%s. This type of '
+        .'object should be called statically like %s::method() and should never be '
+        .'instantiated. Please see http://php.net/manual/en/language.oop5.static.php for '
+        .'more information on static vs. instantiated objects.',
+        $class_name,
+        $file,
+        $line,
+        $class_name
+      ) 
+    );  
+  
+  }//method
 
   /**
    *  set the $val into $key
@@ -25,7 +51,7 @@ abstract class montage_base_static {
    *  @param  mixed $val
    *  @return mixed return $val
    */
-  static function setField($key,$val){
+  static public function setField($key,$val){
     self::$field_map[$key] = $val;
     return self::$field_map[$key];
   }//method
@@ -36,7 +62,7 @@ abstract class montage_base_static {
    *  @param  string  $key   
    *  @return  boolean
    */
-  static function hasField($key){ return !empty(self::$field_map[$key]); }//method
+  static public function hasField($key){ return !empty(self::$field_map[$key]); }//method
   
   /**
    *  check if $key exists
@@ -44,7 +70,7 @@ abstract class montage_base_static {
    *  @param  string  $key   
    *  @return  boolean
    */
-  static function existsField($key){ return array_key_exists($key,self::$field_map); }//method
+  static public function existsField($key){ return array_key_exists($key,self::$field_map); }//method
   
   /**
    *  return the value of $key, return $default_val if key doesn't exist
@@ -53,7 +79,7 @@ abstract class montage_base_static {
    *  @param  mixed $default_val
    *  @return mixed
    */
-  static function getField($key,$default_val = null){
+  static public function getField($key,$default_val = null){
     return self::existsField($key) ? self::$field_map[$key] : $default_val;
   }//method
   
@@ -63,7 +89,7 @@ abstract class montage_base_static {
    *  @param  string  $key
    *  @return mixed the value of key before it was removed
    */
-  static function killField($key){
+  static public function killField($key){
     $ret_val = null;
     if(self::hasField($key)){
       $ret_val = self::$field_map[$key];
@@ -79,7 +105,7 @@ abstract class montage_base_static {
    *  @param  string  $val  the value to compare to the $key's set value
    *  @return boolean
    */
-  static function isField($key,$val){
+  static public function isField($key,$val){
     $ret_bool = false;
     if(self::existsField($name)){
       $ret_bool = self::getField($name) == $val;

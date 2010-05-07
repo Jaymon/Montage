@@ -151,9 +151,9 @@ class montage_forward {
     $controller_method = self::CONTROLLER_METHOD;
     $controller_method_args = array($e);
     
-    if(self::isController($controller_class_name)){
+    if(montage_core::isController($controller_class_name)){
     
-      $maybe_controller_method = $request->getControllerMethodName($e_name);
+      $maybe_controller_method = $this->getControllerMethodName($e_name);
       
       if(method_exists($controller_class_name,$maybe_controller_method)){
         $controller_method = $controller_method;
