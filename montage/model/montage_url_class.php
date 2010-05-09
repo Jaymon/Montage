@@ -170,7 +170,7 @@ class montage_url extends montage_base {
       $url = mb_substr($url,0,$query_str_start); // we just want the regular url
       
       parse_str($url_query_str,$query_vars);
-      $query_vars = montage_text::getSlashless($query_vars);
+      $query_vars = montage_text::killSlashes($query_vars);
       
     }//if
   

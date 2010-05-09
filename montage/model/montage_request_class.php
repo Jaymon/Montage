@@ -87,7 +87,7 @@ class montage_request extends montage_base {
       if(get_magic_quotes_gpc()){
       
         ///$field_map = montage_text::getSlashless(array_merge($_GET,$_POST));
-        $this->setFields(montage_text::getSlashless(array_merge($_GET,$_POST)));
+        $this->setFields(montage_text::killSlashes(array_merge($_GET,$_POST)));
       
       }else{
       
@@ -450,7 +450,7 @@ class montage_request extends montage_base {
    *  @return array
    */
   function getGetFields(){
-    return empty($_GET) ? array() : montage_text::getSlashless($_GET);
+    return empty($_GET) ? array() : montage_text::killSlashes($_GET);
   }//method
   
   /**
@@ -459,7 +459,7 @@ class montage_request extends montage_base {
    *  @return array
    */
   function getPostFields(){
-    return empty($_POST) ? array() : montage_text::getSlashless($_POST);
+    return empty($_POST) ? array() : montage_text::killSlashes($_POST);
   }//method
   
   /**
@@ -468,7 +468,7 @@ class montage_request extends montage_base {
    *  @return array
    */
   function getCookieFields(){
-    return empty($_COOKIE) ? array() : montage_text::getSlashless($_COOKIE);
+    return empty($_COOKIE) ? array() : montage_text::killSlashes($_COOKIE);
   }//method
   
   /**
@@ -477,7 +477,7 @@ class montage_request extends montage_base {
    *  @return array
    */
   function getSessionFields(){
-    return empty($_SESSION) ? array() : montage_text::getSlashless($_SESSION);
+    return empty($_SESSION) ? array() : montage_text::killSlashes($_SESSION);
   }//method
   
   /**

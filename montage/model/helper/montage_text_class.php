@@ -44,14 +44,14 @@ class montage_text {
    *  @param  mixed $val
    *  @return $val with all slashes stripped
    */
-  static function getSlashless($val){
+  static public function killSlashes($val){
   
     // canary...
     if(empty($val)){ return $val; }//if
     if(is_object($val)){ return $val; }//if
     
     if(is_array($val)){
-      $val = array_map(array('self','getSlashless'),$val);
+      $val = array_map(array(__CLASS__,'killSlashes'),$val);
     }else{
       $val = stripslashes($val);
     }//if/else
@@ -66,7 +66,7 @@ class montage_text {
    *  @param  string  $val
    *  @return true if $val is a url, false otherwise
    */
-  static function isUrl($val){
+  static public function isUrl($val){
     // canary...
     if(empty($val)){ return false; }//if
     return preg_match('#^\w+://\S{3,}#',$val) ? true : false;
@@ -78,7 +78,9 @@ class montage_text {
    *  @param  string  $val  the value to be "cleansed"
    *  @return string      
    */
-  static function getSafe($val){ return empty($val) ? '' : htmlspecialchars($val,ENT_COMPAT,MONTAGE_CHARSET,false); }//method
+  static public function getSafe($val){ 
+    return empty($val) ? '' : htmlspecialchars($val,ENT_COMPAT,MONTAGE_CHARSET,false);
+  }//method
   
   /**
    *  perform a word safe substring operation that works exactly like php's built-in
@@ -94,7 +96,7 @@ class montage_text {
    *  @param  integer $len  where to end, if neg, end that many chars from end of $str            
    *  @return string
    */        
-  static function getWordSubStr($str,$start,$len = 0){
+  static public function getWordSubStr($str,$start,$len = 0){
   
     // sanity...
     if(empty($str)){ return $str; }//if
@@ -153,7 +155,7 @@ class montage_text {
      *  @param  integer $len  where to end, if neg, end that many chars from end of $str            
      *  @return string
      */
-  static function getExcerpt($str,$start,$len)
+  static public function getExcerpt($str,$start,$len)
   {
       // canary...
       if(empty($str)){ return ''; }//if
@@ -175,7 +177,7 @@ class montage_text {
    *  @param  string  $val
    *  @return string  the $val with any urls removed      
    */
-  static function getUrlFree($val){
+  static public function killUrls($val){
   
     return empty($val)
       ? ''
@@ -191,7 +193,7 @@ class montage_text {
    *  @param  integer $char_limit max chars $input can be         
    *  @return string  url safe string
    */
-  static function getSafePath($input,$char_limit = 0){
+  static public function getSafePath($input,$char_limit = 0){
   
     // canary...
     if(empty($input)){ return ''; }//if
@@ -199,7 +201,7 @@ class montage_text {
     $ret_str = trim($input);
     $ret_str = preg_replace('/[^\w \-]/u','',$ret_str); // replace anything that isn't a space or word char with nothing
     $ret_str = mb_strtolower($ret_str);
-    $ret_str = join('_',array_filter(self::getStopWordFree($ret_str)));
+    $ret_str = join('_',array_filter(self::killStopWords($ret_str)));
   
     // impose a character limit if there is one...
     if($char_limit > 0){
@@ -219,19 +221,23 @@ class montage_text {
    *  @param  array|string  $word_list
    *  @return array $word_list with stop words removed
    */
-  static function getStopWordFree($words_list){
+  static public function killStopWords($words_list){
   
     // error checking...
-    if(!is_array($words_list)){
-      if(!empty($words_list)){
-        $words_list = explode(' ',$words_list);
-      }else{
-        return array();
-      }//if/else
-    }//if
+    if(is_array($words_list)){
     
-    // make sure all the words are trimmed...
-    $words_list = array_map('trim',$words_list);
+      // make sure all the words are trimmed...
+      $words_list = array_map('trim',$words_list);
+    
+    }else{
+    
+      if(empty($words_list)){
+        return array();
+      }else{
+        $words_list = preg_match('/\s+/u',$words_list);
+      }//if/else
+      
+    }//if
   
     $stop_words = array('i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 
       'you', 'your', 'yours', 'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 
@@ -250,6 +256,48 @@ class montage_text {
  
     return array_diff($words_list, $stop_words);
   
+  }//method
+  
+  /**
+   *  strip the cdata from a string
+   *
+   *  @since  5-9-10   
+   *  @param  string  $input
+   *  @return string  $input without CDATA tags   
+   */
+  static public function killCdata($input){
+  
+    // this one works but requires the cdata to be at the start and end of the string...
+    ///$ret_str = preg_replace("/^<!\[CDATA\[(.*?)\]\]>$/siu","\\1",$input);
+    
+    $ret_str = preg_replace('/<!\[CDATA\[(.*?)\]\]>/siu','\1',$input);
+    
+    return $ret_str;
+  
+  }//method
+  
+  /**
+   *  strip all whitespace from a string
+   *
+   *` @since  5-9-10   
+   *  @param  string  $input
+   *  @return string  $input without white space
+   */
+  static public function killSpaces($input){
+    return preg_replace('/\s+/u','',$input);
+  }//method
+  
+  /**
+   *  strip all newlines from a string
+   *
+   *  NOTE: the reason str_replace isn't used is because I don't want multiple newlines to become 2 spaces.
+   *  
+   *  @since  5-9-10   
+   *  @param  string  $input
+   *  @return string  $input without newlines
+   */
+  static public function killNewlines($input){
+    return preg_replace('/[\r\n]+/u',' ',$input);
   }//method
 
 }//class     
