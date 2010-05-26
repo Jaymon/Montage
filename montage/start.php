@@ -122,6 +122,6 @@ try{
 }//try/catch
 
 // actually handle the request...
-montage_handle::start();
+montage_factory::getBestInstance('montage_handle');
 
 if(MONTAGE_DEBUG){ montage_profile::stop(); }//if

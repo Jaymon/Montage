@@ -76,7 +76,8 @@ final class montage_core extends montage_base_static {
     'MONTAGE_SESSION' => '',
     'MONTAGE_COOKIE' => '',
     'MONTAGE_EVENT' => '',
-    'MONTAGE_FORWARD' => ''
+    'MONTAGE_FORWARD' => '',
+    'MONTAGE_HANDLE' => ''
   );
   
   /**
@@ -237,8 +238,8 @@ final class montage_core extends montage_base_static {
     self::startCoreClasses($controller,$environment,$debug,$charset,$timezone);
     
     // set error handlers...
-    set_error_handler(array('montage_handle','getErrorRuntime'));
-    register_shutdown_function(array('montage_handle','getErrorFatal'));
+    set_error_handler(array('montage_error','handleRuntime'));
+    register_shutdown_function(array('montage_error','handleFatal'));
     
     // profile...
     if($debug){ montage_profile::stop(); }//if
