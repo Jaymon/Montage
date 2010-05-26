@@ -3,13 +3,16 @@
 /**
  *  base class for lots of montage main objects
  *  
- *  @abstract 
+ *  this class isn't abstract because it is handy if you just need a quick key/val
+ *  in php memory store. Also, because montage_base_static uses this class for its
+ *  *Field() methods
+ *  
  *  @version 0.1
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 2-19-10
  *  @package montage 
  ******************************************************************************/
-abstract class montage_base {
+class montage_base {
 
   /**
    *  holds the key/value mapping for different tags of the feed
@@ -23,9 +26,9 @@ abstract class montage_base {
    *
    *  most core class will do all the required init stuff in __construct() and then call 
    *  start() so if you extend any of the core classes and want to do your own init stuff, 
-   *  put it in this method
+   *  extend this method
    */
-  function start(){}//method
+  protected function start(){}//method
 
   /**
    *  set the $val into $key

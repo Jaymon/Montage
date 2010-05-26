@@ -5,7 +5,9 @@
  *  
  *  checkout: http://us2.php.net/manual/en/function.class-parents.php and
  *    http://us2.php.net/manual/en/function.class-implements.php so you can check if
- *    a class is iterable and stuff when you escape it  
+ *    a class is iterable and stuff when you escape it. It doesn't extend montage_base
+ *    because it wraps other classes that do extend it and we don't want method name
+ *    clashing  
  *  
  *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -102,7 +104,7 @@ class montage_escape implements ArrayAccess,Iterator,Countable {
    *  this is here since this class does not extend montage_base but any children
    *  class should have a start method to keep it consistent with other montage classes   
    */
-  function start(){}//method
+  protected function start(){}//method
   
   /**
    *  if you ever need the actual vanilla value, you can call this method

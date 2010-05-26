@@ -11,11 +11,13 @@
 abstract class montage_base_static {
 
   /**
-   *  holds the key/value mapping for different tags of the feed
-   *  
-   *  @var  array
+   *  keep a singleton montage_base instance that will map the static methods to
+   *  the equivalent montage_base method so we only have to keep one master method
+   *  instead of a static version of the montage_base::*field methods      
+   *
+   *  @var  montage_base
    */
-  protected static $field_map = array();
+  protected static $field_instance = null;
 
   /**
    *  here to throw an error if someone tries to instantiate a class that is marked
@@ -52,8 +54,8 @@ abstract class montage_base_static {
    *  @return mixed return $val
    */
   static public function setField($key,$val){
-    self::$field_map[$key] = $val;
-    return self::$field_map[$key];
+    $field_map = self::getFieldInstance();
+    return $field_map->setField($key,$val);
   }//method
   
   /**
@@ -62,7 +64,10 @@ abstract class montage_base_static {
    *  @param  string  $key   
    *  @return  boolean
    */
-  static public function hasField($key){ return !empty(self::$field_map[$key]); }//method
+  static public function hasField($key){
+    $field_map = self::getFieldInstance();
+    return $field_map->hasField($key);
+  }//method
   
   /**
    *  check if $key exists
@@ -70,7 +75,10 @@ abstract class montage_base_static {
    *  @param  string  $key   
    *  @return  boolean
    */
-  static public function existsField($key){ return array_key_exists($key,self::$field_map); }//method
+  static public function existsField($key){
+    $field_map = self::getFieldInstance();
+    return $field_map->existsField($key);
+  }//method
   
   /**
    *  return the value of $key, return $default_val if key doesn't exist
@@ -80,7 +88,8 @@ abstract class montage_base_static {
    *  @return mixed
    */
   static public function getField($key,$default_val = null){
-    return self::existsField($key) ? self::$field_map[$key] : $default_val;
+    $field_map = self::getFieldInstance();
+    return $field_map->getField($key,$default_val);
   }//method
   
   /**
@@ -90,12 +99,8 @@ abstract class montage_base_static {
    *  @return mixed the value of key before it was removed
    */
   static public function killField($key){
-    $ret_val = null;
-    if(self::hasField($key)){
-      $ret_val = self::$field_map[$key];
-      unset(self::$field_map[$key]);
-    }//if
-    return $ret_val;
+    $field_map = self::getFieldInstance();
+    return $field_map->killField($key);
   }//method
   
   /**
@@ -106,11 +111,8 @@ abstract class montage_base_static {
    *  @return boolean
    */
   static public function isField($key,$val){
-    $ret_bool = false;
-    if(self::existsField($name)){
-      $ret_bool = self::getField($name) == $val;
-    }//if
-    return $ret_bool;
+    $field_map = self::getFieldInstance();
+    return $field_map->isField($key,$val);
   }//method
   
   /**
@@ -122,13 +124,21 @@ abstract class montage_base_static {
    *  @param  integer $count  the value to increment $key
    *  @return integer the incremented value now stored at $key
    */
-  static function bumpField($key,$count){
-    
-    $val = self::getField($key,0);
-    $val += $count;
-    self::setField($key,$val);
-    return $val;
-    
+  static public function bumpField($key,$count){
+    $field_map = self::getFieldInstance();
+    return $field_map->bumpField($key,$count);
+  }//method
+  
+  /**
+   *  get the field instance this class uses
+   *  
+   *  @return montage_base
+   */
+  protected static function getFieldInstance(){
+    if(self::$field_instance === null){
+      self::$field_instance = new montage_base();
+    }//if
+    return self::$field_instance;
   }//method
 
 }//class     

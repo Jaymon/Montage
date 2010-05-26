@@ -87,7 +87,7 @@ class montage_session {
     
   }//method
   
-  function start(){}//method
+  protected function start(){}//method
   
   /**
    *  save a field into the session

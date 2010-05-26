@@ -87,6 +87,7 @@ date_default_timezone_set(MONTAGE_TIMEZONE);
 if(!defined('MONTAGE_PATH')){ define('MONTAGE_PATH',realpath(dirname(__FILE__))); }//if
 
 // include the autoloader (and supporting files)...
+require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_base_class.php')));
 require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_base_static_class.php')));
 require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','helper','montage_path_class.php')));
 require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_cache_class.php')));
