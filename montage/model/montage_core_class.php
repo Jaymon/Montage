@@ -542,7 +542,7 @@ final class montage_core extends montage_base_static {
       throw new UnexpectedValueException('tried to get classes in an empty $path');
     }//if
     if(!is_dir($path)){
-      throw new UnexpectedValueException(sprintf('"%s" is not a valid directory',$path));
+      throw new InvalidArgumentException(sprintf('"%s" is not a valid directory',$path));
     }//if
 
     // we only really need to check if the cache exists, we don't need to bother

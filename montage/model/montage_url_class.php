@@ -20,7 +20,7 @@ class montage_url extends montage_base {
    *  
    *  start() is called so that a child that extends this class can do its own initialization      
    */
-  final function __construct(){
+  final public function __construct(){
     $this->start();
   }//method
 
@@ -45,10 +45,10 @@ class montage_url extends montage_base {
    *            
    *  @param  mixed $arg,...  first argument can be a root last argument can be
    *                          an array of key/val mappings that will be turned into
-   *                          a query string                                           
-   *  @return string  a complete url will the passed in args used to build it
+   *                          a query string, all other args will be treated as path bits                     
+   *  @return string  a complete url with the passed in args used to build it
    */
-  function get(){
+  public function get(){
   
     $args = func_get_args();
     list($base_url,$path_list,$var_map) = $this->parse($args);
@@ -70,7 +70,7 @@ class montage_url extends montage_base {
    *  @see  get()
    *  @return string  the base url with no ?key=val... string (unless one was passed in)   
    */
-  function getPath(){
+  public function getPath(){
   
     $args = func_get_args();
     list($base_url,$path_list,$var_map) = $this->parse($args);
@@ -86,7 +86,7 @@ class montage_url extends montage_base {
    *  @see  get()         
    *  @return string  the current url with any passed in vars appended to it
    */
-  function getCurrent(){
+  public function getCurrent(){
   
     $args = func_get_args();
     list($base_url,$path_list,$var_map) = $this->parse($args);
@@ -105,7 +105,7 @@ class montage_url extends montage_base {
    *  @param  array $var_map the vars that will be appended in key => val mappings
    *  @return string  the url with the vars attached
    */
-  function append($url,$var_map = array()){
+  public function append($url,$var_map = array()){
     
     // sanity...
     if(empty($var_map)){ return $url; }//if
@@ -148,13 +148,139 @@ class montage_url extends montage_base {
   }//method
   
   /**
+   *  remove select parts of a url
+   *  
+   *  this method follows the same passed in arg form as {@link get()} and others, 
+   *  the url to strip will be the first argument, the path pieces to be removed will
+   *  be any non-array strings following the url, and if that last passed in arg is an
+   *  array that will be the get values to be removed         
+   *      
+   *  this method is kind of hard to describe so examples might be best:
+   *  
+   *  @since  5-26-10
+   *      
+   *  @example
+   *    $this->kill(
+   *      'http://app.com/foo/bar/?che=baz&dah', // full url to remove stuff from
+   *      'bar', // strip 'bar' from the url                     
+   *      array('che' => null) // remove 'che' query field if found (value doesn't matter)
+   *    ); // -> 'http://app.com/foo/?dah'
+   *    
+   *    $this->kill(
+   *      'http://app.com/foo/bar/?che=baz&dah', // full url to remove stuff from
+   *      'bar', // strip 'bar' from the url                     
+   *      array('che' => 'baz') // remove 'che' query field if its value is 'baz'
+   *    ); // -> 'http://app.com/foo/?dah'      
+   *
+   *  @param  mixed $arg,...  first argument must be a url, last argument can be
+   *                          an array of key/val mappings that will be turned into
+   *                          a query string, all other args will be treated as path bits
+   *  @return string  a url with the found path bits and query vars removed
+   */
+  public function kill(){
+  
+    $args = func_get_args();
+    // sort through the passed in args...
+    list($url,$kill_path_list,$kill_var_map) = $this->parse($args);
+    // deconstruct the passed in url that will have stuff removed...
+    list($base_url,$path_list,$var_map) = $this->unbuild($url);
+
+    if(!empty($path_list)){
+      
+      // get rid of the path vars that match...
+      foreach($kill_path_list as $val){
+      
+        $key = array_search($val,$path_list,true);
+        if($key !== false){ unset($path_list[$key]); }//if
+      
+      }//foreach
+      
+    }//if
+  
+    if(!empty($var_map)){
+    
+      // get rid of the path vars that match...
+      foreach($kill_var_map as $key => $val){
+      
+        // the var map might contain a null value? So let's not use isset just to be safe...
+        if(array_key_exists($key,$var_map)){
+          
+          // if the value is null then just delete the key...
+          if($val === null){
+            
+            unset($var_map[$key]);
+            
+          }else{
+          
+            // since the $val has a value, then only remove the field if it matches the value...
+            if($val == $var_map[$key]){
+              unset($var_map[$key]);
+            }//if
+          
+          }//if/else
+          
+        }//if
+
+      }//foreach
+    
+    }//if
+    
+    return $this->build($base_url,$path_list,$var_map);
+  
+  }//method
+  
+  /**
+   *  deconstruct a string url to its parts
+   *
+   *  this method will deconstruct a url into the parts suitable to be passed to {@link build()}
+   *  
+   *  @since  5-26-10
+   *      
+   *  @param  string  $url
+   *  @return array array($base_url,$path_list,$var_map)
+   */
+  public function unbuild($url){
+  
+    // canary...
+    if(empty($url)){ return array('',array(),array()); }//if
+  
+    $url_map = parse_url($url);
+    
+    $ret_base = '';
+    if(!empty($url_map['host'])){
+      $ret_base = sprintf(
+        '%s://%s',
+        empty($url_map['scheme']) ? self::SCHEME_NORMAL : $url_map['scheme'],
+        $url_map['host']
+      );
+    }//if
+    
+    $ret_path = array();
+    if(!empty($url_map['path'])){
+      $ret_path = array_filter(explode(self::URL_SEP,$url_map['path']));
+    }//if
+    
+    $ret_var_map = array();
+    if(!empty($url_map['query'])){
+      parse_str($url_map['query'],$ret_var_map);
+    }//if
+  
+    if(!empty($url_map['fragment'])){
+      $ret_path[] = $url_map['fragment'];
+    }//if
+    
+    return array($ret_base,$ret_path,$ret_var_map);
+  
+  }//method
+  
+  /**
    *  split a string into base and query vars
    *  
    *  @param  string  $url
    *  @return array array($url,$query_vars) where $url is the url without a ?... string, and $query_vars
    *                is an array of the key/value pairs the $url originally contained
    */
-  function split($url){
+  public function split($url){
     
     // canary...
     if(empty($url)){ return array('',array()); }//if
@@ -186,7 +312,7 @@ class montage_url extends montage_base {
    *                              url, this is handy if you are doing tabs or something            
    *  @return string
    */
-  function isSame($url,$path_only = false){
+  public function isSame($url,$path_only = false){
   
     // sanity...
     if(empty($url)){ return false; }//if
@@ -215,7 +341,7 @@ class montage_url extends montage_base {
    *  @param  array $args the arguments passed into the $method call         
    *  @return mixed
    */
-  function __call($method,$args){
+  public function __call($method,$args){
   
     $method_map = array(
       'set' => 'handleSet',
@@ -227,6 +353,21 @@ class montage_url extends montage_base {
   
   }//method
   
+  /**
+   *  true if a given url base has been defined
+   *  
+   *  this method is called from {@link __call()}      
+   *  
+   *  @example
+   *    // we want to set a default foo base...
+   *    $this->setFoo(self::SCHEME_NORMAL,'app.com','foo');
+   *    $this->getFoo(); // -> http://app.com/foo
+   *    $this->hasFoo(); // -> true                    
+   *
+   *  @param  string  $field  the field to see if it exists
+   *  @param  array $args ignored by this function, but passed in by default
+   *  @return boolean   
+   */
   protected function handleHas($field,$args = array()){ return $this->hasField($field); }//method
   
   /**
@@ -249,9 +390,14 @@ class montage_url extends montage_base {
    *  
    *  @example
    *    // make foo point to /bar/ url...
-   *    $this->setFoo(self::SCHEME_NORMAL,'example.com','bar');
-   *    $this->getFoo(); // -> http://example.com/bar       
+   *    $this->setFoo(self::SCHEME_NORMAL,'app.com','bar');
+   *    $this->getFoo(); // -> http://app.com/bar       
    *
+   *    // even easier way to make foo point to bar...
+   *    // base url: http://app.com   
+   *    $this->setFoo('bar');
+   *    $this->getFoo(); // -> http://app.com/bar      
+   *      
    *  @param  string  $field
    *  @param  array $args the arguments, can be up to 3 arguments passed in:
    *                        1 = path (eg, /foo/bar/))
@@ -264,9 +410,15 @@ class montage_url extends montage_base {
     // canary...
     if(empty($args)){
       throw new RuntimeException(
-        'cannot set with an empty $args array. Any set* methods can take up to 3 arguments: '
-        .' 1 argument: [path (eg, /foo/bar)], 2 arguments: [host (eg, example.com), path], or '
-        .' 3 arguments: [scheme (eg, http), host, path].'
+        join(
+          "\r\n",
+          array(
+            'Cannot set with an empty $args array. Any set* methods can take up to 3 arguments: '
+            ' - 1 argument: [path (eg, /foo/bar)]',
+            ' - 2 arguments: [host (eg, example.com), path]',
+            ' - 3 arguments: [scheme (eg, http), host, path].'
+          )
+        )
       );
     }//if 
   
@@ -306,7 +458,7 @@ class montage_url extends montage_base {
   protected function parse($args){
   
     // canary...
-    if(empty($args)){      
+    if(empty($args)){    
       return array(montage::getRequest()->getBase(),array(),array());
     }//if
     
