@@ -112,5 +112,23 @@ abstract class montage_base_static {
     }//if
     return $ret_bool;
   }//method
+  
+  /**
+   *  bump the field at $key by $count
+   *  
+   *  @since  5-26-10
+   *      
+   *  @param  string  $key  the name
+   *  @param  integer $count  the value to increment $key
+   *  @return integer the incremented value now stored at $key
+   */
+  static function bumpField($key,$count){
+    
+    $val = self::getField($key,0);
+    $val += $count;
+    self::setField($key,$val);
+    return $val;
+    
+  }//method
 
 }//class     

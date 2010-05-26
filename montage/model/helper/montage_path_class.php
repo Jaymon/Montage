@@ -29,7 +29,12 @@ class montage_path extends montage_base_static {
     if(!is_dir($path)){
       if(!mkdir($path,0755,true)){
         throw new UnexpectedValueException(
-          sprintf('"%s" is not a valid directory and the attempt to create it failed.',$path)
+          sprintf(
+            '"%s" is not a valid directory and the attempt to create it failed. '
+            .'Check permissions for every directory on the path to make sure that path '
+            .'is writable.',
+            $path
+          )
         );
       }//if
     }//if

@@ -34,7 +34,7 @@ abstract class montage_base {
    *  @param  mixed $val
    *  @return mixed return $val
    */
-  function setField($key,$val){
+  public function setField($key,$val){
     $this->field_map[$key] = $val;
     return $this->field_map[$key];
   }//method
@@ -45,7 +45,7 @@ abstract class montage_base {
    *  @param  string  $key   
    *  @return  boolean
    */
-  function hasField($key){ return !empty($this->field_map[$key]); }//method
+  public function hasField($key){ return !empty($this->field_map[$key]); }//method
   
   /**
    *  check if $key exists
@@ -53,7 +53,7 @@ abstract class montage_base {
    *  @param  string  $key   
    *  @return  boolean
    */
-  function existsField($key){ return array_key_exists($key,$this->field_map); }//method
+  public function existsField($key){ return array_key_exists($key,$this->field_map); }//method
   
   /**
    *  return the value of $key, return $default_val if key doesn't exist
@@ -62,7 +62,7 @@ abstract class montage_base {
    *  @param  mixed $default_val
    *  @return mixed
    */
-  function getField($key,$default_val = null){
+  public function getField($key,$default_val = null){
     return $this->existsField($key) ? $this->field_map[$key] : $default_val;
   }//method
   
@@ -72,7 +72,7 @@ abstract class montage_base {
    *  @param  string  $key
    *  @return mixed the value of key before it was removed
    */
-  function killField($key){
+  public function killField($key){
     $ret_val = null;
     if($this->hasField($key)){
       $ret_val = $this->field_map[$key];
@@ -88,7 +88,7 @@ abstract class montage_base {
    *  @param  string  $val  the value to compare to the $key's set value
    *  @return boolean
    */
-  function isField($key,$val){
+  public function isField($key,$val){
     $ret_bool = false;
     if($this->existsField($key)){
       $ret_bool = $this->getField($key) == $val;
@@ -104,7 +104,7 @@ abstract class montage_base {
    *  @param  array $field_map      
    *  @return array
    */
-  function setFields($field_map){
+  public function setFields($field_map){
   
     if(!empty($field_map)){
       $this->field_map = array_merge($this->field_map,$field_map);
@@ -118,7 +118,25 @@ abstract class montage_base {
    *  
    *  @return array
    */
-  function getFields(){ return $this->field_map; }//method
+  public function getFields(){ return $this->field_map; }//method
+  
+  /**
+   *  bump the field at $key by $count
+   *  
+   *  @since  5-26-10
+   *      
+   *  @param  string  $key  the name
+   *  @param  integer $count  the value to increment $key
+   *  @return integer the incremented value now stored at $key
+   */
+  public function bumpField($key,$count){
+    
+    $val = $this->getField($key,0);
+    $val += $count;
+    $this->setField($key,$val);
+    return $val;
+    
+  }//method
   
   /**
    *  designed to be called from a __call() magic method, this will decide what

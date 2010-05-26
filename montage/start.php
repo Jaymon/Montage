@@ -65,7 +65,7 @@ if(!defined('MONTAGE_ENVIRONMENT')){
 if(!defined('MONTAGE_DEBUG')){ define('MONTAGE_DEBUG',true); }//if
 
 if(!defined('MONTAGE_ERROR_LEVEL')){
-  // be default, full error reporting should always be on...
+  // by default, full error reporting should always be on...
   define('MONTAGE_ERROR_LEVEL',(E_ALL | E_STRICT | E_PARSE));
 }//if
 error_reporting(MONTAGE_ERROR_LEVEL);
@@ -121,6 +121,6 @@ try{
 }//try/catch
 
 // actually handle the request...
-montage_core::handle();
+montage_handle::start();
 
 if(MONTAGE_DEBUG){ montage_profile::stop(); }//if
