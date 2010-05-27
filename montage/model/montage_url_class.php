@@ -73,9 +73,9 @@ class montage_url extends montage_base {
   public function get(){
   
     $args = func_get_args();
-    list($base_url,$path_list,$var_map) = $this->parse($args);
+    list($base_url,$path_list,$field_map) = $this->parse($args);
     
-    return $this->build($base_url,$path_list,$var_map);
+    return $this->build($base_url,$path_list,$field_map);
   
   }//method
   
@@ -95,9 +95,9 @@ class montage_url extends montage_base {
   public function getPath(){
   
     $args = func_get_args();
-    list($base_url,$path_list,$var_map) = $this->parse($args);
-    list($base_url,$current_var_map) = $this->split($this->getCurrent());
-    return self::build($base_url,$path_list,$var_map);
+    list($base_url,$path_list,$field_map) = $this->parse($args);
+    list($base_url,$current_field_map) = $this->split($this->getCurrent());
+    return self::build($base_url,$path_list,$field_map);
   
   }//method
   
@@ -111,7 +111,7 @@ class montage_url extends montage_base {
   public function getCurrent(){
   
     $args = func_get_args();
-    list($base_url,$path_list,$var_map) = $this->parse($args);
+    list($base_url,$path_list,$field_map) = $this->parse($args);
     
     // get the base url...
     $base_url = $this->getField('montage_url::current_url',null);
@@ -119,55 +119,87 @@ class montage_url extends montage_base {
       $base_url = $this->getField('montage_url::base_url','');
     }//if
     
-    return $this->build($base_url,$path_list,$var_map);
+    return $this->build($base_url,$path_list,$field_map);
   
   }//method
   
   /**
-   *  adds query vars to the given url.
+   *  set a get field that will be included with every url built with this class
+   *  using methods like {@link append()} and {@link get()}, etc.   
+   *
+   *  this is a handy way to set fields that will follow a visitor around as they
+   *  navigate the site   
+   *      
+   *  @since  5-27-10
+   *  @see  append()   
    *  
-   *  this will url encode the query vars, it will also add any vars that were set
-   *  in {@link $get_vars} with {@link setVar()}
+   *  @param  string  $key  the name of the get field
+   *  @param  string  $val  the value for the get field      
+   */
+  public function setGlobalField($key,$val){
+  
+    // canary...
+    if(empty($key)){
+      throw new UnexpectedValueException('$key is empty');
+    }//if
+  
+    $field_key = 'montage_url::get_field_map';
+    $global_get_field_map = $this->getField($field_key,array());
+  
+    $global_get_field_map[$key] = $val;
+  
+    return $this->setField($field_key,$global_get_field_map);
+  
+  }//method
+  
+  /**
+   *  adds query fields to the given url.
    *  
-   *  @param  string  $url  the url to append the vars to
-   *  @param  array $var_map the vars that will be appended in key => val mappings
+   *  this will url encode the query fields, it will also add any fields that were set
+   *  with {@link setGlobalField()}
+   *  
+   *  @param  string  $url  the url to append the fields to
+   *  @param  array $field_map the get fields that will be appended in key => val mappings
    *  @return string  the url with the vars attached
    */
-  public function append($url,$var_map = array()){
+  public function append($url,$field_map = array()){
     
     // sanity...
-    if(empty($var_map)){ return $url; }//if
+    if(empty($field_map)){ return $url; }//if
     
-    list($url,$query_vars) = $this->split($url);
-    if(!empty($query_vars)){
+    list($url,$query_field_map) = $this->split($url);
     
-      $var_map = array_merge($query_vars,$var_map);
+    // build a definitive field map that can be appended...
+    $field_map = array_merge(
+      $this->getField('montage_url::get_field_map',array()),
+      $query_field_map,
+      $field_map
+    );
     
-    }//if/else
+    if(!empty($field_map)){
     
-    if(!empty($var_map)){
-    
-      $single_var_map = array();
-      foreach($var_map as $key => $val){
+      // collect all the fields that don't have a value (so we can do ?val& instead of ?val=&)
+      $single_field_map = array();
+      foreach($field_map as $key => $val){
       
         if(($val === null) || ($val === '')){
-          $single_var_map[] = urlencode($key);
-          unset($var_map[$key]);
+          $single_field_map[] = urlencode($key);
+          unset($field_map[$key]);
         }//if
       
       }//foreach
     
-      $var_str = http_build_query($var_map,'','&');
-      $single_var_str = empty($single_var_map) ? '' : join('&',$single_var_map);
-      if(empty($var_str)){
-        $var_str = $single_var_str; 
+      $field_str = http_build_query($field_map,'','&');
+      $single_field_str = empty($single_field_map) ? '' : join('&',$single_field_map);
+      if(empty($field_str)){
+        $field_str = $single_field_str; 
       }else{
-        if(!empty($single_var_str)){
-          $var_str = sprintf('%s&%s',$var_str,$single_var_str);
+        if(!empty($single_field_str)){
+          $field_str = sprintf('%s&%s',$field_str,$single_field_str);
         }//if
       }//if/else
       
-      if(!empty($var_str)){ $url .= '?'.$var_str; }//if
+      if(!empty($field_str)){ $url = sprintf('%s?%s',$url,$field_str); }//if
     
     }//if
     
@@ -209,9 +241,9 @@ class montage_url extends montage_base {
   
     $args = func_get_args();
     // sort through the passed in args...
-    list($url,$kill_path_list,$kill_var_map) = $this->parse($args);
+    list($url,$kill_path_list,$kill_field_map) = $this->parse($args);
     // deconstruct the passed in url that will have stuff removed...
-    list($base_url,$path_list,$var_map) = $this->unbuild($url);
+    list($base_url,$path_list,$field_map) = $this->unbuild($url);
 
     if(!empty($path_list)){
       
@@ -225,24 +257,24 @@ class montage_url extends montage_base {
       
     }//if
   
-    if(!empty($var_map)){
+    if(!empty($field_map)){
     
       // get rid of the path vars that match...
-      foreach($kill_var_map as $key => $val){
+      foreach($kill_field_map as $key => $val){
       
         // the var map might contain a null value? So let's not use isset just to be safe...
-        if(array_key_exists($key,$var_map)){
+        if(array_key_exists($key,$field_map)){
           
           // if the value is null then just delete the key...
           if($val === null){
             
-            unset($var_map[$key]);
+            unset($field_map[$key]);
             
           }else{
           
             // since the $val has a value, then only remove the field if it matches the value...
-            if($val == $var_map[$key]){
-              unset($var_map[$key]);
+            if($val == $field_map[$key]){
+              unset($field_map[$key]);
             }//if
           
           }//if/else
@@ -253,7 +285,7 @@ class montage_url extends montage_base {
     
     }//if
     
-    return $this->build($base_url,$path_list,$var_map);
+    return $this->build($base_url,$path_list,$field_map);
   
   }//method
   
@@ -265,7 +297,7 @@ class montage_url extends montage_base {
    *  @since  5-26-10
    *      
    *  @param  string  $url
-   *  @return array array($base_url,$path_list,$var_map)
+   *  @return array array($base_url,$path_list,$field_map)
    */
   public function unbuild($url){
   
@@ -288,24 +320,24 @@ class montage_url extends montage_base {
       $ret_path = array_filter(explode(self::URL_SEP,$url_map['path']));
     }//if
     
-    $ret_var_map = array();
+    $ret_field_map = array();
     if(!empty($url_map['query'])){
-      parse_str($url_map['query'],$ret_var_map);
+      parse_str($url_map['query'],$ret_field_map);
     }//if
   
     if(!empty($url_map['fragment'])){
       $ret_path[] = $url_map['fragment'];
     }//if
     
-    return array($ret_base,$ret_path,$ret_var_map);
+    return array($ret_base,$ret_path,$ret_field_map);
   
   }//method
   
   /**
-   *  split a string into base and query vars
+   *  split a string into base and get field_map
    *  
    *  @param  string  $url
-   *  @return array array($url,$query_vars) where $url is the url without a ?... string, and $query_vars
+   *  @return array array($url,$field_map) where $url is the url without a ?... string, and $field_map
    *                is an array of the key/value pairs the $url originally contained
    */
   public function split($url){
@@ -313,7 +345,7 @@ class montage_url extends montage_base {
     // canary...
     if(empty($url)){ return array('',array()); }//if
     
-    $query_vars = array();
+    $field_map = array();
     
     $query_str_start = mb_strpos($url,'?');
     if($query_str_start !== false){
@@ -323,12 +355,12 @@ class montage_url extends montage_base {
       $url_query_str = mb_substr($url,$query_str_start + 1);
       $url = mb_substr($url,0,$query_str_start); // we just want the regular url
       
-      parse_str($url_query_str,$query_vars);
-      $query_vars = montage_text::killSlashes($query_vars);
+      parse_str($url_query_str,$field_map);
+      $field_map = montage_text::killSlashes($field_map);
       
     }//if
   
-    return array($url,$query_vars);
+    return array($url,$field_map);
     
   }//method
   
@@ -479,9 +511,9 @@ class montage_url extends montage_base {
    *  will be appended to the base url
    *  
    *  @param  array $args
-   *  @return array array($base_url,$path_list,$var_map) where $base_url is the url that will be at the beginning
+   *  @return array array($base_url,$path_list,$field_map) where $base_url is the url that will be at the beginning
    *                and $path_list is all the path elements (eg, array('foo','bar' would become: /foo/bar)
-   *                and $var_map are the get vars (eg, array('foo' => 'bar') would become ?foo=bar)      
+   *                and $field_map are the get vars (eg, array('foo' => 'bar') would become ?foo=bar)      
    */
   protected function parse($args){
   
@@ -490,7 +522,7 @@ class montage_url extends montage_base {
       return array($this->getField('montage_url::base_url',''),array(),array());
     }//if
     
-    list($path_list,$var_map) = $this->sortArgs($args);
+    list($path_list,$field_map) = $this->sortArgs($args);
     $base_url = empty($path_list[0]) ? '' : $path_list[0];
     
     if(!empty($base_url)){
@@ -511,36 +543,36 @@ class montage_url extends montage_base {
     
     }//if/else
     
-    return array($base_url,$path_list,$var_map);
+    return array($base_url,$path_list,$field_map);
   
   }//method
   
   /**
    *  most of the get methods can take a variable string of arguments, with an array at the
    *  end that will be turned into a get parameter string, this separates the path vars (eg, foo/bar)
-   *  from the parameter vars (eg, ?foo=bar) and returns them
+   *  from the parameter fields (eg, ?foo=bar) and returns them
    *  
    *  @param  array $args an array of path/parameters
-   *  @return array($path_list,$get_vars)
+   *  @return array($path_list,$get_field_map)
    */              
   protected function sortArgs($args){
     
     // canary...
     if(empty($args)){ return array(array(),array()); }//if
     
-    $path_list = $var_map = array();
+    $path_list = $field_map = array();
     
     // if the last element is an array, then it is a var_map, else it is just a normal value...
-    $var_map = end($args);
-    if(is_array($var_map)){
+    $field_map = end($args);
+    if(is_array($field_map)){
       // the last element isn't part of the url var list, it contains the get vars...
       $path_list = array_slice($args,0,-1);
     }else{
       $path_list = $args;
-      $var_map = array();
+      $field_map = array();
     }//if/else
     
-    return array($path_list,$var_map);
+    return array($path_list,$field_map);
     
   }//method
   
@@ -612,14 +644,14 @@ class montage_url extends montage_base {
    *      
    *  @param  string  $base the base url to start from
    *  @param  array $var_list the vars to add to the base
-   *  @param  array $var_map  the get vars to append to the end of the url build with $bars and $var_list   
+   *  @param  array $field_map  the get vars to append to the end of the url build with $bars and $var_list   
    *  @return string  the completely built url
    */
-  protected function build($base,$var_list,$var_map = array()){
+  protected function build($base,$path_list,$field_map = array()){
     
     // sanity...
-    if(empty($var_list) && empty($var_map)){ return $base; }//if
-    if(!is_array($var_list)){ $var_list = array($var_list); }//if
+    if(empty($path_list) && empty($field_map)){ return $base; }//if
+    if(!is_array($path_list)){ $path_list = array($path_list); }//if
     
     $ret_str = '';
     
@@ -633,24 +665,24 @@ class montage_url extends montage_base {
     $query_str = empty($base_bits['query']) ? '' : '?'.$base_bits['query'];
     
     // add mod_rewrite url vars to the end of the url if there are any...
-    if(!empty($var_list)){
+    if(!empty($path_list)){
     
       // handle the fragment...
-      $var_list = array_filter(
+      $path_list = array_filter(
         array_map('mb_strtolower',
           array_map(
             'trim',
-            $var_list,
-            array_fill(0,count($var_list),'/')
+            $path_list,
+            array_fill(0,count($path_list),'/')
           )
         )
       );
-      $last = end($var_list);
+      $last = end($path_list);
       if(!empty($last)){
       
         if($last[0] != '#'){
         
-          $ret_str .= join(self::URL_SEP,$var_list);
+          $ret_str .= join(self::URL_SEP,$path_list);
           if(mb_strrpos($last,'.') === false){
             $ret_str .= self::URL_SEP;
           }//if
@@ -658,10 +690,10 @@ class montage_url extends montage_base {
         }else{
           
           // the last element is a fragment...
-          $real_var_list = array_slice($var_list,0,-1);
-          $ret_str .= join(self::URL_SEP,$real_var_list);
+          $real_path_list = array_slice($path_list,0,-1);
+          $ret_str .= join(self::URL_SEP,$real_path_list);
           $base_bits['fragment'] = $last;
-          $last = end($real_var_list);
+          $last = end($real_path_list);
           
         }//if/else
       }//if
@@ -670,7 +702,7 @@ class montage_url extends montage_base {
     $ret_str .= $query_str; // add any query string back on
     
     // add any get vars to the url...
-    $ret_str = $this->append($ret_str,$var_map);
+    $ret_str = $this->append($ret_str,$field_map);
     
     // fragment should always be at the end...
     $ret_str .= empty($base_bits['fragment']) ? '' : $base_bits['fragment'];

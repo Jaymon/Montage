@@ -57,7 +57,7 @@ final class montage_error {
     $error_map['message'] = $errstr;
     $error_map['file'] = $errfile;
     $error_map['line'] = $errline;
-    $error_map['name'] = self::getErrorName($error_map['type']);
+    $error_map['name'] = self::getName($error_map['type']);
     
     // broadcast the error to anyone that is listening...
     montage::getEvent()->broadcast(montage_event::KEY_ERROR,$error_map);
@@ -82,7 +82,7 @@ final class montage_error {
     
       if(!isset(self::$ERRORS_RUNTIME[$error_map['type']])){
     
-        $error_map['name'] = self::getErrorName($error_map['type']);
+        $error_map['name'] = self::getName($error_map['type']);
       
         // broadcast the error to anyone that is listening...
         montage::getEvent()->broadcast(montage_event::KEY_ERROR,$error_map);
