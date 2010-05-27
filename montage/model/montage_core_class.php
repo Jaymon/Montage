@@ -58,29 +58,6 @@ final class montage_core extends montage_base_static {
   static private $class_map = array();
   
   /**
-   *  hold the mapped core classes with their best defined class_keys being the value   
-   *  
-   *  @deprecated this is no longer used but is a good snapshot of what classes can
-   *  be extended by the user, when I have proper documentation this can be gotten rid
-   *  of      
-   *      
-   *  @var  array
-   */
-  static private $core_class_map = array(
-    'MONTAGE_REQUEST' => '',
-    'MONTAGE_SETTINGS' => '',
-    'MONTAGE_RESPONSE' => '',
-    'MONTAGE_URL' => '',
-    'MONTAGE_ESCAPE' => '',
-    'MONTAGE_TEMPLATE' => '',
-    'MONTAGE_SESSION' => '',
-    'MONTAGE_COOKIE' => '',
-    'MONTAGE_EVENT' => '',
-    'MONTAGE_FORWARD' => '',
-    'MONTAGE_HANDLE' => ''
-  );
-  
-  /**
    *  map all the child classes to their parents
    *  
    *  this is handy for making sure a given class inherits what it should
@@ -156,8 +133,9 @@ final class montage_core extends montage_base_static {
       // throughout building the paths, we need to compile a list of start classes.
       // start classes are classes that extend montage_start.
       // the start classes follow a precedence order: Global, environment, plugins, and controller...
-      // * Global is a class named "app" it can't be named "start" because of the start() method trying to override __construct()
-      // * environment controller is a class with the same name as $environment, it's before plugins to set db variables
+      // * Global is a class named "app" it can't be named "start" because of the start() method trying to override 
+      //    __construct()
+      // * environment is a class with the same name as $environment, it's before plugins to set db variables
       //    and the like so that plugins (like a db plugin) can take advantage of connection settings
       //    like db name, db username, and db password
       // * plugins are name by what folder they are in (eg, [APP PATH]/plugins/foo/ the plugin is named foo)
@@ -859,7 +837,10 @@ final class montage_core extends montage_base_static {
       'montage::montage_url',
       montage_factory::getBestInstance(
         'montage_url',
-        array()
+        array(
+          montage::getRequest()->getUrl(),
+          montage::getRequest()->getBase()
+        )
       )
     );
     

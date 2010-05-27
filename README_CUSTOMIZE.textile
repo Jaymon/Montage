@@ -1,0 +1,42 @@
+h1. Customizing Montage
+
+Montage allows you to easily extend most of the core classes to allow you to add specific functionality to your app or change default behaviors.
+
+The classes you can extend are:
+
+* <code>montage_request</code>
+* <code>montage_response</code>
+* <code>montage_settings</code>
+* <code>montage_url</code>
+* <code>montage_escape</code>
+* <code>montage_template</code>
+* <code>montage_session</code>
+* <code>montage_cookie</code>
+* <code>montage_event</code>
+* <code>montage_forward</code>
+* <code>montage_handle</code>
+
+So, for example, if you wanted to extend <code>montage_request</code> to allow for some custom code, you would just create a new class in your app's model directory that extends <code>montage_request</code>:
+
+<pre>
+class custom_request extends montage_request {
+
+  protected function start(){
+    // custom initialization code can go here
+  }//method
+
+}//class
+
+</pre>
+
+In order to guarantee uniformity of the classes (ie, you don't extend a core class and add a constructor argument that the core doesn't know about when it instantiates it) the core class's constructors are final and can't be extended, but each class calls a <code>start()</code> method from the constructor where you can do your customized class initialization. This also ensures the class is allowed to do certain things before passing control over to the developer.
+
+Now, after you have created your new class, just make sure the app's cache is deleted and reload your application, your new class will now be used instead of the original class.
+
+Montage will always use the final extended class for each of its core classes. For example, if you had three request classes like so:
+
+* <code>class montage_request</code> - the default Montage request class.
+* <code>class base_request extends montage_request</code> - your specific request class you use for all your projects that adds some custom functionality that you can't live without.
+* <code>class request extends base_request</code> - your app specific request class that adds functionality that only this app uses, so there is no point to put it in your <code>base_request</code> class.
+
+Montage will use the <code>request</code> class automatically.

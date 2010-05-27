@@ -11,20 +11,27 @@
  *  classes, allowing the developer to easily extend the base default classes and have all
  *  the code still work    
  *  
+ *  this class is final to keep everything uniform since this class is used in the 
+ *  core to start classes, a developer overriding it would technically be possible
+ *  (core uses parent, developer uses their factory class that extends this?) but
+ *  it just seems weird to me   
+ *  
  *  @example  
  *    // class child extends parent...
- *    echo get_class(montage_factory::getBestInstance('parent')); // 'child'
- *    echo get_class(montage_factory::getInstance('parent')); // 'parent'
+ *    echo get_class(montage_factory::getBestInstance('parent')); // -> 'child'
+ *    echo get_class(montage_factory::getInstance('parent')); // -> 'parent'
  *    
  *    // now, we create a third class, grandchild that extends child...   
- *    echo get_class(montage_factory::getBestInstance('child')); // 'grandchild'   
+ *    echo get_class(montage_factory::getBestInstance('child')); // -> 'grandchild'
+ *    echo get_class(montage_factory::getBestInstance('parent')); // -> 'grandchild'    
+ *    echo get_class(montage_factory::getInstance('child')); // -> 'child' 
  * 
  *  @version 0.1
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 5-4-10
  *  @package montage 
  ******************************************************************************/
-class montage_factory {
+final class montage_factory extends montage_base_static {
 
   /**
    *  create and return an instance of $class_name

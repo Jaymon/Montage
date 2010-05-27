@@ -3,7 +3,7 @@
 /**
  *  class for generating urls
  *
- *  @version 0.1
+ *  @version 0.3
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 2-22-10
  *  @package mingo 
@@ -18,11 +18,33 @@ class montage_url extends montage_base {
   /**
    *  override default constructor
    *  
-   *  start() is called so that a child that extends this class can do its own initialization      
+   *  start() is called so that a child that extends this class can do its own initialization
+   *  
+   *  @param  string  $current_url  the current url
+   *  @param  string  $base_url the url that will be used as the default base               
    */
-  final public function __construct(){
+  final public function __construct($current_url = '',$base_url = ''){
+  
+    $this->setCurrent($current_url);
+    $this->setBase($base_url);
+  
     $this->start();
   }//method
+  
+  /**
+   *  set the current url that will be used in {@link getCurrent()}
+   *  
+   *  @param  string  $url  the current requested url   
+   */
+  public function setCurrent($url){ $this->setField('montage_url::current_url',$url); }//method
+  
+  /**
+   *  set the base url that will be used as the default if no other url is passed into
+   *  methods like {@link get()}   
+   *
+   *  @param  string  $url  the url that will be used as the default base
+   */
+  public function setBase($url){ $this->setField('montage_url::base_url',$url); }//method
 
   /**
    *  get a url
@@ -90,7 +112,13 @@ class montage_url extends montage_base {
   
     $args = func_get_args();
     list($base_url,$path_list,$var_map) = $this->parse($args);
-    $base_url = montage::getRequest()->getUrl();
+    
+    // get the base url...
+    $base_url = $this->getField('montage_url::current_url',null);
+    if($base_url === null){
+      $base_url = $this->getField('montage_url::base_url','');
+    }//if
+    
     return $this->build($base_url,$path_list,$var_map);
   
   }//method
@@ -426,9 +454,9 @@ class montage_url extends montage_base {
     
     if($total_args === 1){
     
-      $request = montage::getRequest();
+      $base_url = $this->getField('montage_url::base_url','');
       $ret_str = $args[0];
-      $this->setField($field,$this->assemble('',$request->getBase(),$ret_str));
+      $this->setField($field,$this->assemble('',$base_url,$ret_str));
     
     }else if($total_args < 3){
     
@@ -459,7 +487,7 @@ class montage_url extends montage_base {
   
     // canary...
     if(empty($args)){    
-      return array(montage::getRequest()->getBase(),array(),array());
+      return array($this->getField('montage_url::base_url',''),array(),array());
     }//if
     
     list($path_list,$var_map) = $this->sortArgs($args);
@@ -473,13 +501,13 @@ class montage_url extends montage_base {
         
       }else{
       
-        $base_url = montage::getRequest()->getBase();
+        $base_url = $this->getField('montage_url::base_url','');
       
       }//if/else if/else
     
     }else{
     
-      $base_url = montage::getRequest()->getBase();
+      $base_url = $this->getField('montage_url::base_url','');
     
     }//if/else
     
@@ -517,29 +545,29 @@ class montage_url extends montage_base {
   }//method
   
   /**
-   *  given a $scheme, $host, $path or combination of the 3 build a url
+   *  given a $scheme, $$base, $path or combination of the 3 build a url
    *  
    *  @param  string  $scheme can be one of the SCHEME_* constants
-   *  @param  string  $host something like example.com
+   *  @param  string  $$base  usually something like example.com
    *  @param  string  $path something like /foo/bar
-   *  @return string  all the 3 parst combined
+   *  @return string  all the 3 parts combined
    */
-  protected function assemble($scheme,$host,$path = ''){
+  protected function assemble($scheme,$base,$path = ''){
     
-    if(empty($host)){
+    if(empty($base)){
     
-      $host = montage::getRequest()->getBase();
+      $base = $this->getField('montage_url::base_url','');
     
     }//if/else
     
-    $url_bits = empty($host) ? array() : parse_url($host);
+    $url_bits = empty($base) ? array() : parse_url($base);
     
-    if(montage_text::isUrl($host)){
+    if(montage_text::isUrl($base)){
     
       if(empty($scheme)){
       
         $scheme = $url_bits['scheme'];
-        $host = sprintf(
+        $base = sprintf(
           '%s%s',
           $url_bits['scheme'],
           isset($url_bits['path']) ? rtrim($url_bits['path'],self::URL_SEP) : ''
@@ -557,10 +585,10 @@ class montage_url extends montage_base {
   
     $list = array();
   
-    if(!empty($host)){
-      $host = rtrim($host,self::URL_SEP);
-      $host = sprintf('%s://%s',$scheme,$host);
-      $list[] = $host;
+    if(!empty($base)){
+      $base = rtrim($base,self::URL_SEP);
+      $base = sprintf('%s://%s',$scheme,$base);
+      $list[] = $base;
     }//if
     
     if(!empty($path)){
