@@ -441,7 +441,7 @@ class montage_url extends montage_base {
         join(
           "\r\n",
           array(
-            'Cannot set with an empty $args array. Any set* methods can take up to 3 arguments: '
+            'Cannot set with an empty $args array. Any set* methods can take up to 3 arguments: ',
             ' - 1 argument: [path (eg, /foo/bar)]',
             ' - 2 arguments: [host (eg, example.com), path]',
             ' - 3 arguments: [scheme (eg, http), host, path].'
