@@ -11,6 +11,11 @@
  *  @since 5-26-10
  *  @package montage 
  ******************************************************************************/
+
+// @todo  this class needs to instantiate the start classes, so montage_core
+// needs a getStartClassNames method, the start classes can now also have a stop(
+// method
+
 class montage_handle extends montage_base {
 
   /**
@@ -44,6 +49,8 @@ class montage_handle extends montage_base {
    *  to be called, everything else will take care of itself      
    */
   protected function start(){
+  
+    // @todo  this function should be blank, move most of this into __construct()
   
     $debug = montage::getSettings()->getDebug();
     
@@ -249,6 +256,18 @@ class montage_handle extends montage_base {
     if($debug){ montage_profile::stop(); }//if
   
     return $use_template;
+  
+  }//method
+  
+  /**
+   *  handle a thrown exception
+   *
+   *  @return boolean whether or not to "handle" the request again
+   */
+  protected function handleException(Exception $e){
+  
+    // @todo move all the current get() exception code into this method
+  
   
   }//method
 

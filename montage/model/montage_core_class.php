@@ -129,6 +129,7 @@ final class montage_core extends montage_base_static {
       self::setPath(montage_path::get($app_path,'settings'));
       
       $start_class_list = array();
+      $start_class_parent_name = 'montage_start';
       
       // throughout building the paths, we need to compile a list of start classes.
       // start classes are classes that extend montage_start.
@@ -142,10 +143,10 @@ final class montage_core extends montage_base_static {
       // and the plugin start class is the class with the same name as the root folder
       // (eg, class foo extends montage_start)
       // * controller start class is a class with same name as $controller
-      $start_class_name = self::getClassName(self::CLASS_NAME_APP_START);
+      $start_class_name = self::getClassName(self::CLASS_NAME_APP_START,$start_class_parent_name);
       if(!empty($start_class_name)){ $start_class_list[] = $start_class_name; }//if
       
-      $start_class_name = self::getClassName($environment);
+      $start_class_name = self::getClassName($environment,$start_class_parent_name);
       if(!empty($start_class_name)){ $start_class_list[] = $start_class_name; }//if
       
       // include all the plugin paths, save all the start class names.
@@ -163,12 +164,12 @@ final class montage_core extends montage_base_static {
         // find all the classes in the plugin path...
         self::setPath($plugin_path);
         
-        $start_class_name = self::getClassName($plugin_name);
+        $start_class_name = self::getClassName($plugin_name,$start_class_parent_name);
         if(!empty($start_class_name)){ $start_class_list[] = $start_class_name; }//if
         
       }//foreach
       
-      $start_class_name = self::getClassName($controller);
+      $start_class_name = self::getClassName($controller,$start_class_parent_name);
       if(!empty($start_class_name)){ $start_class_list[] = $start_class_name; }//if
       
       self::setField('montage_core_start_class_list',$start_class_list);
@@ -229,9 +230,8 @@ final class montage_core extends montage_base_static {
     
     // now actually start the settings/start classes...
     $start_class_list = self::getField('montage_core_start_class_list',array());
-    $start_class_parent_key = 'montage_start';
     foreach($start_class_list as $start_class_name){
-      montage_factory::getInstance($start_class_name,array(),$start_class_parent_key);
+      montage_factory::getInstance($start_class_name,array(),$start_class_parent_name);
     }//foreach
     
     // profile...

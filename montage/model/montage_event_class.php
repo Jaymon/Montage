@@ -6,11 +6,11 @@
  *  this class is loosely based on the Symfony events from which I took inspiration...
  *  http://components.symfony-project.org/event-dispatcher/ 
  *  
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 4-2-10
  *  @package montage
- *  @subpackage messaging
+ *  @subpackage event
  ******************************************************************************/       
 class montage_event {
 
@@ -23,6 +23,16 @@ class montage_event {
    *  general info about how the request is being handled will broadcast on this key
    */
   const KEY_INFO = 'montage.info';
+  
+  /**
+   *  this is a special event in that a callback bounded to this event will be called
+   *  with every broadcast event. Great for analytics and/or logging
+   *  
+   *  return values don't matter for this event, the callback will also receive the
+   *  original calling key instead of the value of this key (ie, if you bind method "foo"
+   *  to this key and event "bar" was broadcast, the callback would be: foo('bar',$info_map))            
+   */
+  const KEY_ALL = 'montage.all';
 
   /**
    *  holds the event mappings. each key will have an array of callbacks to ping
@@ -79,30 +89,42 @@ class montage_event {
   /**
    *  broadcast the $key so all the listening callbacks will be pinged
    *  
-   *  if one of the callbacks returns true then the remaining callbacks will not be called
+   *  if one of the callbacks returns non-null then the remaining callbacks will not be called
+   *  and that non-null value will be returned   
    *      
    *  @param  string  $key
    *  @param  array $info_map anything you want but usually a key/value array with information
    *                          you want to pass to each callback listening            
-   *  @return boolean
+   *  @return mixed the first non-null value returned from the callback list wins
    */
   public function broadcast($key,$info_map = array()){
   
     // canary...
     if(empty($key)){ throw new UnexpectedValueException('$key cannot be empty'); }//if
   
+    $ret_mix = null;
+  
+    // broadcast "ALL" events first since they won't affect the outcome...
+    if(isset($this->event_map[self::KEY_ALL])){
+    
+      foreach($this->event_map[self::KEY_ALL] as $event_callback){
+        call_user_func($event_callback,$key,$info_map);
+      }//foreach
+    
+    }//if
+  
     if(isset($this->event_map[$key])){
     
       foreach($this->event_map[$key] as $event_callback){
       
-        $ret_bool = call_user_func($event_callback,$key,$info_map);
-        if($ret_bool === true){ break; }//if
+        $ret_mix = call_user_func($event_callback,$key,$info_map);
+        if($ret_mix !== null){ break; }//if
       
       }//foreach
   
     }//if
     
-    return true;
+    return $ret_mix;
   
   }//method
   
