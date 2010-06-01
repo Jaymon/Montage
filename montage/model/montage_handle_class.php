@@ -45,20 +45,18 @@ class montage_handle extends montage_base {
   
     $debug = montage::getSettings()->getDebug();
     if($debug){ montage_profile::start(__METHOD__); }//if
-  
-    if($debug){ montage_profile::start('start'); }//if
-  
-    // let any child class do its init stuff...
-    $this->start();
     
     // needed global classes...
     $event = montage::getEvent();
     $use_template = false;
     
-    if($debug){ montage_profile::stop(); }//if
-    
     // let's do this... 
     try{
+    
+      // let any child class do its init stuff...
+      if($debug){ montage_profile::start('start'); }//if
+      $this->start();
+      if($debug){ montage_profile::stop(); }//if
       
       // get all the start classes and run them...
       if($debug){ montage_profile::start('start classes start'); }//if
@@ -91,14 +89,12 @@ class montage_handle extends montage_base {
     // needed global classes...
     $request = montage::getRequest();
     $response = montage::getResponse();
-
-    if($debug){ montage_profile::start('response'); }//if
     
     // chances are stuff is going to be echo'ed to the user in this method...
+    if($debug){ montage_profile::start('response'); }//if
     $response->handle($use_template);
-    
-    // profile, response...
     if($debug){ montage_profile::stop(); }//if
+    
     
     // profile, method...
     if($debug){ montage_profile::stop(); }//if
@@ -123,19 +119,7 @@ class montage_handle extends montage_base {
   protected function handle(){
   
     // canary, avoid infinite internal redirects...
-    $ir_field = 'montage_handle::infinite_recursion_count'; 
-    $ir_count = $this->getField($ir_field,0);
-    if($ir_count > $this->handle_max_count){
-      throw new RuntimeException(
-        sprintf(
-          'The application has internally redirected more than %s times, something seems to '
-          .'be wrong and the app is bailing to avoid infinite recursion!',
-          $this->handle_max_count
-        )
-      );
-    }else{
-      $this->bumpField($ir_field,1);
-    }//if/else
+    $this->handleRecursion();
   
     $debug = montage::getSettings()->getDebug();
     
@@ -147,15 +131,9 @@ class montage_handle extends montage_base {
     
     try{
       
-      // profile, filters start...
-      if($debug){ montage_profile::stop(); }//if
-      
       // profile...
       if($debug){ montage_profile::start('controller'); }//if
-      
       $use_template = $request->handle();
-      
-      // profile, stop controller...
       if($debug){ montage_profile::stop(); }//if
     
     }catch(Exception $e){
@@ -257,6 +235,35 @@ class montage_handle extends montage_base {
     }//try/catch
   
     return $use_template;
+  
+  }//method
+  
+  /**
+   *  check for infinite recursion, throw an exception if found
+   *  
+   *  this is done by keeping an internal count of how many times the {@link handle()}
+   *  method has been called, if that count reaches the max count then an exception is
+   *  thrown
+   *  
+   *  @return integer the current count
+   */
+  protected function handleRecursion(){
+  
+    $ir_field = 'montage_handle::infinite_recursion_count'; 
+    $ir_count = $this->getField($ir_field,0);
+    if($ir_count > $this->handle_max_count){
+      throw new RuntimeException(
+        sprintf(
+          'The application has internally redirected more than %s times, something seems to '
+          .'be wrong and the app is bailing to avoid infinite recursion!',
+          $this->handle_max_count
+        )
+      );
+    }else{
+      $ir_count = $this->bumpField($ir_field,1);
+    }//if/else
+    
+    return $ir_count;
   
   }//method
   
