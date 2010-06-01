@@ -94,6 +94,33 @@ final class montage_error {
   }//method
   
   /**
+   *  handles exceptions
+   *  
+   *  this is just a quick way to have an exception be broadcast to any error listeners
+   *  for logging and so forth         
+   * 
+   *  @since  6-1-10    
+   *  @param  Exception $e  the exception to handle         
+   *  @return boolean
+   */
+  static function handleException($e){
+  
+    $error_map = array();
+    $error_map['type'] = $e->getCode();
+    $error_map['message'] = $e->getMessage();
+    $error_map['file'] = $e->getFile();
+    $error_map['line'] = $e->getLine();
+    $error_map['name'] = 'EXCEPTION';
+    $error_map['instance'] = $e;
+    
+    // broadcast the error to anyone that is listening...
+    montage::getEvent()->broadcast(montage_event::KEY_ERROR,$error_map);
+    
+    return true;
+    
+  }//method
+  
+  /**
    *  return the error name that corresponds to the $errno
    *  
    *  @param  integer $errno

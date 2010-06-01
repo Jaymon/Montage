@@ -1,7 +1,7 @@
 <?php
 
 /**
- *  this class actually handles the request
+ *  this class actually handles the request  
  *  
  *  while you can extend this class, don't do it unless you know what you are doing
  *  and absolutely need to as you can screw up your entire app in all kinds of ways      
@@ -29,6 +29,11 @@ class montage_handle extends montage_base {
    */
   protected $handle_max_count = 15;
 
+  /**
+   *  create an instance of this class
+   *  
+   *  this is final so that a certain order is enforced even if this class is extended
+   */
   final function __construct(){
   
     // canary...
@@ -53,14 +58,14 @@ class montage_handle extends montage_base {
     // let's do this... 
     try{
     
-      // let any child class do its init stuff...
-      if($debug){ montage_profile::start('start'); }//if
-      $this->start();
-      if($debug){ montage_profile::stop(); }//if
-      
       // get all the start classes and run them...
       if($debug){ montage_profile::start('start classes start'); }//if
       $start_list = $this->startClasses(montage_core::getStartClassNames());
+      if($debug){ montage_profile::stop(); }//if
+    
+      // let any child class do its init stuff...
+      if($debug){ montage_profile::start('start'); }//if
+      $this->start();
       if($debug){ montage_profile::stop(); }//if
       
       // get all the filters and start them...
@@ -82,7 +87,11 @@ class montage_handle extends montage_base {
       
     }catch(Exception $e){
     
-      $use_template = $this->handle();
+      // handle() usually takes care of catching the exception and stuff but if
+      // an exception is thrown in the start or filter classes, etc. then those
+      // exceptinos also need to be dealt with the same way handle() deals with them
+      
+      $use_template = $this->handleException($e);
     
     }//try/catch
     
@@ -94,7 +103,6 @@ class montage_handle extends montage_base {
     if($debug){ montage_profile::start('response'); }//if
     $response->handle($use_template);
     if($debug){ montage_profile::stop(); }//if
-    
     
     // profile, method...
     if($debug){ montage_profile::stop(); }//if
@@ -110,15 +118,14 @@ class montage_handle extends montage_base {
   /**
    *  handle a request, warts and all
    *  
-   *  the reason this is separate from {@link handle()} so that it can call it again
-   *  to try and handle (in case of error or the like)
+   *  this method is designed to be called anytime the request object changes (eg, the
+   *  controller to handle the request is changed)         
    *  
-   *  @param  array $filter_list  a list of string names of classes that extend montage_filter
    *  @return boolean $use_template to pass into the response handler
    */
   protected function handle(){
   
-    // canary, avoid infinite internal redirects...
+    // canary, avoid infinite calling of this method...
     $this->handleRecursion();
   
     $debug = montage::getSettings()->getDebug();
@@ -151,8 +158,11 @@ class montage_handle extends montage_base {
   
   /**
    *  handle a thrown exception
+   *  
+   *  basically, when an exception is thrown this method looks at it, updates the
+   *  request object and calls {@link handle()} again if needed         
    *
-   *  @return boolean "$use_template
+   *  @return boolean $use_template
    */
   protected function handleException(Exception $e){
   
@@ -213,6 +223,9 @@ class montage_handle extends montage_base {
       );
       
     }else{
+      
+      // broadcast that an exception has occured...
+      montage_error::handleException($e);
       
       $request->setErrorHandler($e);
       
