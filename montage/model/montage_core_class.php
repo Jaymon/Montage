@@ -98,6 +98,8 @@ final class montage_core extends montage_base_static {
     if(empty($app_path)){
       throw new UnexpectedValueException('$app_path cannot be empty');
     }//if
+    
+    self::$is_started = true;
   
     // set the default autoloader...
     self::appendClassLoader(array(__CLASS__,'load'));
@@ -172,7 +174,7 @@ final class montage_core extends montage_base_static {
       $start_class_name = self::getClassName($controller,$start_class_parent_name);
       if(!empty($start_class_name)){ $start_class_list[] = $start_class_name; }//if
       
-      self::setField('montage_core_start_class_list',$start_class_list);
+      self::setField('montage_core::start_class_list',$start_class_list);
       
       // load the app's model directory...
       self::setPath(montage_path::get($app_path,'model'));
@@ -222,22 +224,6 @@ final class montage_core extends montage_base_static {
     
     // profile...
     if($debug){ montage_profile::stop(); }//if
-    
-    // load the settings directory and "start" the app...
-    
-    // profile...
-    if($debug){ montage_profile::start('settings'); }//if
-    
-    // now actually start the settings/start classes...
-    $start_class_list = self::getField('montage_core_start_class_list',array());
-    foreach($start_class_list as $start_class_name){
-      montage_factory::getInstance($start_class_name,array(),$start_class_parent_name);
-    }//foreach
-    
-    // profile...
-    if($debug){ montage_profile::stop(); }//if
-    
-    self::$is_started = true;
     
     // profile...
     if($debug){ montage_profile::stop(); }//if
@@ -370,6 +356,16 @@ final class montage_core extends montage_base_static {
    */
   static function getControllerClassNames(){
     return self::getChildClassNames('montage_controller');
+  }//method
+  
+  /**
+   *  get all the start classes that the app has defined
+   *  
+   *  @since  5-31-10   
+   *  @return array a list of class names that extend montage_start
+   */
+  static function getStartClassNames(){
+    return self::getField('montage_core::start_class_list',array());
   }//method
   
   /**
@@ -738,7 +734,7 @@ final class montage_core extends montage_base_static {
       self::$class_map = $cache_maps['class_map'];
       
       // core secondary...
-      self::setField('montage_core_start_class_list',$cache_maps['start_class_list']);
+      self::setField('montage_core::start_class_list',$cache_maps['start_class_list']);
       
       $ret_bool = true;
       
@@ -764,7 +760,7 @@ final class montage_core extends montage_base_static {
       array(
         'parent_class_map' => self::$parent_class_map,
         'class_map' => self::$class_map,
-        'start_class_list' => self::getField('montage_core_start_class_list',array())
+        'start_class_list' => self::getField('montage_core::start_class_list',array())
       )
     );
   
