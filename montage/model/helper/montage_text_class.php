@@ -174,6 +174,8 @@ class montage_text {
   /**
    *  strip the links from $val, this will make it easier to do things with certain input
    *  
+   *  based off this regex url: http://daringfireball.net/2009/11/liberal_regex_for_matching_urls
+   *      
    *  @param  string  $val
    *  @return string  the $val with any urls removed      
    */
@@ -182,35 +184,6 @@ class montage_text {
     return empty($val)
       ? ''
       : preg_replace('#\b(([\w-]+://?|www[.])[^\s()<>]+(?:\([\w\d]+\)|([^[:punct:]\s]|/)))#u','',$input);
-  
-  }//method
-  
-  /**
-   *  turns $input into a url safe path
-   *  
-   *  @since  2-4-10   
-   *  @param  string  $input
-   *  @param  integer $char_limit max chars $input can be         
-   *  @return string  url safe string
-   */
-  static public function getSafePath($input,$char_limit = 0){
-  
-    // canary...
-    if(empty($input)){ return ''; }//if
-  
-    $ret_str = trim($input);
-    $ret_str = preg_replace('/[^\w \-]/u','',$ret_str); // replace anything that isn't a space or word char with nothing
-    $ret_str = mb_strtolower($ret_str);
-    $ret_str = join('_',array_filter(self::killStopWords($ret_str)));
-  
-    // impose a character limit if there is one...
-    if($char_limit > 0){
-      $ret_str = mb_substr($ret_str,0,$char_limit);
-      // make sure there isn't something dumb on the end like a "_", or just contains ___...
-      $ret_str = preg_replace('/(?:^[_]+|[_]+)$/u','',$ret_str);
-    }//if
-    
-    return $ret_str;
   
   }//method
   
@@ -234,7 +207,7 @@ class montage_text {
       if(empty($words_list)){
         return array();
       }else{
-        $words_list = preg_match('/\s+/u',$words_list);
+        $words_list = preg_split('/\s+/u',$words_list);
       }//if/else
       
     }//if
