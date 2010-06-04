@@ -667,36 +667,33 @@ class montage_url extends montage_base {
     // add mod_rewrite url vars to the end of the url if there are any...
     if(!empty($path_list)){
     
-      // handle the fragment...
-      $path_list = array_filter(
-        array_map('mb_strtolower',
-          array_map(
-            'trim',
-            $path_list,
-            array_fill(0,count($path_list),'/')
-          )
-        )
-      );
-      $last = end($path_list);
-      if(!empty($last)){
-      
-        if($last[0] != '#'){
-        
-          $ret_str .= join(self::URL_SEP,$path_list);
-          if(mb_strrpos($last,'.') === false){
-            $ret_str .= self::URL_SEP;
-          }//if
-          
-        }else{
-          
-          // the last element is a fragment...
-          $real_path_list = array_slice($path_list,0,-1);
-          $ret_str .= join(self::URL_SEP,$real_path_list);
-          $base_bits['fragment'] = $last;
-          $last = end($real_path_list);
-          
-        }//if/else
+      // see if we have a fragment at the end of the path...
+      $last = $this->format(end($path_list));
+      if(!empty($last) && is_string($last) && ($last[0] == '#')){
+        $path_list = array_slice($path_list,0,-1);
+        $base_bits['fragment'] = $last;
       }//if
+      
+      if(!empty($path_list)){
+        
+        // get the path list to be a url path...
+        $path_list = array_filter(
+          array_map(
+            array($this,'format'),
+            $path_list
+          )
+        );
+      
+        $ret_str .= join(self::URL_SEP,$path_list);
+        
+        // see if we want to add a trailing slash...
+        $last = end($path_list);
+        if(mb_strrpos($last,'.') === false){
+          $ret_str .= self::URL_SEP;
+        }//if
+        
+      }//if
+    
     }//if
     
     $ret_str .= $query_str; // add any query string back on
@@ -707,6 +704,17 @@ class montage_url extends montage_base {
     // fragment should always be at the end...
     $ret_str .= empty($base_bits['fragment']) ? '' : $base_bits['fragment'];
     
+    return $ret_str;
+    
+  }//method
+  
+  protected function format($val){
+    
+    // canary...
+    if(empty($val)){ return ''; }//if
+    
+    $ret_str = is_object($val) ? get_class($val) : $val;
+    $ret_str = mb_strtolower(trim($ret_str,self::URL_SEP));
     return $ret_str;
     
   }//method
