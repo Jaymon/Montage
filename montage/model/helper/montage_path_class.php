@@ -27,7 +27,7 @@ class montage_path extends montage_base_static {
     
     // make sure path is directory, try to create it if it isn't...
     if(!is_dir($path)){
-      if(!mkdir($path,0755,true)){
+      if(!mkdir($path,0777,true)){
         throw new UnexpectedValueException(
           sprintf(
             '"%s" is not a valid directory and the attempt to create it failed. '

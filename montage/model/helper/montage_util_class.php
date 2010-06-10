@@ -19,45 +19,99 @@ class montage_util {
    *  if you want to do an array, then specify the name multiple times: --name=val1 --name=val2 will
    *  result in ['name'] => array(val1,val2)
    *  
-   *  @param  array $argv the values passed into php from the commmand line 
+   *  @param  array $argv the values passed into php from the commmand line
+   *  @param  array $required_argv_map hold required args that need to be passed in to be considered valid.
+   *                                  The name is the key and the required value will be the val, if the val is null
+   *                                  then the name needs to be there with a value (in $argv), if the val 
+   *                                  is not null then that will be used as the default value if 
+   *                                  the name isn't passed in with $argv 
    *  @return array the key/val mappings that were parsed from --name=val command line arguments
    */
-  static function parseArgv($argv)
+  static public function parseArgv($argv,$required_argv_map = array())
   {
-    // canary...
-    if(empty($argv)){ return array(); }//if
-  
     $ret_map = array();
   
-    foreach($argv as $arg){
+    // build the map that will be returned...
+    if(!empty($argv)){
     
-      // canary...
-      if((!isset($arg[0]) || !isset($arg[1])) || ($arg[0] != '-') || ($arg[1] != '-')){
-        throw new InvalidArgumentException(
-          sprintf('%s does not conform to the --name=value convention',$arg)
-        );
-      }//if
-    
-      $arg_bits = explode('=',$arg,2);
-      // strip off the dashes...
-      $name = mb_substr($arg_bits[0],2);
-      $val = isset($arg_bits[1]) ? $arg_bits[1] : true;
+      foreach($argv as $arg){
       
-      if(isset($ret_map[$name])){
+        // canary...
+        if((!isset($arg[0]) || !isset($arg[1])) || ($arg[0] != '-') || ($arg[1] != '-')){
+          throw new InvalidArgumentException(
+            sprintf('%s does not conform to the --name=value convention',$arg)
+          );
+        }//if
       
-        if(!is_array($ret_map[$name])){
-          $ret_map[$name] = array($ret_map[$name]);
+        $arg_bits = explode('=',$arg,2);
+        // strip off the dashes...
+        $name = mb_substr($arg_bits[0],2);
+        
+        $val = true;
+        if(isset($arg_bits[1])){
+          
+          $val = $arg_bits[1];
+          
+          if(!is_numeric($val)){
+            
+            // convert literal true or false into actual booleans...
+            switch($val){
+            
+              case 'true':
+              case 'TRUE':
+                $val = true;
+                
+              case 'false':
+              case 'FALSE':
+                $val = false;
+            
+            }//switch
+          
+          }//if
+          
         }//if
         
-        $ret_map[$name][] = $val;
+        if(isset($ret_map[$name])){
         
-      }else{
+          if(!is_array($ret_map[$name])){
+            $ret_map[$name] = array($ret_map[$name]);
+          }//if
+          
+          $ret_map[$name][] = $val;
+          
+        }else{
+        
+          $ret_map[$name] = $val;
+          
+        }//if/else
       
-        $ret_map[$name] = $val;
-        
-      }//if/else
+      }//foreach
+      
+    }//if
+  
+    // make sure any required key/val pairings are there...
+    if(!empty($required_argv_map)){
     
-    }//foreach
+      foreach($required_argv_map as $name => $default_val){
+      
+        if(!isset($ret_map[$name])){
+          if($default_val === null){
+            throw new UnexpectedValueException(
+              sprintf(
+                '%s was not passed in and is required, you need to pass it in: --%s=[VALUE]',
+                $name,
+                $name
+              )
+            );
+          }else{
+            $ret_map[$name] = $default_val;
+          }///if/else
+        }//if
+      
+      
+      }//foreach
+    
+    }//if
   
     return $ret_map;
   

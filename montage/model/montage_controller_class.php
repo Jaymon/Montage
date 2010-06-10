@@ -11,7 +11,7 @@
  ******************************************************************************/
 abstract class montage_controller extends montage_base {
 
-  final function __construct(){
+  final public function __construct(){
     $this->start();
   }//method
 
@@ -23,11 +23,11 @@ abstract class montage_controller extends montage_base {
    *  @return boolean like all controller methods if true, then the template will be rendered, 
    *                  if false, then montage::getResponse()->get() will be used instead of the template
    */
-  abstract function handleIndex();
+  abstract public function handleIndex();
   
   /**
    *  after calling the get* method, run this method
    */
-  abstract function stop();
+  abstract public function stop();
 
 }//class     

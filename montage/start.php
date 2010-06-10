@@ -62,6 +62,13 @@ if(!defined('MONTAGE_ENVIRONMENT')){
 }//if
 
 // set some constants to default values if not previously set...
+
+// some OSes might have a default umask set, so let's override that...
+// if you want to keep the Os's default umask, then you can do:
+// define('MONTAGE_UMASK',umsak()); which will override this setting 
+if(!defined('MONTAGE_UMASK')){ define('MONTAGE_UMASK',0000); }//if
+umask(MONTAGE_UMASK);
+
 if(!defined('MONTAGE_DEBUG')){ define('MONTAGE_DEBUG',true); }//if
 
 if(!defined('MONTAGE_ERROR_LEVEL')){
