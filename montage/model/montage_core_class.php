@@ -98,7 +98,7 @@ final class montage_core extends montage_base_static {
     if(empty($app_path)){
       throw new UnexpectedValueException('$app_path cannot be empty');
     }//if
-    
+
     self::$is_started = true;
   
     // set the default autoloader...
@@ -136,8 +136,7 @@ final class montage_core extends montage_base_static {
       // throughout building the paths, we need to compile a list of start classes.
       // start classes are classes that extend montage_start.
       // the start classes follow a precedence order: Global, environment, plugins, and controller...
-      // * Global is a class named "app" it can't be named "start" because of the start() method trying to override 
-      //    __construct()
+      // * Global is a class named "app" it can't be named "start" because start_start sounds funny
       // * environment is a class with the same name as $environment, it's before plugins to set db variables
       //    and the like so that plugins (like a db plugin) can take advantage of connection settings
       //    like db name, db username, and db password
@@ -145,10 +144,18 @@ final class montage_core extends montage_base_static {
       // and the plugin start class is the class with the same name as the root folder
       // (eg, class foo extends montage_start)
       // * controller start class is a class with same name as $controller
-      $start_class_name = self::getClassName(self::CLASS_NAME_APP_START,$start_class_parent_name);
+      $start_class_postfix_list = array('_start','Start');
+      
+      $start_class_name = self::getClassName(
+        array(self::CLASS_NAME_APP_START,$start_class_postfix_list),
+        $start_class_parent_name
+      );
       if(!empty($start_class_name)){ $start_class_list[] = $start_class_name; }//if
       
-      $start_class_name = self::getClassName($environment,$start_class_parent_name);
+      $start_class_name = self::getClassName(
+        array($environment,$start_class_postfix_list),
+        $start_class_parent_name
+      );
       if(!empty($start_class_name)){ $start_class_list[] = $start_class_name; }//if
       
       // include all the plugin paths, save all the start class names.
@@ -166,12 +173,18 @@ final class montage_core extends montage_base_static {
         // find all the classes in the plugin path...
         self::setPath($plugin_path);
         
-        $start_class_name = self::getClassName($plugin_name,$start_class_parent_name);
+        $start_class_name = self::getClassName(
+          array($plugin_name,$start_class_postfix_list),
+          $start_class_parent_name
+        );
         if(!empty($start_class_name)){ $start_class_list[] = $start_class_name; }//if
         
       }//foreach
       
-      $start_class_name = self::getClassName($controller,$start_class_parent_name);
+      $start_class_name = self::getClassName(
+        array($controller,$start_class_postfix_list),
+        $start_class_parent_name
+      );
       if(!empty($start_class_name)){ $start_class_list[] = $start_class_name; }//if
       
       self::setField('montage_core::start_class_list',$start_class_list);
@@ -191,11 +204,7 @@ final class montage_core extends montage_base_static {
               'the controller (%s) does not have any classes that extend "montage_controller" '
               .'so no requests can be processed. Fix this by adding some classes that extend '
               .'"montage_controller" in the "%s" directory. At the very least, you should have '
-              .'an index class to fulfill default requests:',
-              '',
-              'class index extends montage_controller {',
-              '  function %s(){}',
-              '}'
+              .'an index class to fulfill default requests'
             )),
             $controller,
             $controller_path,
@@ -239,35 +248,143 @@ final class montage_core extends montage_base_static {
   static function isCached(){ return self::$is_cached; }//method
   
   /**
-   *  get the class name from the given $class_key
+   *  get the class name from the given potential $class_name
    *  
    *  this is useful because since we standardize all the class names we can find
    *  a class whether we pass in ClassName Classname className. Basically, montage
    *  classes are case-insensitive            
    *  
-   *  @param  string  $class_key  
+   *  @param  string  $class_name see {@link getPossibleClassNames()}  
    *  @param  string  $parent_name  the name of the parent class, if not empty then $class_name
    *                                must be a child of $parent_name       
    *  @return string
    */
-  static function getClassName($class_key,$parent_name = ''){
-    
-    // sanity, make sure the class key is in the right format...
-    $class_key = self::getClassKey($class_key);
+  static function getClassName($class_name,$parent_name = ''){
     
     $ret_str = '';
-    if(isset(self::$class_map[$class_key])){
-      $ret_str = self::$class_map[$class_key]['class_name'];
+    $class_name_list = self::getPossibleClassNames($class_name);
+    foreach($class_name_list as $class_name){
       
-      if(!empty($parent_name)){
-        if(!self::isChild($class_key,$parent_name)){
-          $ret_str = '';
-        }//if
+      // sanity, make sure the class key is in the right format...
+      $class_key = self::getClassKey($class_name);
+      
+      if(isset(self::$class_map[$class_key])){
+      
+        $ret_str = self::$class_map[$class_key]['class_name'];
+        
+        if(empty($parent_name)){
+        
+          break;
+          
+        }else{
+        
+          if(!self::isChild($class_key,$parent_name)){
+            $ret_str = '';
+          }//if
+        
+          break;
+        
+        }//if/else
+        
       }//if
       
-    }//if
+    }//foreach
     
     return $ret_str;
+    
+  }//method
+  
+  /**
+   *  get possible class names from an array of some structure like: array(prefix_list,name_list,postfix_list)
+   *
+   *  this is handy for getting the class name of a class that has to have a specific pre or postfix
+   *  like the _controller or _start postfixes         
+   *        
+   *  @param  string|array  $class_name_list  the possible parts of a class name to be combined      
+   *                                          Possible combinations:
+   *                                            1 - class_name
+   *                                            2 - array(prefix_list,class_name
+   *                                            3 - array(class_name,postfix_list)
+   *                                            4 - array(prefix_list,class_name,postfix_list)            
+   *  @return array a list of possible combinations assembled from the bits of $class_name_list
+   */
+  static protected function getPossibleClassNames($class_name_list){
+  
+    // canary....
+    // class name isn't an array, so return as one...
+    if(!is_array($class_name_list)){ return array($class_name_list); }//if
+    // class name is an array with one key, the class's name...
+    if(empty($class_name_list[1])){
+      if(empty($class_name_list[0])){
+        return array();
+      }else{
+        return is_array($class_name_list[0]) ? $class_name_list[0] : array($class_name_list[0]);
+      }//if/else
+    }//if
+    
+    // assure the array is of the form: array(prefix_list,name_list,postfix_list)
+    
+    if(!is_array($class_name_list[0])){ $class_name_list[0] = array($class_name_list[0]); }//if
+    if(!is_array($class_name_list[1])){ $class_name_list[1] = array($class_name_list[1]); }//if
+    if(empty($class_name_list[2])){
+    
+      if(empty($class_name_list[0])){
+        $class_name_list[] = array();
+      }else{
+        array_unshift($class_name_list,array());
+      }//if/else
+      
+    }else{
+    
+      if(!is_array($class_name_list[2])){ $class_name_list[2] = array($class_name_list[2]); }//if
+      
+    }//if/else
+
+    $ret_list = array();
+
+    // go through each class name...
+    foreach($class_name_list[1] as $class_name){
+    
+      $class_name_partial_list = array();
+    
+      if(empty($class_name_list[0])){
+      
+        $class_name_partial_list[] = $class_name;
+      
+      }else{
+      
+        // append the prefixes...
+        foreach($class_name_list[0] as $class_name_prefix){
+        
+          $class_name_partial_list[] = sprintf('%s%s',$class_name_prefix,$class_name);
+        
+        }//foreach
+        
+      }//if/else
+      
+      if(empty($class_name_list[2])){
+      
+        $ret_list = $class_name_partial_list;
+      
+      }else{
+      
+        // now append the postfix
+        foreach($class_name_partial_list as $class_name_partial){
+        
+          // append the postfixes to each of the partials...
+          foreach($class_name_list[2] as $class_name_postfix){
+        
+            $ret_list[] = sprintf('%s%s',$class_name_partial,$class_name_postfix);
+            
+          }//foreach
+        
+        }//foreach
+        
+      }//if/else
+    
+    }//foreach
+    
+    return $ret_list;
     
   }//method
   
@@ -277,50 +394,58 @@ final class montage_core extends montage_base_static {
    *  
    *  @idea final might be a better word than best here (eg, getFinalClassName)
    *      
-   *  @param  string  $class_key
+   *  @param  string  $class_name see {@link getPossibleClassNames()}
    *  @param  string  $parent_name  the name of the parent class, if not empty then $class_name
    *                                must be a child of $parent_name   
    *  @return string  the child class name   
    *  @throws DomainException if the class_key is extended by more than one unrelated child   
    */
-  static function getBestClassName($class_key,$parent_name = ''){
+  static function getBestClassName($class_name,$parent_name = ''){
   
     $ret_str = '';
+    $class_name_list = self::getPossibleClassNames($class_name);
+    foreach($class_name_list as $class_name){
   
-    $class_key = self::getClassKey($class_key);
-    if(isset(self::$parent_class_map[$class_key])){
-    
-      $child_class_list = self::$parent_class_map[$class_key];
-      foreach($child_class_list as $child_class_key){
+      $class_key = self::getClassKey($class_name);
+      if(isset(self::$parent_class_map[$class_key])){
       
-        if(!isset(self::$parent_class_map[$child_class_key])){
+        $child_class_list = self::$parent_class_map[$class_key];
+        foreach($child_class_list as $child_class_key){
         
-          if(empty($ret_str)){
-            $ret_str = $child_class_key;
-          }else{
-            throw new DomainException(
-              sprintf(
-                'the given $class_key (%s) has divergent children %s and %s (those 2 classes extend ' 
-                .'%s but are not related to each other) so a best class cannot be found.',
-                $class_key,
-                $ret_str,
-                $child_class_key,
-                $class_key
-              )
-            );
-          }//if/else
+          if(!isset(self::$parent_class_map[$child_class_key])){
+          
+            if(empty($ret_str)){
+              $ret_str = $child_class_key;
+            }else{
+              throw new DomainException(
+                sprintf(
+                  'the given $class_key (%s) has divergent children %s and %s (those 2 classes extend ' 
+                  .'%s but are not related to each other) so a best class cannot be found.',
+                  $class_key,
+                  $ret_str,
+                  $child_class_key,
+                  $class_key
+                )
+              );
+            }//if/else
+          
+          }//if
         
-        }//if
+        }//foreach
+        
+        $ret_str = self::getClassName($ret_str,$parent_name);
+        break;
       
-      }//foreach
-    
-    }else{
-    
-      $ret_str = $class_key;
+      }else{
       
-    }//if/else
+        $ret_str = self::getClassName($class_key,$parent_name);
+        if(!empty($ret_str)){ break; }//if
+        
+      }//if/else
+      
+    }//foreach
   
-    return self::getClassName($ret_str,$parent_name);
+    return $ret_str;
   
   }//method
   

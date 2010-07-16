@@ -40,10 +40,18 @@ class montage_info {
         }else{
         
           $method_reflect = new ReflectionMethod($class,$method);
+          $method_modifiers = join(' ',Reflection::getModifierNames($method_reflect->getModifiers()));
+        
+          $method_caller = '->';
+          if(mb_stripos($method_modifiers,'static') !== false){
+            $method_caller = '::';
+          }//if
+          
           $method_call = sprintf(
-            '%s %s::%s',
-            join(' ',Reflection::getModifierNames($method_reflect->getModifiers())),
+            '%s %s%s%s',
+            $method_modifiers,
             $class,
+            $method_caller,
             $method
           );
           

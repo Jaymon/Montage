@@ -39,7 +39,7 @@ Now, refresh the page, you should see <code>Hello world!</code>. That's because 
 By default, Montage redirects all requests using this formula:
 
 <pre>
-http://app.com/controller_class/method/$field
+http://app.com/controller/method/$field
 </pre>
 
 that means, to handle this request:
@@ -51,7 +51,7 @@ http://app.com/foo/bar/baz
 You could create a class like this:
 
 <pre>
-class foo extends montage_controller {
+class foo_controller extends montage_controller {
 
   protected function handleBar($baz){
     echo $baz;
@@ -60,14 +60,14 @@ class foo extends montage_controller {
 }//class
 </pre>
 
-Montage also cascades nicely. That means if it can't find a matching method, then it will call the controller's <code>handleIndex</code> method if it is defined. If it can't find a matching class, then it will call the index controller's <code>handleClass</code> method, if that doesn't exist, then it will call the index controller's <code>handleIndex</code> method.
+Montage also cascades nicely. That means if it can't find a matching method, then it will call the controller's <code>handleIndex</code> method if it is defined. If it can't find a matching class, then it will use a default index controller's <code>handleMethod</code> method, if that doesn't exist, then it will call the index controller's <code>handleIndex</code> method.
 
-Their are two controller classes Montage will look for by default:
+There are two controller classes Montage will look for by default:
 
-* <code>index</code> - to handle default requests
-* <code>error</code> - to handle all error states
+* <code>index_controller</code> - to handle default requests
+* <code>error_controller</code> - to handle all error states
 
-The <code>error</code> controller's methods correspond to the name of the exception they will be handling, (eg, <code>handleRuntimeException</code> will handle all raised RuntimeException exceptions), with <code>handleIndex</code> being the generic method for all exceptions that don't have a custom method to handle them.
+The <code>error_controller</code>'s methods correspond to the name of the exception they will be handling, (eg, <code>handleRuntimeException</code> will handle all raised RuntimeException exceptions), with <code>handleIndex</code> being the generic method for all exceptions that don't have a custom method to handle them.
 
 h2. Custom Settings
 
@@ -78,10 +78,10 @@ Montage doesn't have any config files, but any app settings can be set using Mon
 # plugins
 # controller
 
-the global class is named "app"
+the global class is named "app_start"
 
 <pre>
-class app extends montage_start {
+class app_start extends montage_start {
 
   protected function start(){
     // do global app configuration here
@@ -90,7 +90,7 @@ class app extends montage_start {
 }//class
 </pre>
 
-The environment's start class name is the same value that the <code>MONTAGE_ENVIRONMENT</code> constant contains. Likewise, the controller's start class name is the same as the value that the <code>MONTAGE_CONTROLLER</code> constant contains.
+The environment's start class name is the same value that the <code>MONTAGE_ENVIRONMENT</code> (eg, if your environment is foo, then foo_start is the name of the environment's start class) constant contains. Likewise, the controller's start class name is the same as the value that the <code>MONTAGE_CONTROLLER</code> constant contains (eg, if your controller is bar, then bar_start is the name of the controller's start class).
 
 Since the start files cascade, you can have different environments use different database credentials, etc..
 
@@ -101,10 +101,10 @@ $settings = montage::getSettings();
 $settings->setField('foo','bar');
 <pre>
 
-Now, anywhere in your app, you could:
+Now, anywhere in your app, you can:
 
 <pre>
 $settings = montage::getSettings();
-$foo = $settings->getField('foo','bar');
+$foo = $settings->getField('foo');
 echo $foo; // -> 'bar'
 <pre>

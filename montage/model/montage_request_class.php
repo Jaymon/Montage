@@ -31,6 +31,7 @@ class montage_request extends montage_base {
     $path_list = array();
     
     // are we in CLI?
+    // http://www.php.net/manual/en/features.commandline.php#93248
     if(strncasecmp(PHP_SAPI, 'cli', 3) === 0){
     
       $this->setMethod('CLI');

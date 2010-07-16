@@ -58,7 +58,9 @@ class montage_forward {
    */
   public function find($path_list){
   
-    $controller_class_name = self::CONTROLLER_CLASS_NAME;
+    $controller_class_name = $this->getControllerClassName(self::CONTROLLER_CLASS_NAME);
+    $class_attempt_list = array(self::CONTROLLER_CLASS_NAME);
+    
     $controller_method = self::CONTROLLER_METHOD;
     $controller_method_args = array();
   
@@ -66,7 +68,9 @@ class montage_forward {
     $controller_method_args = $path_list;
     if(!empty($path_list[0])){
       
-      $maybe_controller_class_name = montage_core::getClassName($path_list[0]);
+      $class_attempt_list[] = $path_list[0];
+      
+      $maybe_controller_class_name = $this->getControllerClassName($path_list[0]);
       
       if(montage_core::isController($maybe_controller_class_name)){
         
@@ -92,8 +96,32 @@ class montage_forward {
           $controller_method_args = array_slice($path_list,1);
         }//if/else
         
+      }else{
+      
+        if(!empty($controller_class_name)){
+        
+          $maybe_controller_method = $this->getControllerMethodName($path_list[0]);
+          if(method_exists($controller_class_name,$maybe_controller_method)){
+          
+            $controller_method = $maybe_controller_method;
+            $controller_method_args = array_slice($path_list,1);
+            
+          }//if
+          
+        }//if
+      
       }//if/else
       
+    }//if
+    
+    // fail if we didn't successfully find a controller class...
+    if(empty($controller_class_name)){
+      throw new UnexpectedValueException(
+        sprintf(
+          'No valid controller found for: [%s]',
+          join(',',$class_attempt_list)
+        )
+      );
     }//if
   
     return array($controller_class_name,$controller_method,$controller_method_args);
@@ -109,11 +137,12 @@ class montage_forward {
    */
   public function get($controller_class_name,$controller_method){
   
+    $controller_class_name = $this->getControllerClassName($controller_class_name);
     $controller_method = $this->getControllerMethodName($controller_method);
   
     // canary...
     if(empty($controller_class_name)){
-      throw new UnexpectedValueException('$controller_class_name cannot be empty');
+      throw new UnexpectedValueException('a valid $controller_class_name was not found');
     }//if
     if(empty($controller_method)){
       throw new UnexpectedValueException('$controller_method cannot be empty');
@@ -147,7 +176,7 @@ class montage_forward {
     
     $e_name = get_class($e);
       
-    $controller_class_name = montage_core::getClassName(self::CONTROLLER_ERROR_CLASS_NAME);
+    $controller_class_name = $this->getControllerClassName(self::CONTROLLER_ERROR_CLASS_NAME);
     $controller_method = self::CONTROLLER_METHOD;
     $controller_method_args = array($e);
     
@@ -164,13 +193,10 @@ class montage_forward {
       throw new RuntimeException(
         sprintf(
           'No error controller %s found so the exception %s could not be resolved. '
-          .' To remedy this, create an error class that extends montage_controller (eg, "class %s '
-          .' extends montage_controller { ... }"). '
-          .' exception information: %s',
+          .'To remedy this, create an error class that extends montage_controller. '
+          .'exception information: %s',
           self::CONTROLLER_ERROR_CLASS_NAME,
           $e_name,
-          $e->getCode(),
-          $e->getMessage(),
           self::CONTROLLER_ERROR_CLASS_NAME,
           $e ///$e->getTraceAsString()
         )
@@ -182,6 +208,26 @@ class montage_forward {
   
   }//method
   
+  final protected function getControllerClassName($controller_class_name){
+  
+    // canary...
+    if(empty($controller_class_name)){
+      throw new UnexpectedValueException('$controller_class_name cannot be empty');
+    }//if
+  
+    $prefix_list = array('_controller','Controller');
+  
+    // canary...
+    foreach($prefix_list as $prefix){
+      if(mb_stripos($controller_class_name,$prefix) > 0){ return $controller_class_name; }//if
+    }//foreach
+
+    return montage_core::getClassName(
+      array($controller_class_name,$prefix_list)
+    );
+  
+  }//method
+  
   /**
    *  get the controller name that should be used
    *  
@@ -189,7 +235,7 @@ class montage_forward {
    *                                that will be made into the full name (eg, foo gets turned into handleFoo)      
    *  @return string
    */
-  final public function getControllerMethodName($method_name){
+  final protected function getControllerMethodName($method_name){
   
     // canary...
     if(empty($method_name)){
