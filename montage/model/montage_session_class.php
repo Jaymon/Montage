@@ -3,7 +3,7 @@
 /**
  *  handle session stuff 
  *
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 2-28-10
  *  @package montage
@@ -11,7 +11,7 @@
 class montage_session {
 
   /**
-   *  for saveRequest, getRequest function
+   *  for setRequest, loadRequest function
    */        
   const FIELD_REQUEST = 'montage_session_request_saved';
   
@@ -26,7 +26,7 @@ class montage_session {
    */
   protected $path = '';
 
-  final function __construct($path = ''){
+  final public function __construct($path = ''){
     
     $ret_bool = false;
     $session_id = session_id();
@@ -36,12 +36,18 @@ class montage_session {
       $file = $line = '';
       if(headers_sent($file,$line)){
       
-        throw new RuntimeException(
-          sprintf(
-            'cannot start session because headers were sent at %s:%s',
-            $file,
-            $line
-          )
+        // we used to throw a RuntimeException if the session couldn't be started,
+        // but that was annoying if you didn't care about the session at all
+        montage::getEvent()->broadcast(
+          montage_event::KEY_WARNING,
+          array(
+            'msg' => sprintf(
+              'cannot start session because headers were sent at %s:%s',
+              $file,
+              $line
+            )
+          ),
+          true
         );
       
       }else{
@@ -54,7 +60,9 @@ class montage_session {
         
         ini_set('session.name',self::SESSION_NAME);
         register_shutdown_function('session_write_close');
-        session_save_path($this->setPath($path));
+        
+        $this->setPath($path);
+        session_save_path($this->path);
         
         session_start();
         

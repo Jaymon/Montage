@@ -712,39 +712,32 @@ final class montage_core extends montage_base_static {
    *  this should never be called by the user, the only reason it is public is so
    *  {@link appendClassLoader()} will work right   
    *      
-   *  @return boolean
+   *  @return boolean true if the class was found, false if not (so other autoloaders can have a chance)
    */
   static function load($class_name){
   
     // if you just get blank pages: http://www.php.net/manual/en/function.error-reporting.php#28181
     //  http://www.php.net/manual/en/function.include-once.php#53239
 
+    $ret_bool = false;
+
     $class_key = self::getClassKey($class_name);
     if(isset(self::$class_map[$class_key])){
     
       include(self::$class_map[$class_key]['path']);
       self::$class_map[$class_key]['method'] = __METHOD__;
-      return true;
+      $ret_bool = true;
     
     }else{
     
-      // @tbi clear cache right here so it doesn't have to be done manually?
-    
-      $backtrace = debug_backtrace();
-      $file = empty($backtrace[1]['file']) ? 'unknown' : $backtrace[1]['file'];
-      $line = empty($backtrace[1]['line']) ? 'unknown' : $backtrace[1]['line'];
-    
-      throw new InvalidArgumentException(
-        sprintf(
-          'unable to autoload $class_name (%s) at %s:%s. Have you ' 
-          .'added a new class and not cleared cache?',
-          $class_name,
-          $file,
-          $line
-        )
-      );
+      // we used to throw an exception here, but that didn't account for user appended
+      // autoloaders (ie, if this autoloader failed, then it failed even if the user
+      // had appended another autoloader...
+      $ret_bool = false;
       
     }//if/else
+    
+    return $ret_bool;
   
   }//method
   
@@ -927,6 +920,7 @@ final class montage_core extends montage_base_static {
    */
   private static function startCoreClasses($controller,$environment,$debug,$charset,$timezone){
   
+    // we start this first so other classes can broadcast events...
     montage::setField(
       'montage::montage_event',
       montage_factory::getBestInstance(
@@ -934,6 +928,7 @@ final class montage_core extends montage_base_static {
       )
     );
     
+    // we start session as soon as we can to minimize the chances of headers being sent...
     montage::setField(
       'montage::montage_session',
       montage_factory::getBestInstance(
