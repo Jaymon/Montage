@@ -6,7 +6,7 @@
  *  this class is loosely based on the Symfony events from which I took inspiration...
  *  http://components.symfony-project.org/event-dispatcher/ 
  *  
- *  @version 0.2
+ *  @version 0.3
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 4-2-10
  *  @package montage
@@ -18,6 +18,11 @@ class montage_event {
    *  any errors encountered will broadcast on this key
    */
   const KEY_ERROR = 'montage.error';
+  
+  /**
+   *  any warnings encountered will broadcast on this key
+   */
+  const KEY_WARNING = 'montage.warning';
   
   /**
    *  general info about how the request is being handled will broadcast on this key
@@ -40,6 +45,16 @@ class montage_event {
    *  @var  array   
    */
   protected $event_map = array();
+  
+  /**
+   *  if $persistent = true is passed into {@link broadcast()} then the event will
+   *  be kept in this map until a callback is registered with the key
+   *  
+   *  basically, this allows a backlog to be created
+   *  
+   *  @var  array
+   */
+  protected $persistent_map = array();
 
   /**
    *  sets this class to handle errors, basically this is the on switch            
@@ -82,6 +97,17 @@ class montage_event {
   
     $this->event_map[$key][] = $callback;
     
+    // clear any backlog...
+    if(isset($this->persistent_map[$key])){
+      
+      foreach($this->persistent_map[$key] as $info_map){
+        $this->broadcast($key,$info_map,false);
+      }//foreach
+      
+      unset($this->persistent_map[$key]);
+      
+    }//if
+    
     return true;
   
   }//method
@@ -94,10 +120,11 @@ class montage_event {
    *      
    *  @param  string  $key
    *  @param  array $info_map anything you want but usually a key/value array with information
-   *                          you want to pass to each callback listening            
+   *                          you want to pass to each callback listening        
+   *  @param  boolean $persistent true to make the message stay around until a callback is listening       
    *  @return mixed the first non-null value returned from the callback list wins
    */
-  public function broadcast($key,$info_map = array()){
+  public function broadcast($key,$info_map = array(),$persistent = false){
   
     // canary...
     if(empty($key)){ throw new UnexpectedValueException('$key cannot be empty'); }//if
@@ -122,7 +149,19 @@ class montage_event {
       
       }//foreach
   
-    }//if
+    }else{
+    
+      if($persistent){
+        
+        if(!isset($this->persistent_map[$key])){
+          $this->persistent_map[$key] = array();
+        }//if
+        
+        $this->persistent_map[$key][] = $info_map;
+      
+      }//if
+    
+    }//if/else
     
     return $ret_mix;
   

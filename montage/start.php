@@ -71,6 +71,10 @@ umask(MONTAGE_UMASK);
 
 if(!defined('MONTAGE_DEBUG')){ define('MONTAGE_DEBUG',true); }//if
 
+// set this to false if you only want montage to start and not actually handle the
+// request, this is handy if you want access to all the classes but nothing else
+if(!defined('MONTAGE_HANDLE')){ define('MONTAGE_HANDLE',true); }//if
+
 if(!defined('MONTAGE_ERROR_LEVEL')){
   // by default, full error reporting should always be on...
   define('MONTAGE_ERROR_LEVEL',(E_ALL | E_STRICT | E_PARSE));
@@ -128,7 +132,11 @@ try{
 
 }//try/catch
 
-// actually handle the request...
-montage_factory::getBestInstance('montage_handle');
+if(MONTAGE_HANDLE){
+
+  // actually handle the request...
+  montage_factory::getBestInstance('montage_handle');
+  
+}//if
 
 if(MONTAGE_DEBUG){ montage_profile::stop(); }//if

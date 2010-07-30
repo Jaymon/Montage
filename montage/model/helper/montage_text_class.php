@@ -175,6 +175,8 @@ class montage_text {
    *  strip the links from $val, this will make it easier to do things with certain input
    *  
    *  based off this regex url: http://daringfireball.net/2009/11/liberal_regex_for_matching_urls
+   *    \b(([\w-]+://?|www[.])[^\s()<>]+(?:\([\w\d]+\)|([^[:punct:]\s]|/))   
+   *  7-28-10 - updated to this regex: http://daringfireball.net/2010/07/improved_regex_for_matching_urls    
    *      
    *  @param  string  $val
    *  @return string  the $val with any urls removed      
@@ -183,7 +185,7 @@ class montage_text {
   
     return empty($val)
       ? ''
-      : preg_replace('#\b(([\w-]+://?|www[.])[^\s()<>]+(?:\([\w\d]+\)|([^[:punct:]\s]|/)))#u','',$input);
+      : preg_replace('#(?i)\b((?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?«»“”‘’]))#u','',$input);
   
   }//method
   

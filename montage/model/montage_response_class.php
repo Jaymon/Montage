@@ -3,7 +3,7 @@
 /**
  *  all the montage response stuff
  *  
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 2-20-10
  *  @package montage 
@@ -82,7 +82,12 @@ class montage_response extends montage_base {
     
     $class_name = montage_core::getBestClassName('montage_template');
     $this->template_instance = new $class_name();
-    $this->template_instance->setPath($template_path);
+    
+    try{
+      $this->template_instance->setPath($template_path);
+    }catch(InvalidArgumentException $e){
+      montage::getEvent()->broadcast(montage_event::KEY_WARNING,array('msg' => $e->getMessage()),true);
+    }//try/catch
   
     $this->start();
     

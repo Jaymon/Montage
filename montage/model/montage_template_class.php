@@ -3,7 +3,7 @@
 /**
  *  render the template 
  *   
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 2-22-10
  *  @package montage
@@ -100,8 +100,8 @@ class montage_template extends montage_base {
    *  to see if the file exists in any path
    *  
    *  we render the template files using the include_paths so you can set other template files
-   *  in the actual template and include them without having to actually know the path, it's all
-   *  for your convenience programming               
+   *  in the actual template and include them without having to actually know the path, it's "all
+   *  for your convenience" programming
    *  
    *  @param  string  $path the template path to add to the include paths
    */
@@ -112,7 +112,7 @@ class montage_template extends montage_base {
       throw new UnexpectedValueException('$path is empty');
     }//if
     if(!is_dir($path)){
-      throw new UnexpectedValueException(sprintf('"%s" is not a valid directory',$path));
+      throw new InvalidArgumentException(sprintf('"%s" is not a valid directory',$path));
     }//if
   
     $path = get_include_path().PATH_SEPARATOR.$path;

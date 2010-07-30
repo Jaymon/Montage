@@ -3,7 +3,7 @@
 /**
  *  all the request information
  *  
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 2-19-10
  *  @package montage 
@@ -160,6 +160,16 @@ class montage_request extends montage_base {
     $controller_class_name = $this->getControllerClass();
     $controller_method = $this->getControllerMethod();
     $controller_method_args = $this->getControllerMethodArgs();
+    
+    // canary...
+    if(empty($controller_class_name)){
+      throw new UnexpectedValueException('no controller class to handle the request was found');
+    }//if
+    if(empty($controller_method)){
+      throw new UnexpectedValueException(
+        sprintf('no method found in controller class %s to handle the request',$controller_class_name)
+      );
+    }//if
     
     // make sure there are enough required method_args...
     $arg_count = empty($controller_method_args) ? 0 : count($controller_method_args);

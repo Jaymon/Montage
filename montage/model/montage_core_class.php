@@ -16,7 +16,7 @@
  *    [MONTAGE_APP_PATH]/model
  *    [MONTAGE_APP_PATH]/controller/$controller
  *   
- *  @version 0.3
+ *  @version 0.4
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 12-28-09
  *  @package montage 
@@ -100,6 +100,7 @@ final class montage_core extends montage_base_static {
     }//if
 
     self::$is_started = true;
+    $event_warning_list = array();
   
     // set the default autoloader...
     self::appendClassLoader(array(__CLASS__,'load'));
@@ -127,8 +128,12 @@ final class montage_core extends montage_base_static {
       // load the default model directories...
       self::setPath(montage_path::get($framework_path,'model'));
       
-      // set the main settings path...
-      self::setPath(montage_path::get($app_path,'settings'));
+      // set the main settings path, ingore it if it doesn't exist...
+      try{
+        self::setPath(montage_path::get($app_path,'settings'));
+      }catch(InvalidArgumentException $e){
+        $event_warning_list[] = array('msg' => $e->getMessage());
+      }//try/catch
       
       $start_class_list = array();
       $start_class_parent_name = 'montage_start';
@@ -189,29 +194,37 @@ final class montage_core extends montage_base_static {
       
       self::setField('montage_core::start_class_list',$start_class_list);
       
-      // load the app's model directory...
-      self::setPath(montage_path::get($app_path,'model'));
+      // load the app's model directory, ignore it if it doesn't exist...
+      try{
+        self::setPath(montage_path::get($app_path,'model'));
+      }catch(InvalidArgumentException $e){
+        $event_warning_list[] = array('msg' => $e->getMessage());
+      }//try/catch
     
-      // load the controller...
-      $controller_path = montage_path::get($app_path,'controller',$controller);
-      self::setPath($controller_path);
-      
-      $controller_class_key = self::getClassKey('MONTAGE_CONTROLLER');
-      if(empty(self::$parent_class_map[$controller_class_key])){
-        throw new RuntimeException(
-          sprintf(
-            join("\r\n",array(
-              'the controller (%s) does not have any classes that extend "montage_controller" '
-              .'so no requests can be processed. Fix this by adding some classes that extend '
-              .'"montage_controller" in the "%s" directory. At the very least, you should have '
-              .'an index class to fulfill default requests'
-            )),
-            $controller,
-            $controller_path,
-            montage_forward::CONTROLLER_METHOD
-          )
-        );
-      }//if
+      // load the controller, ignore it if it doesn't exist...
+      try{
+        $controller_path = montage_path::get($app_path,'controller',$controller);
+        self::setPath($controller_path);
+        
+        $controller_class_key = self::getClassKey('MONTAGE_CONTROLLER');
+        if(empty(self::$parent_class_map[$controller_class_key])){
+          throw new RuntimeException(
+            sprintf(
+              join("\r\n",array(
+                'the controller (%s) does not have any classes that extend "montage_controller" '
+                .'so no requests can be processed. Fix this by adding some classes that extend '
+                .'"montage_controller" in the "%s" directory. At the very least, you should have '
+                .'an index class to fulfill default requests'
+              )),
+              $controller,
+              $controller_path,
+              montage_forward::CONTROLLER_METHOD
+            )
+          );
+        }//if
+      }catch(InvalidArgumentException $e){
+        $event_warning_list[] = array('msg' => $e->getMessage());
+      }//try/catch
       
       // save all the compiled core classes/paths into the cache...
       self::setCore();
@@ -227,14 +240,25 @@ final class montage_core extends montage_base_static {
     // officially start the core global classes of the framework...
     self::startCoreClasses($controller,$environment,$debug,$charset,$timezone);
     
+    // profile, finish init of core...
+    if($debug){ montage_profile::stop(); }//if
+    
     // set error handlers...
     set_error_handler(array('montage_error','handleRuntime'));
     register_shutdown_function(array('montage_error','handleFatal'));
     
-    // profile...
-    if($debug){ montage_profile::stop(); }//if
+    // broadcast any encountered warnings...
+    if(!empty($event_warning_list)){
     
-    // profile...
+      $event = montage::getEvent();
+      
+      foreach($event_warning_list as $info_map){
+        $event->broadcast(montage_event::KEY_WARNING,$info_map,true);
+      }//foreach
+    
+    }//if
+    
+    // profile, finish method run...
     if($debug){ montage_profile::stop(); }//if
     
   }//method

@@ -3,7 +3,7 @@
 /**
  *  handles deciding which controller::method to forward to
  *  
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 4-6-10
  *  @package montage
@@ -116,11 +116,15 @@ class montage_forward {
     
     // fail if we didn't successfully find a controller class...
     if(empty($controller_class_name)){
-      throw new UnexpectedValueException(
-        sprintf(
-          'No valid controller found for: [%s]',
-          join(',',$class_attempt_list)
-        )
+      montage::getEvent()->broadcast(
+        montage_event::KEY_WARNING,
+        array(
+          'msg' => sprintf(
+            'No valid controller found for these attempted class names: [%s]',
+            join(', ',$class_attempt_list)
+          )
+        ),
+        true
       );
     }//if
   
@@ -208,6 +212,12 @@ class montage_forward {
   
   }//method
   
+  /**
+   *  gets the final controller class name
+   *  
+   *  @param  string  $controller_class_name  the potential controller class name
+   *  @return string  the final controller class name that can be used, empty if a valid controller isn't found
+   */
   final protected function getControllerClassName($controller_class_name){
   
     // canary...
