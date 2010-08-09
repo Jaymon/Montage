@@ -29,6 +29,7 @@ class montage_url extends montage_base {
     $this->setBase($base_url);
   
     $this->start();
+    
   }//method
   
   /**
@@ -488,6 +489,7 @@ class montage_url extends montage_base {
     
       $base_url = $this->getField('montage_url::base_url','');
       $ret_str = $args[0];
+      
       $this->setField($field,$this->assemble('',$base_url,$ret_str));
     
     }else if($total_args < 3){
@@ -593,7 +595,7 @@ class montage_url extends montage_base {
     }//if/else
     
     $url_bits = empty($base) ? array() : parse_url($base);
-    
+
     if(montage_text::isUrl($base)){
     
       if(empty($scheme)){
@@ -601,7 +603,7 @@ class montage_url extends montage_base {
         $scheme = $url_bits['scheme'];
         $base = sprintf(
           '%s%s',
-          $url_bits['scheme'],
+          isset($url_bits['host']) ? $url_bits['host'] : '',
           isset($url_bits['path']) ? rtrim($url_bits['path'],self::URL_SEP) : ''
         );
         
@@ -614,7 +616,7 @@ class montage_url extends montage_base {
       $scheme = empty($scheme) ? self::SCHEME_NORMAL : rtrim($scheme,':/');
     
     }//if/else
-  
+
     $list = array();
   
     if(!empty($base)){

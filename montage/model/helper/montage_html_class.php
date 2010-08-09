@@ -57,7 +57,7 @@ class montage_html {
   }//method
   
   /**
-   *  find any urls and wrap them in a tags
+   *  find any urls and wrap them in <a> tags
    *  
    *  @param  string  $input  the input that will be autolinked
    *  @param  callback  $tag_callback should accept a string and return an array with 2 indexes

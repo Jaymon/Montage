@@ -105,7 +105,7 @@ class montage_fill extends montage_base_static {
    *  @param  boolean $as_str if true then return a string with the name   
    *  @return array|string  array($first,$last) if $as_str is false
    */        
-  static public function getName($as_str = false){
+  static public function getName($as_str = true){
   
     $key = 'montage_fill::names';
   

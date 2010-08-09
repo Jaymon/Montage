@@ -196,12 +196,11 @@ class montage_forward {
         
       throw new RuntimeException(
         sprintf(
-          'No error controller %s found so the exception %s could not be resolved. '
+          'No error controller "%s" found so the exception "%s" could not be resolved. '
           .'To remedy this, create an error class that extends montage_controller. '
           .'exception information: %s',
           self::CONTROLLER_ERROR_CLASS_NAME,
           $e_name,
-          self::CONTROLLER_ERROR_CLASS_NAME,
           $e ///$e->getTraceAsString()
         )
       );

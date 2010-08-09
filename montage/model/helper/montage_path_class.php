@@ -191,6 +191,54 @@ class montage_path extends montage_base_static {
   }//method
   
   /**
+   *  takes $path_1 and finds out where it starts in relation to $path_2, it then returns
+   *  the rest of $path_1 that doesn't intersect with $path_2
+   *  
+   *  @example
+   *    $path_1 = '/foo/bar/baz';
+   *    $path_2 = /root/che/foo/'
+   *    $this->getIntersection($path_1,$path_2); // array('bar','baz');               
+   *  
+   *  @since  8-8-10      
+   *  @param  string  $path_1
+   *  @param  string  $path_2 the root path   
+   *  @return array the remaining elements of $path_1 where it starts in relation to $path_2            
+   */
+  public static function getIntersection($path_1,$path_2){
+  
+    // canary...
+    if(empty($path_1)){ return array(); }//if
+    if(empty($path_2)){ return $path_1; }//if
+    
+    // canary, split 'em if we have to...
+    if(!is_array($path_1)){ $path_1 = preg_split('#\\/#u',$path_1); }//if
+    if(!is_array($path_2)){ $path_2 = preg_split('#\\/#u',$path_2); }//if
+  
+    // canary, we don't want '' values throwing us off, and we want to reset the keys (just in case)...
+    $path_1 = array_values(array_filter($path_1));
+    $path_2 = array_values(array_filter($path_2));
+    
+    $ret_path = array();
+  
+    // find where the last directory of path 2 is the first directory of path 1...
+    $key = array_search($path_2[(count($path_2) - 1)],$path_1);
+    
+    if($key !== false){
+    
+      $ret_path = array_slice($path_1,$key + 1);
+    
+    }else{
+    
+      // since there was no dir in common with root, set path from the root...
+      $ret_path = $path_1;
+      
+    }//if/else
+    
+    return $ret_path;
+  
+  }//method
+  
+  /**
    *  set the montage root path
    *  
    *  @param  string  $val

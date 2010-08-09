@@ -29,7 +29,7 @@ class custom_request extends montage_request {
 
 </pre>
 
-In order to guarantee uniformity of the classes (ie, you don't extend a core class and add a constructor argument that the core doesn't know about when it instantiates it) the core class's constructors are final and can't be extended, but each class calls a <code>start()</code> method from the constructor where you can do your customized class initialization. This also ensures the class is allowed to do certain things before passing control over to the developer.
+In order to guarantee uniformity of the classes (ie, you don't extend a core class and add a constructor argument that the core doesn't know about when it instantiates it) the core class's constructors are final and can't be extended, but each class calls a <code>start()</code> method from the constructor where you can do your customized class initialization. A final constructor also ensures the class is allowed to do certain things before passing control over to the developer.
 
 Now, after you have created your new class, just make sure the app's cache is deleted and reload your application, your new class will now be used instead of the original class.
 

@@ -16,7 +16,7 @@
  *    [MONTAGE_APP_PATH]/model
  *    [MONTAGE_APP_PATH]/controller/$controller
  *   
- *  @version 0.4
+ *  @version 0.6
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 12-28-09
  *  @package montage 
@@ -32,6 +32,27 @@ final class montage_core extends montage_base_static {
    *  the "global" settings will be a montage_start child extending class with this name
    */
   const CLASS_NAME_APP_START = 'app';
+  
+  /**
+   *  the key where all the start classes are kept
+   */
+  const KEY_START = 'montage_core::start_class_list';
+  
+  /**
+   *  the key where all the class paths are kept
+   */
+  const KEY_PATH = 'montage_core::path_list';
+  
+  /**
+   *  the keys in this list will be cached with the core
+   *  
+   *  @see  setCore(), loadCore(), resetCore()      
+   *  @var  array
+   */
+  static private $key_cache_list = array(
+    self::KEY_START,
+    self::KEY_PATH
+  );
   
   /**
    *  switched to true in the start() function
@@ -125,6 +146,9 @@ final class montage_core extends montage_base_static {
       // profile...
       if($debug){ montage_profile::start('check paths'); }//if
       
+      // reset the core...
+      self::resetCore();
+      
       // load the default model directories...
       self::setPath(montage_path::get($framework_path,'model'));
       
@@ -137,6 +161,7 @@ final class montage_core extends montage_base_static {
       
       $start_class_list = array();
       $start_class_parent_name = 'montage_start';
+      $start_class_postfix_list = array('_start','Start');
       
       // throughout building the paths, we need to compile a list of start classes.
       // start classes are classes that extend montage_start.
@@ -149,7 +174,6 @@ final class montage_core extends montage_base_static {
       // and the plugin start class is the class with the same name as the root folder
       // (eg, class foo extends montage_start)
       // * controller start class is a class with same name as $controller
-      $start_class_postfix_list = array('_start','Start');
       
       $start_class_name = self::getClassName(
         array(self::CLASS_NAME_APP_START,$start_class_postfix_list),
@@ -192,7 +216,7 @@ final class montage_core extends montage_base_static {
       );
       if(!empty($start_class_name)){ $start_class_list[] = $start_class_name; }//if
       
-      self::setField('montage_core::start_class_list',$start_class_list);
+      self::setField(self::KEY_START,$start_class_list);
       
       // load the app's model directory, ignore it if it doesn't exist...
       try{
@@ -332,7 +356,7 @@ final class montage_core extends montage_base_static {
    *                                            4 - array(prefix_list,class_name,postfix_list)            
    *  @return array a list of possible combinations assembled from the bits of $class_name_list
    */
-  static protected function getPossibleClassNames($class_name_list){
+  private static function getPossibleClassNames($class_name_list){
   
     // canary....
     // class name isn't an array, so return as one...
@@ -514,7 +538,7 @@ final class montage_core extends montage_base_static {
    *  @return array a list of class names that extend montage_start
    */
   static function getStartClassNames(){
-    return self::getField('montage_core::start_class_list',array());
+    return self::getField(self::KEY_START,array());
   }//method
   
   /**
@@ -668,10 +692,13 @@ final class montage_core extends montage_base_static {
       throw new InvalidArgumentException(sprintf('"%s" is not a valid directory',$path));
     }//if
 
+    $path_list = self::getField(self::KEY_PATH,array());
+
     // we only really need to check if the cache exists, we don't need to bother
     // with fetching it since all the class maps get saved into the main cache
     // when the directory is first seen...
-    if(!montage_cache::has($path)){
+    ///if(!montage_cache::has($path)){
+    if(!in_array($path,$path_list,true)){
       
       // cached miss, so get them the old fashioned way...
       $class_map = self::getClasses($path);
@@ -688,6 +715,9 @@ final class montage_core extends montage_base_static {
         $class_map
       );
       
+      // add the path to the path list and save the new core...
+      $path_list[] = $path;
+      self::setField(self::KEY_PATH,$path_list);
       self::setCore();
       
     }//if
@@ -725,7 +755,6 @@ final class montage_core extends montage_base_static {
     if(isset(self::$class_map[$class_key])){
     
       include(self::$class_map[$class_key]['path']);
-      self::$class_map[$class_key]['method'] = __METHOD__;
       $ret_bool = true;
     
     }else{
@@ -760,11 +789,11 @@ final class montage_core extends montage_base_static {
       
         throw new RuntimeException(
           sprintf(
-            'The class (%s) at "%s" has the same name as the class (%s) at "%s"',
+            'SAME CLASS NAME ERROR! The class (%s) at "%s" has the same name as the class (%s) at "%s"',
             self::$class_map[$class_key]['class_name'],
             self::$class_map[$class_key]['path'],
             $class_map[$class_key]['class_name'],
-            $class_map[$class_key]['class_name']
+            $class_map[$class_key]['path']
           )
         );
       
@@ -776,6 +805,7 @@ final class montage_core extends montage_base_static {
     
     }//foreach
   
+    // now map the child classes to their parents...
     foreach($class_map as $class_key => $map){
   
       // @note  the class_parents call depends on the autoloader...
@@ -862,21 +892,26 @@ final class montage_core extends montage_base_static {
     $ret_bool = false;
   
     // load the cache...
-    $cache_maps = montage_cache::get(
+    $core_map = montage_cache::get(
       array(
         self::getField('montage_core_controller'),
         self::getField('montage_core_environment'),
-        'montage_core:class_maps'
+        'montage_core::core_map'
       )
     );
-    if(!empty($cache_maps)){
+    
+    if(!empty($core_map)){
     
       // core primary...
-      self::$parent_class_map = $cache_maps['parent_class_map'];
-      self::$class_map = $cache_maps['class_map'];
+      self::$parent_class_map = $core_map['parent_class_map'];
+      self::$class_map = $core_map['class_map'];
       
-      // core secondary...
-      self::setField('montage_core::start_class_list',$cache_maps['start_class_list']);
+      // load the secondary core...
+      foreach(self::$key_cache_list as $key){
+        if(isset($core_map[$key])){
+          self::setField($key,$core_map[$key]);
+        }//if
+      }//foreach
       
       $ret_bool = true;
       
@@ -892,20 +927,36 @@ final class montage_core extends montage_base_static {
    */        
   private static function setCore(){
   
+    $core_map = array();
+    $core_map['parent_class_map'] = self::$parent_class_map;
+    $core_map['class_map'] = self::$class_map;
+  
+    foreach(self::$key_cache_list as $key){
+      $core_map[$key] = self::getField($key,array());
+    }//foreach
+  
     // save all the class maps into cache...
     montage_cache::set(
       array(
         self::getField('montage_core_controller'),
         self::getField('montage_core_environment'),
-        'montage_core:class_maps'
+        'montage_core::core_map'
       ),
-      array(
-        'parent_class_map' => self::$parent_class_map,
-        'class_map' => self::$class_map,
-        'start_class_list' => self::getField('montage_core::start_class_list',array())
-      )
+      $core_map
     );
   
+  }//method
+  
+  /**
+   *  reset all the compiled core information to its initial state
+   *  
+   *  the reason why this method exists is so static arrays can be reset when the 
+   *  cache is    
+   *      
+   *  @see  setCore(), loadCore()   
+   */
+  private static function resetCore(){
+    foreach(self::$key_cache_list as $key){ self::setField($key,array()); }//foreach
   }//method
   
   /**

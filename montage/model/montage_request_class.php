@@ -10,8 +10,8 @@
  ******************************************************************************/
 class montage_request extends montage_base {
 
-  const FIELD_CONTROLLER = 'montage_request_controller';
-  const FIELD_ENVIRONMENT = 'montage_request_environment';
+  const FIELD_CONTROLLER = 'montage_request::controller';
+  const FIELD_ENVIRONMENT = 'montage_request::environment';
 
   /**
    *  initialize the request class
@@ -64,6 +64,19 @@ class montage_request extends montage_base {
 
     }else{
       
+      $this->setMethod($this->getServerField('REQUEST_METHOD','GET'));
+      
+      // strip out the magic quotes if they exist...
+      if(get_magic_quotes_gpc()){
+      
+        $this->setFields(montage_text::killSlashes(array_merge($_GET,$_POST)));
+      
+      }else{
+      
+        $this->setFields(array_merge($_GET,$_POST));
+      
+      }//if/else
+      
       // get the root of the request...
       $root_path_list = explode(DIRECTORY_SEPARATOR,$request_root_path);
       
@@ -73,29 +86,7 @@ class montage_request extends montage_base {
       $request_path_list = preg_split('#\\/#u',$request_uri[0]);
       
       // find the difference between ROOT and REQUEST and that will decide the controller::method to use...
-      $path_list = array_values(array_filter(array_diff($request_path_list,$root_path_list)));
-      
-      // this will contain no fake path parts like controller class and controller method...
-      $base_path_list = preg_split('#\\/#u',$this->getServerField('DOCUMENT_ROOT'));
-      $base_path_list = array_values(array_filter(array_diff($base_path_list,$root_path_list)));
-      
-      // make all the different vars available through the field methods...
-      if(!empty($_COOKIE)){ $this->setFields($_COOKIE); }//if
-      if(!empty($_SESSION)){ $this->setFields($_SESSION); }//if
-      
-      // strip out the magic quotes if they exist...
-      ///$field_map = array();
-      if(get_magic_quotes_gpc()){
-      
-        ///$field_map = montage_text::getSlashless(array_merge($_GET,$_POST));
-        $this->setFields(montage_text::killSlashes(array_merge($_GET,$_POST)));
-      
-      }else{
-      
-        ///$field_map = array_merge($_GET,$_POST);
-        $this->setFields(array_merge($_GET,$_POST));
-      
-      }//if/else
+      $path_list = montage_path::getIntersection($request_path_list,$root_path_list);
       
       if(!$this->hasHost()){
         $host = $this->getServerField(array('HTTP_X_FORWARDED_HOST','HTTP_HOST'),'');
@@ -114,26 +105,29 @@ class montage_request extends montage_base {
         )
       );
       
+      // see if we have any base path on top of the host...
+      $base_path = $this->getServerField(array('SCRIPT_NAME','PHP_SELF'),'');
+      if(!empty($base_path)){
+        $base_path = join('/',array_slice(preg_split('#\\/#u',$base_path),0,-1));
+      }//if
+      
       $this->setBase(
         sprintf(
           '%s://%s%s',
           montage_url::SCHEME_NORMAL,
           $host,
-          empty($base_path_list) ? '' : join('/',$base_path_list)
+          $base_path
         )
       );
       
-      $this->setMethod($this->getServerField('REQUEST_METHOD','GET'));
-      
     }//if/else
     
-    $this->setField('montage_request_path_list',$path_list);
+    $this->setField('montage_request::path_list',$path_list);
     $this->setPath(join('/',$path_list));
     
     // set the controller...
     $forward = montage_factory::getBestInstance('montage_forward');
     $controller_map = $forward->find($path_list); 
-    ///$this->setHandler($controller_map[0],$controller_map[1],$controller_map[2]);
     $this->setControllerClass($controller_map[0]);
     $this->setControllerMethod($controller_map[1]);
     $this->setControllerMethodArgs($controller_map[2]);
@@ -264,37 +258,37 @@ class montage_request extends montage_base {
    *  the full requested base, the base is different than url because url would have the generated
    *  path on it (eg, controller_class/controller_method/...) and this won't   
    */        
-  function setBase($val){ return $this->setField('montage_request_base',$val); }//method
-  function getBase(){ return $this->getField('montage_request_base',''); }//method
-  function hasBase(){ return $this->hasField('montage_request_base'); }//method
+  function setBase($val){ return $this->setField('montage_request::base',$val); }//method
+  function getBase(){ return $this->getField('montage_request::base',''); }//method
+  function hasBase(){ return $this->hasField('montage_request::base'); }//method
 
   /**
    *  the full requested url
    */        
-  function setUrl($val){ return $this->setField('montage_request_url',$val); }//method
-  function getUrl(){ return $this->getField('montage_request_url',''); }//method
-  function hasUrl(){ return $this->hasField('montage_request_url'); }//method
+  function setUrl($val){ return $this->setField('montage_request::url',$val); }//method
+  function getUrl(){ return $this->getField('montage_request::url',''); }//method
+  function hasUrl(){ return $this->hasField('montage_request::url'); }//method
 
   /**
    *  usually something like: example.com or subdomain.example.com
    */        
-  function setHost($val){ return $this->setField('montage_request_host',$val); }//method
-  function getHost(){ return $this->getField('montage_request_host',''); }//method
-  function hasHost(){ return $this->hasField('montage_request_host'); }//method
+  function setHost($val){ return $this->setField('montage_request::host',$val); }//method
+  function getHost(){ return $this->getField('montage_request::host',''); }//method
+  function hasHost(){ return $this->hasField('montage_request::host'); }//method
 
   /**
    *  if the path of the montage request isn't just the root directory (eg, /) then
    *  that path will be here
    */
-  function setPath($val){ return $this->setField('montage_request_path',$val); }//method
-  function getPath(){ return $this->getField('montage_request_path',''); }//method
-  function hasPath(){ return $this->hasField('montage_request_path'); }//method
+  function setPath($val){ return $this->setField('montage_request::path',$val); }//method
+  function getPath(){ return $this->getField('montage_request::path',''); }//method
+  function hasPath(){ return $this->hasField('montage_request::path'); }//method
 
   /**
    *  corresponds to the [APP PATH]/web/ directory
    */        
-  function setRequestRoot($val){ return $this->setField('montage_request_request_root',$val); }//method
-  function getRequestRoot(){ return $this->getField('montage_request_request_root',''); }//method
+  function setRequestRoot($val){ return $this->setField('montage_request::request_root',$val); }//method
+  function getRequestRoot(){ return $this->getField('montage_request::request_root',''); }//method
   
   /**
    *  the requested controller class that will be used to answer this request
@@ -318,10 +312,10 @@ class montage_request extends montage_base {
   /**
    *  the method used for this request (eg, GET, POST, CLI)
    */        
-  function setMethod($val){ return $this->setField('montage_request_method',mb_strtoupper($val)); }//method
-  function getMethod(){ return $this->getField('montage_request_method',''); }//method
-  function hasMethod(){ return $this->hasField('montage_request_method'); }//method
-  function isMethod($val){ return $this->isField('montage_request_method',mb_strtoupper($val)); }//method
+  function setMethod($val){ return $this->setField('montage_request::method',mb_strtoupper($val)); }//method
+  function getMethod(){ return $this->getField('montage_request::method',''); }//method
+  function hasMethod(){ return $this->hasField('montage_request::method'); }//method
+  function isMethod($val){ return $this->isField('montage_request::method',mb_strtoupper($val)); }//method
   
   /**
    *  shortcut method for you to know if this is a command line request

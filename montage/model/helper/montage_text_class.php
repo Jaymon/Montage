@@ -78,7 +78,7 @@ class montage_text {
    *  @param  string  $val  the value to be "cleansed"
    *  @return string      
    */
-  static public function getSafe($val){ 
+  static public function getSafe($val){
     return empty($val) ? '' : htmlspecialchars($val,ENT_COMPAT,MONTAGE_CHARSET,false);
   }//method
   
@@ -164,7 +164,7 @@ class montage_text {
       $ret_str = self::getWordSubStr($str,$start,$len);
       
       if(mb_strlen($ret_str) < $orig_size){
-        $ret_str .= '...';
+        $ret_str .= '...'; ///'…';
       }//if
       
       return $ret_str;

@@ -161,7 +161,7 @@ class montage_base {
     
     if(empty($method_map[$key])){
     
-      throw new montage_exception(sprintf('could not find a match for $method %s with command: %s',$method,$key));
+      throw new InvalidArgumentException(sprintf('could not find a match for $method %s with command: %s',$method,$key));
     
     }else{
     
@@ -209,7 +209,7 @@ class montage_base {
     
     if(empty($ret_field)){
     
-      throw new montage_exception(
+      throw new UnexpectedValueException(
         'no field was specified in the method, for example, if you want to "get" the field "foo" '.
         'you would do: getFoo() (notice the capital F)'
       ); 
@@ -230,7 +230,7 @@ class montage_base {
     
     // canary...
     if(is_numeric($field)){
-      throw new mingo_exception(sprintf('an all numeric $field like %s is not allowed',$field));
+      throw new InvalidArgumentException(sprintf('an all numeric $field like %s is not allowed',$field));
     }//if
     
     return mb_strtolower((string)$field);
