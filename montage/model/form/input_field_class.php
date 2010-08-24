@@ -82,12 +82,16 @@ class input_field extends montage_form_field {
   function getPlaceholder(){ return $this->getAttr('placeholder'); }//method
   /**#@-*/
   
-  function out(){
+  function out($attr_map = array()){
   
     // make sure the value is safe...
-    $this->setVal($this->getSafe($this->getVal()));
+    if(isset($attr_map['value'])){
+      $attr_map['value'] = $this->getSafe($attr_map['value']);
+    }else{
+      $attr_map['value'] = $this->getSafe($this->getVal());
+    }//if/else
   
-    return sprintf('<input%s/>',$this->outAttr());
+    return sprintf('<input%s/>',$this->outAttr($attr_map));
     
   }//method
 

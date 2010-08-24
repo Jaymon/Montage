@@ -99,6 +99,63 @@ abstract class montage_form extends montage_form_base implements ArrayAccess,Cou
   /**#@-*/
   
   /**
+   *  shortcut to set a field's value
+   *  
+   *  this one is just here as a compliment to all the other *Val() methods since setField()
+   *  does pretty much the same thing as this method         
+   *  
+   *  @since  8-15-10   
+   *  @see  setField()   
+   *  @param  string  $field  the field name
+   *  @param  mixed $val  the $field's value
+   */
+  public function setVal($field,$val){ return $this->setField($field,$val); }//method
+  
+  /**
+   *  shortcut to check if a field has a value
+   *  
+   *  @since  8-15-10      
+   *  @param  string  $field  the field name
+   *  @return boolean   
+   */
+  public function hasVal($field){
+    // canary...
+    if(!$this->hasField($field)){ return false; }//if
+    return $this->getField($field)->hasVal();
+  }//method
+  
+  /** 
+   *  provides a quick way to get the value of a field of the form
+   *  
+   *  so, rather than having to do:
+   *    $this->getField('name')->getVal();
+   *  you can do:
+   *    $this->getVal('name');
+   *      
+   *  @since  8-15-10      
+   *  @param  string  $field  the field name
+   *  @return mixed
+   */
+  public function getVal($field){
+    // canary...
+    if(!$this->hasField($field)){ return null; }//if
+    return $this->getField($field)->getVal();
+  }//method
+  
+  /**
+   *  shortcut to clear a field's value
+   *  
+   *  @since  8-15-10      
+   *  @param  string  $field  the field name
+   *  @return boolean
+   */
+  public function clearVal($field){
+    // canary...
+    if(!$this->hasField($field)){ return false; }//if
+    return $this->getField($field)->clearVal();
+  }//method
+  
+  /**
    *  map an associative array of values to the fields defined in the form
    *  
    *  the supported fields of this form should already be defined before calling this
@@ -297,9 +354,9 @@ abstract class montage_form extends montage_form_base implements ArrayAccess,Cou
     
   }//method
   
-  function out(){
+  function out($attr_map = array()){
     
-    $ret_str = $this->outStart();
+    $ret_str = $this->outStart($attr_map);
     
     if($this->hasError()){
       $ret_str .= $this->outError();
@@ -336,12 +393,12 @@ abstract class montage_form extends montage_form_base implements ArrayAccess,Cou
     
   }//method
   
-  function outStart(){
+  function outStart($attr_map = array()){
   
     $this->setMethod($this->getMethod());
     $this->setEncoding($this->getEncoding());
   
-    return sprintf('<form%s>',$this->outAttr());
+    return sprintf('<form%s>',$this->outAttr($attr_map));
     
   }//method
   function outStop(){ return '</form>'; }//method

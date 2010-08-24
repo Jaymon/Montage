@@ -141,7 +141,7 @@ class montage_path extends montage_base_static {
   /**
    *  given multiple path bits, build a custom path
    *  
-   *  @example  self::getCustomPath('foo','bar'); // -> foo/bar
+   *  @example  self::get('foo','bar'); // -> foo/bar
    *  
    *  @param  $args,... one or more path bits
    *  @return string
@@ -151,8 +151,12 @@ class montage_path extends montage_base_static {
     $path_bits = func_get_args();
     foreach($path_bits as $path_bit){
       if(is_array($path_bit)){
-        $ret_list = array_merge($ret_list,$path_bit);
+        ///$path_bit = array_map('trim', $path_bit,array_fill(0,count($path_bit),'\\/'));
+        ///$ret_list = array_merge($ret_list,$path_bit);
+        // turns out this was faster in my dumb tests...
+        foreach($path_bit as $pb){ $ret_list[] = trim($pb,'\\/'); }//foreach
       }else{
+        $path_bit = trim($path_bit,'\\/');
         $ret_list[] = $path_bit;
       }//if/else
     }//foreach

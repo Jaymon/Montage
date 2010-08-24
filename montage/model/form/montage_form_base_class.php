@@ -34,9 +34,10 @@ abstract class montage_form_base {
   /**
    *  output an html representation of the instance
    *  
+   *  @param  array $attr_map pass in attributes (key => val pairs) to override default values   
    *  @return string
    */
-  abstract function out();
+  abstract function out($attr_map = array());
   
   /**
    *  uses the instance's defined {@link out()} method to output the class
@@ -198,18 +199,23 @@ abstract class montage_form_base {
   /**
    *  output all the attributes in a nicely formatted string
    *     
+   *  @param  array $attr_map pass in attributes (key => val pairs) to override default values    
    *  @return string
    */       
-  function outAttr(){
+  function outAttr($attr_map = array()){
     
+    // favor passed in values over previously set ones...
+    $attr_map = array_merge($this->attr_map,$attr_map);
+  
     // canary...
-    if(empty($this->attr_map)){ return ''; }//if
+    if(empty($attr_map)){ return ''; }//if
   
     $ret_str = ' ';
-    foreach($this->attr_map as $attr_name => $attr_val){
+    foreach($attr_map as $attr_name => $attr_val){
       $ret_str .= sprintf('%s="%s" ',$attr_name,$attr_val);
     }//foreach
     return $ret_str;
+    
   }//method
 
   /**

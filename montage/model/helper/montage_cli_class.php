@@ -1,15 +1,22 @@
 <?php
 
 /**
- *  handy functions that don't seem to go anywhere else. A toolbox of sorts
+ *  handy functions for working with the CLI (command line)
  *  
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 3-26-10
  *  @package montage
  *  @subpackage help 
  ******************************************************************************/
-class montage_util {
+class montage_cli {
+  
+  /**
+   *  set to true to turn off {@link out()} messages
+   *  
+   *  @var  boolean
+   */
+  public static $muffle = false;
   
   /**
    *  function to make passing arguments into a CLI script easier
@@ -27,7 +34,7 @@ class montage_util {
    *                                  the name isn't passed in with $argv 
    *  @return array the key/val mappings that were parsed from --name=val command line arguments
    */
-  static public function parseArgv($argv,$required_argv_map = array())
+  public static function parseArgv($argv,$required_argv_map = array())
   {
     $ret_map = array();
   
@@ -114,6 +121,58 @@ class montage_util {
     }//if
   
     return $ret_map;
+  
+  }//method
+  
+  /**
+   *  print out a line of information to the user
+   *  
+   *  a newline is automatically added to the output echo      
+   *  
+   *  @example  montage_cli::out('this is the %s string with %d args','format',2);
+   *      
+   *  @since  8-19-10 pulled from Plancast's BaseTask class   
+   *  @param  string  $format_msg the message, if $var_list is present then inferred to
+   *                              be a format string suitable for a sprintf call, if no
+   *                              $var_list is present then it will just be printed out 
+   *                              to the user
+   *  @param  mixed $arg,...  any other arguments passed in are assumed to be the format string vars for
+   *                          vsprintf                           
+   */
+  public static function out()
+  {
+    // sanity...
+    if(self::$muffle){ return; }//if
+  
+    $args = func_get_args();
+    if(!empty($args))
+    {
+      $format_msg = $args[0];
+      $var_list = array_slice($args,1);
+      
+      if(empty($var_list))
+      {
+        $msg = $format_msg;
+        
+      }else{
+        
+        $total_vars = count($var_list);
+        if($total_vars == 1)
+        {
+          if(is_array($var_list[0]))
+          {
+            $var_list = $var_list[0];
+          }//if
+        }//if
+        
+        $msg = vsprintf($format_msg,$var_list);
+        
+      }//if
+      
+      echo $msg,PHP_EOL;
+      flush();
+      
+    }//if
   
   }//method
 

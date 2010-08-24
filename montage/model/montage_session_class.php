@@ -3,7 +3,7 @@
 /**
  *  handle session stuff 
  *
- *  @version 0.2
+ *  @version 0.3
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 2-28-10
  *  @package montage
@@ -11,9 +11,14 @@
 class montage_session {
 
   /**
-   *  for setRequest, loadRequest function
+   *  for setRequest(), loadRequest() methods
    */        
-  const FIELD_REQUEST = 'montage_session_request_saved';
+  const FIELD_REQUEST = 'montage_session::request_saved';
+  
+  /**
+   *  for *Flash() methods
+   */
+  const FIELD_FLASH = 'montage_session::flash_map';
   
   /**
    *  the name of the session started with this class
@@ -67,7 +72,7 @@ class montage_session {
         session_start();
         
         // pull out the flash map...
-        $flash_map = $this->getField('montage_session_flash',array());
+        $flash_map = $this->getField(self::FIELD_FLASH,array());
         
         // save killed...
         $flash_map['dead'] = empty($flash_map['kill']) ? array() : $flash_map['kill'];
@@ -82,7 +87,7 @@ class montage_session {
         $flash_map['set'] = array();
         
         // save it back into the session...
-        $this->setField('montage_session_flash',$flash_map);
+        $this->setField(self::FIELD_FLASH,$flash_map);
         
         // load any request vars back in...
         $this->loadRequest();
@@ -104,10 +109,34 @@ class montage_session {
    *  @param  mixed $val
    *  @return mixed $val
    */
-  function setField($key,$val){
+  public function setField($key,$val){
   
     $_SESSION[$key] = $val;
     return $val;
+  
+  }//method
+  
+  /**
+   *  get a field from any part of the session
+   *  
+   *  order of precedence is normal session field, then "get" flash session field, then "set"
+   *  flash session field, then default_val   
+   *  
+   *  @since  8-15-10   
+   *  @param  string  $key
+   *  @param  mixed $default_val  if $key wasn't found, return this
+   *  @return mixed
+   */
+  public function getAny($key,$default_val = null){
+  
+    $ret_mixed = $default_val;
+    if(isset($_SESSION[$key])){
+      $ret_mixed = $_SESSION[$key];
+    }else if($this->hasFlash($key)){
+      $ret_mixed = $this->getFlash($key);
+    }//if/else if
+  
+    return $ret_mixed;
   
   }//method
   
@@ -118,10 +147,8 @@ class montage_session {
    *  @param  mixed $default_val  if $key wasn't found, return this
    *  @return mixed
    */
-  function getField($key,$default_val = null){
-  
+  public function getField($key,$default_val = null){
     return isset($_SESSION[$key]) ? $_SESSION[$key] : $default_val;
-  
   }//method
   
   /**
@@ -129,7 +156,7 @@ class montage_session {
    *  
    *  @param  string  $key
    */
-  function killField($key){
+  public function killField($key){
     unset($_SESSION[$key]);
   }//method
   
@@ -139,7 +166,7 @@ class montage_session {
    *  @param  string  $key
    *  @return boolean   
    */
-  function hasField($key){
+  public function hasField($key){
     return !empty($_SESSION[$key]);
   }//method
   
@@ -149,7 +176,7 @@ class montage_session {
    *  @param  string  $key
    *  @return boolean   
    */
-  function existsField($key){
+  public function existsField($key){
     return array_key_exists($key,$_SESSION);
   }//method
   
@@ -157,15 +184,38 @@ class montage_session {
   /**
    *  get a flash field (field that is good for about one page load)
    *  
+   *  first use "get" then use "set" if no "get" was found, finally use $default_val
+   *      
    *  @param  string  $key
    *  @param  mixed $default_val
    *  @return mixed
    */
-  function getFlash($key,$default_val = null){
+  public function getFlash($key,$default_val = null){
   
-    $flash_map = $this->getField('montage_session_flash',array());
-    return isset($flash_map['get'][$key]) ? $flash_map['get'][$key] : $default_val;
+    $ret_mixed = $default_val;
   
+    $flash_map = $this->getField(self::FIELD_FLASH,array());
+    
+    if(isset($flash_map['get'][$key])){
+      $ret_mixed = $flash_map['get'][$key];
+    }else if(isset($flash_map['set'][$key])){
+      $ret_mixed = $flash_map['set'][$key];
+    }//if/else if
+    
+    return $ret_mixed;
+  
+  }//method
+  
+  /**
+   *  does a field exist in the flash session and is non-empty
+   *  
+   *  @since  8-15-10   
+   *  @param  string  $key
+   *  @return boolean   
+   */
+  public function hasFlash($key){
+    $flash_map = $this->getField(self::FIELD_FLASH,array());
+    return isset($flash_map['get'][$key]) || isset($flash_map['set'][$key]);
   }//method
   
   /**
@@ -177,9 +227,9 @@ class montage_session {
    */
   function setFlash($key,$val){
   
-    $flash_map = $this->getField('montage_session_flash',array());
+    $flash_map = $this->getField(self::FIELD_FLASH,array());
     $flash_map['set'][$key] = $val;
-    $this->setField('montage_session_flash',$flash_map);
+    $this->setField(self::FIELD_FLASH,$flash_map);
     return $val;
   
   }//method
@@ -194,10 +244,10 @@ class montage_session {
    *  the $_SESSION array so I now have to do this manually by having {@link montage_response::redirect()}
    *  call this method         
    */
-  function resetFlash(){
+  public function resetFlash(){
   
     // pull out the flash map...
-    $flash_map = $this->getField('montage_session_flash',array());
+    $flash_map = $this->getField(self::FIELD_FLASH,array());
     
     // move get back to set...
     $flash_map_set = empty($flash_map['set']) ? array() : $flash_map['set'];
@@ -216,7 +266,7 @@ class montage_session {
     $flash_map['dead'] = array();
     
     // save it back into the session...
-    $this->setField('montage_session_flash',$flash_map);
+    $this->setField(self::FIELD_FLASH,$flash_map);
   
   }//method
   
@@ -227,7 +277,7 @@ class montage_session {
    *  be better off in request, the key is figuring out when to load. I'm thinking urls
    *  to see if something needs to be loaded
    */
-  function setRequest(){
+  public function setRequest(){
   
     $field_map = array();
     if(!empty($_GET)){

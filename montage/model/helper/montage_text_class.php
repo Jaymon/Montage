@@ -71,6 +71,27 @@ class montage_text {
     if(empty($val)){ return false; }//if
     return preg_match('#^\w+://\S{3,}#',$val) ? true : false;
   }//method
+  
+  /**
+   *  given a url: http://www.example.com/, this function would return example.com, 
+   *  
+   *  @since  8-15-10   
+   *  @param  string  $url  the url to check   
+   *  @return string  empty string if any problems are encounted or it can't find the host.
+   */
+  public static function getHost($url){
+  
+    // canary...
+    if(empty($url)){ return ''; }//if
+  
+    $ret_str = parse_url($url,PHP_URL_HOST);
+  
+    // get rid of the www if it exists, otherwise return the whole base url...
+    $ret_str = preg_replace('/^www\./i','',$ret_str);
+    
+    return $ret_str;
+  
+  }//method
 
   /**
    *  return a safe value for $val that is suitable for display in stuff like the value attribute 

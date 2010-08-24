@@ -55,7 +55,7 @@ class montage_request extends montage_base {
             $arg_map = array_slice($arg_map,1); // strip off the controller path
           }//if
         
-          $arg_map = montage_util::parseArgv($arg_map);
+          $arg_map = montage_cli::parseArgv($arg_map);
           $this->setFields($arg_map);
 
         }//if

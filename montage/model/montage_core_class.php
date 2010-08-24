@@ -841,36 +841,42 @@ final class montage_core extends montage_base_static {
       
       if($file->isFile()){
       
-        $file_path = $file->getRealPath();
-        
-        // I originally called get_declared_classes() before and after an include_once but
-        // it would fail when a child class was included where the parent class hadn't been
-        // seen yet, so I'm back to reading the file in and regexing for classes, which
-        // I consider hackish
-        
-        $file_contents = file_get_contents($file_path);
-        ///$file_contents = mb_convert_encoding($file_contents,'UTF-8');
-        
-        // find the class declaration lines...
-        $line_matches = array();
-        if(preg_match_all('#^[a-z\s]*(?:class|interface)\s+[^{]+#sim',$file_contents,$line_matches)){
-        
-          foreach($line_matches[0] as $line_match){
+        // make sure the extension is a php one...
+        $ext = pathinfo($file->getFilename(),PATHINFO_EXTENSION);
+        if(!empty($ext) && preg_match('#(?:php(?:\d+)?|inc|phtml)$#',$ext)){
+      
+          $file_path = $file->getRealPath();
           
-            // get the class...
-            $class_match = array();
-            if(preg_match('#(?:class|interface)\s+(\S+)#',$line_match,$class_match)){
-              
-              $class_name = $class_match[1];
-              $class_key = self::getClassKey($class_match[1]);
-              $ret_map[$class_key] = array(
-                'path' => $file_path,
-                'class_name' => $class_name
-              );
-              
-            }//if
+          // I originally called get_declared_classes() before and after an include_once but
+          // it would fail when a child class was included where the parent class hadn't been
+          // seen yet, so I'm back to reading the file in and regexing for classes, which
+          // I consider hackish
+          
+          $file_contents = file_get_contents($file_path);
+          ///$file_contents = mb_convert_encoding($file_contents,'UTF-8');
+          
+          // find the class declaration lines...
+          $line_matches = array();
+          if(preg_match_all('#^[a-z\s]*(?:class|interface)\s+[^{]+#sim',$file_contents,$line_matches)){
+          
+            foreach($line_matches[0] as $line_match){
             
-          }//foreach
+              // get the class...
+              $class_match = array();
+              if(preg_match('#(?:class|interface)\s+(\S+)#',$line_match,$class_match)){
+                
+                $class_name = $class_match[1];
+                $class_key = self::getClassKey($class_match[1]);
+                $ret_map[$class_key] = array(
+                  'path' => $file_path,
+                  'class_name' => $class_name
+                );
+                
+              }//if
+              
+            }//foreach
+            
+          }//if
           
         }//if
         
