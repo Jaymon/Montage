@@ -97,11 +97,19 @@ date_default_timezone_set(MONTAGE_TIMEZONE);
 // where the framework's core can be found...
 if(!defined('MONTAGE_PATH')){ define('MONTAGE_PATH',realpath(dirname(__FILE__))); }//if
 
+// where cache is stored...
+if(!defined('MONTAGE_CACHE_PATH')){
+  define(
+    'MONTAGE_CACHE_PATH',
+    join(DIRECTORY_SEPARATOR,array(MONTAGE_APP_PATH,'cache'))
+  );
+}//if
+
 // include the autoloader (and supporting files)...
 require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_base_class.php')));
 require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_base_static_class.php')));
 require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','helper','montage_path_class.php')));
-require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_cache_class.php')));
+require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','helper','montage_cache_class.php')));
 require(join(DIRECTORY_SEPARATOR,array(MONTAGE_PATH,'model','montage_core_class.php')));
 
 // include the profile class so we can see how long core takes to run...
@@ -120,8 +128,11 @@ try{
     MONTAGE_DEBUG,
     MONTAGE_CHARSET,
     MONTAGE_TIMEZONE,
-    MONTAGE_PATH,
-    MONTAGE_APP_PATH
+    array(
+      'montage_path' => MONTAGE_PATH,
+      'montage_app_path' => MONTAGE_APP_PATH,
+      'montage_cache_path' => MONTAGE_CACHE_PATH
+    )
   );
   
 }catch(Exception $e){

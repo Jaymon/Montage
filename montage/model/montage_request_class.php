@@ -44,15 +44,22 @@ class montage_request extends montage_base {
         
           if($arg_map[0][0] == '-'){
           
-            throw UnexpectedValueException(
-              'You are missing class/method (class should extend montage_controller). '
-              .'A cli request must be made the following way: '
-              .' php path/to/script.php class/method --key=val --key2=val2 ...'
-            ); 
-          
+            $event = montage::getEvent();
+            $event->broadcast(
+              montage_event::KEY_WARNING,
+              array('msg' => 
+                'You are missing class/method (class should extend montage_controller). '
+                .'A cli request can be made more exact by doing it the following way: '
+                .' php path/to/script.php class/method --key=val --key2=val2 ...'
+              ),
+              true
+            );
+            
           }else{
+          
             $path_list = array_values(array_filter(preg_split('#\\/#u',$arg_map[0])));
             $arg_map = array_slice($arg_map,1); // strip off the controller path
+            
           }//if
         
           $arg_map = montage_cli::parseArgv($arg_map);

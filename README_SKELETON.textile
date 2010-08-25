@@ -1,0 +1,23 @@
+h1. Using Skeletion to generate a new Montage app
+
+Skeletion is a command line script that allows you to quickly build out the default structure of a new Montage app.
+
+To quickly build a new vanilla Montage app:
+
+<pre>
+$ php skeleton.php --path="path/to/put/app"
+</pre>
+
+To see all the options available to you:
+
+<pre>
+$ php skeleton.php --help
+</pre>
+
+h2. Customizing Skeletion
+
+By using the option --include-path you can add paths that extend the default Skeletion classes, allowing you to customize the generator to fit your needs.
+
+h2. Using Skeletion to quickly add new controllers, environments, plugins, etc.
+
+Skeleton won't replace files so just add the appropriate option (e.g., --controller and --controller-class to add a new controller class) and the file will be generated and your current files won't be touched.

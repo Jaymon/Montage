@@ -19,6 +19,32 @@ class montage_cli {
   public static $muffle = false;
   
   /**
+   *  get just the argument parts of the argv
+   *  
+   *  @since  8-24-10   
+   *  @return array
+   */
+  public static function getArgv()
+  {
+    if(empty($_SERVER['argv'])){ return array(); }//if
+  
+    $argv = $_SERVER['argv'];
+  
+    // do some hackish stuff to decide if the first argv needs to be stripped...
+    $bt = debug_backtrace();
+    if(!empty($bt[0]['file'])){
+      $file_path = $bt[0]['file'];
+      $file_name = basename($bt[0]['file']);
+      if(($argv[0] == $file_path) || ($argv[0] == $file_name)){
+        $argv = array_slice($argv,1);
+      }//if
+    }//if
+  
+    return $argv;
+  
+  }//method
+  
+  /**
    *  function to make passing arguments into a CLI script easier
    *  
    *  an argument has to be in the form: --name=val or --name if you want name to be true
@@ -156,7 +182,16 @@ class montage_cli {
         
       }else{
         
-        $total_vars = count($var_list);
+        foreach($var_list as $key => $var){
+        
+          // turn arrays into strings...
+          if(is_array($var)){
+            $var_list[$key] = sprintf('[%s]',join(', ',$var));
+          }//if
+        
+        }//foreach
+        
+        /** $total_vars = count($var_list);
         if($total_vars == 1)
         {
           if(is_array($var_list[0]))
@@ -164,6 +199,7 @@ class montage_cli {
             $var_list = $var_list[0];
           }//if
         }//if
+        **/
         
         $msg = vsprintf($format_msg,$var_list);
         

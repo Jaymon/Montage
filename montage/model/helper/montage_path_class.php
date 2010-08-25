@@ -147,20 +147,36 @@ class montage_path extends montage_base_static {
    *  @return string
    */
   static function get(){
+    
     $ret_list = array();
     $path_bits = func_get_args();
+    
     foreach($path_bits as $path_bit){
+      
       if(is_array($path_bit)){
+        
         ///$path_bit = array_map('trim', $path_bit,array_fill(0,count($path_bit),'\\/'));
         ///$ret_list = array_merge($ret_list,$path_bit);
         // turns out this was faster in my dumb tests...
-        foreach($path_bit as $pb){ $ret_list[] = trim($pb,'\\/'); }//foreach
+        foreach($path_bit as $pb){
+          if(!empty($pb) || !ctype_space($pb)){
+            $ret_list[] = trim($pb,'\\/');
+          }//if
+        }//foreach
+        
       }else{
+        
         $path_bit = trim($path_bit,'\\/');
-        $ret_list[] = $path_bit;
+        if(!empty($path_bit) || !ctype_space($path_bit)){
+          $ret_list[] = $path_bit;
+        }//if
+        
       }//if/else
+      
     }//foreach
+    
     return join(DIRECTORY_SEPARATOR,$ret_list);
+    
   }//method
   
   /**
@@ -240,6 +256,77 @@ class montage_path extends montage_base_static {
     
     return $ret_path;
   
+  }//method
+  
+  /**
+   *  completely remove the given path and any children
+   *  
+   *  @since  8-25-10   
+   *  @param  string  $path the path to completely remove
+   *  @return boolean
+   */
+  static public function kill($path){
+  
+    $ret_bool = self::clear($path);
+    
+    // if we cleared all the contents then get rid of the base folder also...
+    if($ret_bool){
+      $ret_bool = rmdir($path);
+    }//if
+  
+    return $ret_bool;
+  
+  }//method
+  
+  /**
+   *  recursively clear an entire directory, files, folders, everything
+   *  
+   *  @since  8-25-10   
+   *  @see  montage_cache::clear()
+   *  @param  string  $path the starting path, all sub things will be removed
+   *  @param  string  $regex  if a PCRE regex is passed in then only files matching it will be removed 
+   */
+  static public function clear($path,$regex = ''){
+  
+    // canary...
+    if(!is_dir($path)){ return false; }//if
+    
+    $ret_bool = true;
+    $path_iterator = new RecursiveDirectoryIterator($path);
+    foreach($path_iterator as $file){
+      
+      $file_path = $file->getRealPath();
+      
+      if($file->isDir()){
+        
+        $ret_bool = self::clear($file_path,$regex);
+        if($ret_bool){
+          rmdir($file_path);
+        }//if
+      
+      }else{
+    
+        if(!empty($regex)){
+        
+          $ret_bool = false;
+        
+          // make sure we only kill files that match regex...
+          if(preg_match($regex,$file->getFilename())){
+            $ret_bool = unlink($file_path);
+          }//if
+        
+        }else{
+        
+          $ret_bool = unlink($file_path);
+          
+        }//if/else
+      
+      }//if/else
+
+    }//foreach
+    
+    return $ret_bool;
+    
   }//method
   
   /**

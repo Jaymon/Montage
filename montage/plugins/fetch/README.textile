@@ -10,7 +10,9 @@ h3. Making a fetch call is easy:
 $url = 'http://example.com';
 $fetch = new fetch($url);
 $fetch->setTimeout(5); // don't wait around forever
-$fetch->setFields(array('foo' => 'bar')); // pass in as many vars as you want
+
+// pass in as many vars as you want, don't worry, they'll be encoded for you...
+$fetch->setFields(array('foo' => 'bar'));
 
 $response = $fetch->get(); // $response is a fetch_response object instance
 </pre>
@@ -25,6 +27,7 @@ $fetch = new fetch($url);
 $fetch->setPath($save_path);
 
 $response = $fetch->get(); // $response is a fetch_response object instance
+echo $response->getPath(); // echo the path the file was saved to
 </pre>
 
 h3. want to make your curl request in the background?

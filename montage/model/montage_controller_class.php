@@ -26,7 +26,7 @@ abstract class montage_controller extends montage_base {
   abstract public function handleIndex();
   
   /**
-   *  after calling the get* method, run this method
+   *  after calling the handle* method, this method is run
    */
   abstract public function stop();
 

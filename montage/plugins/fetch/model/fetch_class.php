@@ -9,15 +9,16 @@
  *    - {@link http://www.useragentstring.com/} is a great place for user agent strings  
  *  
  *  ideas:
- *    - for PUT calls, right now you have to specify an infile, but it would be cool if you 
- *      could do array($url,path|contents) since already, array($url,$str) does a raw post, why not
- *      afford PUT the same luxury?   
+ *    - putPath() when I finally get around to adding this method, it would be cool if
+ *      you specify a folder it will PUT every file in the folder, if a file then it
+ *      will just PUT that one file    
  *  
  *  bugs:
  *    - possible bug: when instantiating and using this class in a for loop of 10,000
  *      iterations the headers will eventually stop being retrieved, this could be a bug
  *      in this class, or my test server is just getting overwhelmed with that many request
- *      hitting it so fast    
+ *      hitting it so fast, or there are too many resources getting opened. 
+ *      Putting a usleep(1); in the for loop seems to fix it though  
  *  
  *  @version 2.1
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -96,7 +97,7 @@ class fetch extends fetch_base {
     $curl_handler = curl_init();
     
     // casting to a string turns the resource into a string like: "Resource id #12" that is unique... 
-    $curl_key = (string)$curl_handler;
+    $curl_key = $this->getCurlKey($curl_handler);
     $this->field_map[$curl_key] = array();
     
     // ignore certificates on an https request...
@@ -134,6 +135,10 @@ class fetch extends fetch_base {
     
       // if there is a file then use the normal put, else user custom request set to 'PUT'
       // since the curl put requires a file
+      
+      ///curl_setopt($curl_handler, CURLOPT_PUT, 1);
+      ///curl_setopt($curl_handler, CURLOPT_INFILE, ...);
+      ///curl_setopt($curl_handler, CURLOPT_INFILESIZE, ...);
     
     }else if($this->isMethod(self::METHOD_HEAD)){
     
@@ -176,23 +181,21 @@ class fetch extends fetch_base {
     }//if
     
     // return request headers...
-    // http://stackoverflow.com/questions/866946/how-can-i-see-the-request-headers-made-by-curl-when-sending-a-request-to-the-serv
+    // http://stackoverflow.com/questions/866946/
     curl_setopt($curl_handler, CURLINFO_HEADER_OUT, true);
     
+    curl_setopt($curl_handler, CURLOPT_HEADERFUNCTION,array($this,'appendHeader'));
+    $this->field_map[$curl_key]['headers'] = array();
+    
     if(empty($this->field_map['response_path'])){
-      
-      // return response headers...
-      curl_setopt($curl_handler, CURLOPT_HEADER, true);
       
       // return the result...
       curl_setopt($curl_handler, CURLOPT_RETURNTRANSFER, true);
       
     }else{
-  
-      // we can't get response headers if we are writing to a file because it will write them to the top
-      // of the file...
-      curl_setopt($curl_handler, CURLOPT_HEADER, false);
-  
+
+      // we're writing to a file...
+
       $this->field_map[$curl_key]['response_handler'] = fopen($this->field_map['response_path'], 'wb');
   
       if($this->field_map[$curl_key]['response_handler'] === false){
@@ -295,8 +298,13 @@ class fetch extends fetch_base {
           // get the response to pass to the response object...
           $response = curl_multi_getcontent($done_map['handle']);
           $response_info = curl_getinfo($done_map['handle']);
+          $curl_key = $this->getCurlKey($done_map['handle']);
           
-          $ret_instance = new fetch_response($response,$response_info);
+          $ret_instance = new fetch_response(
+            $response,
+            $response_info,
+            $this->field_map[$curl_key]['headers']
+          );
           
           // make the response headers available...
           if(isset($response_info['request_header'])){
@@ -305,12 +313,8 @@ class fetch extends fetch_base {
           
             // the first header is the request...
             $this->field_map['request'] = $this->field_map['headers']['http'];
-            unset($this->field_map['headers']['http']);
           
           }//if
-          
-          // get the key...
-          $curl_key = (string)$done_map['handle'];
           
           // if we were reading into a file, close the file pointer for this particular handle...
           if(isset($this->field_map[$curl_key]['response_handler'])){
@@ -571,6 +575,58 @@ class fetch extends fetch_base {
     if(empty($fields)){ return ''; }//if
   
     return is_array($fields) ? http_build_query($fields,'',$separator) : urlencode($fields);
+    
+  }//method
+  
+  /**
+   *  casting to a string turns the resource into a string like: "Resource id #12" that is unique.
+   *  
+   *  having a unique string to identify a certain resource is handy for when your juggling
+   *  multiple curl handlers         
+   *  
+   *  @param  resource  $curl_handler
+   *  @return string
+   */
+  protected function getCurlKey($curl_handler){
+    return (string)$curl_handler;
+  }//method
+  
+  /**
+   *  append the response header to the $curl_handler's unique key
+   *  
+   *  @param  resource  $curl_handler the curl instance handling the request
+   *  @param  string  $header the response header         
+   *  @return integer the total number of bytes seen
+   */
+  protected function appendHeader($curl_handler,$header){
+    
+    $curl_key = $this->getCurlKey($curl_handler);
+    
+    list($header_name,$header_val) = $this->parseHeader($header);
+    
+    if(empty($header_name)){
+    
+      // this is the method, code, and message...
+      if(empty($this->field_map[$curl_key]['headers'])){
+        $this->field_map[$curl_key]['headers']['http'] = trim($header);
+      }//if
+    
+    }else{
+      
+      if(isset($this->field_map[$curl_key]['headers'][$header_name])){
+            
+        $this->field_map[$curl_key]['headers'][$header_name] = (array)$this->field_map[$curl_key]['headers'][$header_name];
+        $this->field_map[$curl_key]['headers'][$header_name][] = $header_val;
+        
+      }else{
+      
+        $this->field_map[$curl_key]['headers'][$header_name] = $header_val;
+      
+      }//if/else
+      
+    }//if/else
+
+    return mb_strlen($header);
     
   }//method
   

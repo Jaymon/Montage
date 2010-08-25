@@ -28,17 +28,15 @@ class fetch_response extends fetch_base {
   /**
    *  initialize the instance
    *  
-   *  @param  string  $response the raw response that will be split into header/body
+   *  @param  string  $body the url's body (ie, response text)
    *  @param  array $response_info  all the curl info that was accumaleted in a key/val map
+   *  @param  array $headers  the parsed headers (in key/val format) of the collected response headers   
    */
-  final public function __construct($response,$response_info){
+  final public function __construct($body,$response_info,$headers){
   
     $header_size = $response_info['header_size'];
-        
-    // separate the headers from the data...
-    // the 4 is the \r\n\r\n that separates the headers from the data in the HTTP spec...
-    $headers = mb_substr($response, 0, ($header_size - 4));
-    $this->field_map['headers'] = $this->parseHeaders($headers);
+    
+    $this->field_map['headers'] = $headers;
     
     // the first header is the response...
     $this->field_map['status'] = $this->field_map['headers']['http'];
@@ -46,10 +44,8 @@ class fetch_response extends fetch_base {
     $response_list = explode(' ',$this->field_map['headers']['http']);
     $this->field_map['version'] = empty($response_list[0]) ? '' : $response_list[0];
     $this->field_map['msg'] = empty($response_list[2]) ? '' : $response_list[2];
-    unset($this->field_map['headers']['http']);
     
-    // trim the headers off the body...
-    $this->field_map['body'] = mb_substr($response, $header_size);
+    $this->field_map['body'] = $body;
     
     // set the http code...
     $this->field_map['code'] = (int)$response_info['http_code'];
@@ -62,7 +58,7 @@ class fetch_response extends fetch_base {
   }//method
   
   /**
-   *  will be true if the request failed, ie, the http status code was usually >400
+   *  will be true if the request failed, ie, the http status code was usually >= 400
    *
    *  @return boolean   
    */

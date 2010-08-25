@@ -88,17 +88,16 @@ final class montage_core extends montage_base_static {
   static private $parent_class_map = array();
   
   /**
-   *  start the wizard
+   *  start montage's core, basically, everything that makes montage go
    *  
    *  @param  string  $controller the requested controller name
    *  @param  string  $environment  the env that will be used
    *  @param  boolean if debug is on or not
    *  @param  string  $charset
    *  @param  string  $timezone
-   *  @param  string  $framework_path corresponds to MONTAGE_PATH constant
-   *  @param  string  $app_path corresponds to MONTAGE_APP_PATH constant        
+   *  @param  array $path_map contains key/val pairs of all the paths the core needs
    */
-  static function start($controller,$environment,$debug,$charset,$timezone,$framework_path,$app_path){
+  static function start($controller,$environment,$debug,$charset,$timezone,$path_map){
   
     // profile...
     if($debug){ montage_profile::start(__METHOD__); }//if
@@ -113,15 +112,22 @@ final class montage_core extends montage_base_static {
     if(empty($environment)){
       throw new UnexpectedValueException('$environment cannot be empty');
     }//if
-    if(empty($framework_path)){
-      throw new UnexpectedValueException('$framework_path cannot be empty');
+    if(empty($path_map['montage_path'])){
+      throw new UnexpectedValueException('montage_path cannot be empty');
     }//if
-    if(empty($app_path)){
-      throw new UnexpectedValueException('$app_path cannot be empty');
+    if(empty($path_map['montage_app_path'])){
+      throw new UnexpectedValueException('montage_app_path cannot be empty');
+    }//if
+    if(empty($path_map['montage_cache_path'])){
+      throw new UnexpectedValueException('montage_cache_path cannot be empty');
     }//if
 
     self::$is_started = true;
     $event_warning_list = array();
+  
+    // so I don't have to go change everything...
+    $framework_path = $path_map['montage_path'];
+    $app_path = $path_map['montage_app_path'];
   
     // set the default autoloader...
     self::appendClassLoader(array(__CLASS__,'load'));
@@ -133,7 +139,7 @@ final class montage_core extends montage_base_static {
     // save the important paths...
     montage_path::setFramework($framework_path);
     montage_path::setApp($app_path);
-    montage_path::setCache(montage_path::get($app_path,'cache'));
+    montage_path::setCache($path_map['montage_cache_path']);
     montage_cache::setPath(montage_path::getCache());
     
     $loaded_from_cache = self::loadCore();

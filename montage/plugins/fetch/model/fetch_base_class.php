@@ -70,33 +70,13 @@ abstract class fetch_base {
     // now parse the headers...
     foreach(array_slice($header_list,1) as $header){
     
-      $header_parts = explode(':',$header);
-    
-      $header_name = $header_val = '';  
-      if(isset($header_parts[1])){
-      
-        $header_name = $header_parts[0];
-        $header_val = $header_parts[1];
-      
-      }else{
-      
-        if(!empty($header_parts[1])){
-        
-          $header_name = 'other';
-          $header_val = $header_parts[0];
-          
-        }//if
-      
-      }//if/else
+      list($header_name,$header_val) = $this->parseHeader($header);
       
       if(!empty($header_name)){
         
         if(isset($ret_map[$header_name])){
           
-          if(!is_array($ret_map[$header_name])){
-            $ret_map[$header_name] = array($ret_map[$header_name]);
-          }//if
-          
+          $ret_map[$header_name] = (array)$ret_map[$header_name];
           $ret_map[$header_name][] = $header_val;
           
         }else{
@@ -111,6 +91,37 @@ abstract class fetch_base {
   
     return $ret_map;
   
+  }//method
+
+  /**
+   *  parses the header into a name and a value
+   *
+   *  @param  string  $header the full header (eg, name: val)
+   *  @return array array($header_name,$header_val)   
+   */
+  protected function parseHeader($header){
+    
+    $header_parts = explode(':',$header);
+  
+    $header_name = $header_val = '';  
+    if(isset($header_parts[1])){
+    
+      $header_name = trim($header_parts[0]);
+      $header_val = trim($header_parts[1]);
+    
+    }else{
+    
+      if(!empty($header_parts[1])){
+      
+        $header_name = 'other';
+        $header_val = trim($header_parts[0]);
+        
+      }//if
+    
+    }//if/else
+    
+    return array($header_name,$header_val);
+    
   }//method
   
 }//class
