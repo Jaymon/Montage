@@ -9,7 +9,7 @@
  *  @package montage
  *  @subpackage help  
  ******************************************************************************/
-class montage_html {
+class montage_html extends montage_helper {
 
   /**
    *  return an <a href...>$body</a> tag
@@ -20,7 +20,8 @@ class montage_html {
   static function getLink($url,$body,$attr_map = array()){
   
     $attr_map['href'] = $url;
-    return self::getTag('a',$body,$attr_map);
+    ///return self::getTag('a',$body,$attr_map);
+    return parent::call(__CLASS__,'getTag',array('a',$body,$attr_map));
   
   }//method
   
@@ -46,7 +47,8 @@ class montage_html {
     
     if(!empty($attr_map)){
       $format_str = '<%s>%s</%s>';
-      $format_vars[] = self::getAttributes($attr_map);
+      ///$format_vars[] = self::getAttributes($attr_map);
+      $format_vars[] = parent::call(__CLASS__,'getAttributes',array($attr_map));
     }//if
   
     $format_vars[] = $body;
@@ -75,13 +77,15 @@ class montage_html {
     // canary...
     if(empty($input)){ return $input; }//if
     
-    $cb = new montage_html_cb();
+    ///$cb = new montage_html_cb();
+    $cb = montage::getFactory()->getBestInstance('montage_html_cb');
     
     $param_map = array();
     $param_map['tag_callback'] = $tag_callback;
     $param_map['body_callback'] = $body_callback;
     
-    return self::getBetweenTags($input,array($cb,'getAutoLinked'),$param_map);
+    ///return self::getBetweenTags($input,array($cb,'getAutoLinked'),$param_map);
+    return parent::call(__CLASS__,'getBetweenTags',array($input,array($cb,'getAutoLinked'),$param_map));
   
   }//method
   

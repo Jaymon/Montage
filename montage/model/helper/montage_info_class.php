@@ -9,7 +9,7 @@
  *  @package montage
  *  @subpackage help 
  ******************************************************************************/
-class montage_info {
+class montage_info extends montage_helper {
 
   /**
    *  generate a backtrace list

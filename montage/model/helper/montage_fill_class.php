@@ -31,9 +31,15 @@ class montage_fill extends montage_base_static {
     $paragraphs[] = 'Mauris mi tortor, elementum ut, mattis eget, aliquam a, tellus. Suspendisse porttitor orci. Donec rutrum diam non est. Duis ac nunc. Cras sollicitudin aliquet mi. Cras in pede. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia Curae; Nam vehicula est at metus. Suspendisse sapien. Nunc lobortis tortor sed purus hendrerit pellentesque. Nunc laoreet. Morbi pharetra. Integer cursus molestie turpis. Nam cursus sodales sem. Maecenas non lacus. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Nam vel nibh eu nulla blandit facilisis. Sed varius turpis ac neque. Curabitur vel erat. Morbi sed purus id erat tincidunt ullamcorper.';
     $keys = array_rand($paragraphs,$count);
     if(is_array($keys)){
+    
+      $ret_lines = array();
+      
       foreach($keys as $key){
-        $ret_str .= $paragraphs[$key].PHP_EOL.PHP_EOL;
+        $ret_lines[] = $paragraphs[$key];
       }//foreach
+      
+      $ret_str = join(PHP_EOL.PHP_EOL,$ret_lines);
+      
     }else{
       $ret_str = $paragraphs[$keys];
     }//if/else

@@ -4,6 +4,8 @@ _Build your website through the power of the montage._
 
 Montage is an ultra-lightweight MVC framework that does not try to be all things to all people so it can avoid the heft of other frameworks. The goal is to make Montage ultra-flexible yet still super-lightweight.
 
+Montage's aim is to reach that balance of being just magical enough that it's extremely useful while not being so magical you have no idea what's going on or how anything works.
+
 h2. Getting Started
 
 h3. Terminology

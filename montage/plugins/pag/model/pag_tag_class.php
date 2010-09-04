@@ -8,7 +8,6 @@
  *  @since 8-8-10
  *  @package parse
  ******************************************************************************/
-
 class pag_tag {
 
   protected $field_map = array();
@@ -81,6 +80,34 @@ class pag_tag {
 
   public function hasAttr($name){
     return !empty($this->field_map['attr'][$name]);
+  }//method
+  
+  /**
+   *  return true if the internal attribute value at $name matches $val
+   *  
+   *  @since  8-28-10   
+   *  @param  string  $name the name of the attribute
+   *  @param  mixed $val  the value to match against
+   *  @param  boolean $case_sensitive true if case should be compared, false otherwise         
+   *  @return boolean
+   */
+  public function isAttr($name,$val,$case_sensitive = false){
+  
+    $ret_bool = false;
+  
+    $this_val = $this->getAttr($name,null);
+    if($this_val !== null){
+    
+      if($case_sensitive){
+        $ret_bool = (string)$this_val === (string)$val;
+      }else{
+        $ret_bool = mb_strtoupper($this_val) === mb_strtoupper($val);
+      }//if/else
+    
+    }//if
+  
+    return $ret_bool;
+    
   }//method
 
 }//class

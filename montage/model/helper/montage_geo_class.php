@@ -9,7 +9,7 @@
  *  @package montage
  *  @subpackage help 
  ******************************************************************************/
-class montage_geo {
+class montage_geo extends montage_helper {
 
   /**
    *  get a bounding box for a given $point using $miles
@@ -31,7 +31,8 @@ class montage_geo {
     // canary...
     if(empty($miles)){ throw UnexpectedValueException('$miles should not be empty'); }//if
   
-    list($latitude,$longitude) = self::assurePoint($point);
+    ///list($latitude,$longitude) = self::assurePoint($point);
+    list($latitude,$longitude) = parent::call(__CLASS__,'assurePoint',array($point));
   
     $latitude_miles = 69; // 1 degree of latitude, this is approximate but it's close enough
     $latitude_bounding = ($miles / $latitude_miles);
@@ -80,7 +81,8 @@ class montage_geo {
       
     }else{
     
-      $latitude = self::assureCoordinate($latitude);
+      ///$latitude = self::assureCoordinate($latitude);
+      $latitude = parent::call(__CLASS__,'assureCoordinate',array($latitude));
     
       if(($latitude >= 90.0) || ($latitude <= -90.0)){
         throw new UnexpectedValueException('latitude of $point was not between 90 and -90 degrees');
@@ -99,7 +101,8 @@ class montage_geo {
     
     }else{
     
-      $longitude = self::assureCoordinate($longitude);
+      ///$longitude = self::assureCoordinate($longitude);
+      $longitude = parent::call(__CLASS__,'assureCoordinate',array($longitude));
     
       if(($longitude >= 180.0) || ($longitude <= -180.0)){
         throw new UnexpectedValueException('longitude of $point was not between 180 and -180 degrees');

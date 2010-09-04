@@ -73,7 +73,7 @@ try{
 
   $options_map = montage_cli::parseArgv(montage_cli::getArgv(),$required_argv);
 
-  $path = montage_path::get($options_map['path'],$options_map['app']);
+  $path = montage_path::format(montage_path::get($options_map['path'],$options_map['app']));
 
   // add any passed in include paths, this will allow customized create scripts...
   if(!empty($options_map['include-path'])){

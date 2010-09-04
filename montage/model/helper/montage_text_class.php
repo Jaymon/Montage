@@ -9,7 +9,7 @@
  *  @package montage 
  *  @subpackage help  
  ******************************************************************************/
-class montage_text {
+class montage_text extends montage_helper {
 
   /**
    *  return true if a string is binary
@@ -182,7 +182,8 @@ class montage_text {
       if(empty($str)){ return ''; }//if
       
       $orig_size = mb_strlen($str);
-      $ret_str = self::getWordSubStr($str,$start,$len);
+      ///$ret_str = self::getWordSubStr($str,$start,$len);
+      $ret_str = parent::call(__CLASS__,'getWordSubStr',array($str,$start,$len));
       
       if(mb_strlen($ret_str) < $orig_size){
         $ret_str .= '...'; ///'…';

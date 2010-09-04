@@ -11,6 +11,6 @@ class <?php echo $this->getField('name',''); ?> extends montage_start {
   /**
    *  if you want to do some closing down stuff, put it here      
    */
-  protected function stop(){}//method
+  public function stop(){}//method
 
 }//class

@@ -6,7 +6,7 @@ class <?php echo $this->getField('name',''); ?> extends montage_controller {
   /**
    *  controller specific initializationcode goes here
    */
-  function start(){}//method
+  protected function start(){}//method
   
   /**
    *  this is the default controller method for this controller
@@ -16,13 +16,13 @@ class <?php echo $this->getField('name',''); ?> extends montage_controller {
    *  @return boolean like all controller methods if true, then the template will be rendered, 
    *                  if false, then montage::getResponse()->get() will be used instead of the template
    */
-  function handleIndex(){
+  public function handleIndex(){
     echo 'Hello World';
   }//method
   
   /**
    *  after calling the handle* method, this method is run
    */
-  function stop(){}//method
+  public function stop(){}//method
 
 }//class
