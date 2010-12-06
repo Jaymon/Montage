@@ -3,6 +3,8 @@
 /**
  *  hold lots of html helper functions
  *  
+ *  this class might be better named: montage_tag
+ *  
  *  @version 0.1
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 2-23-10

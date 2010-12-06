@@ -33,6 +33,33 @@
  ******************************************************************************/
 final class montage_factory extends montage_base_static {
 
+  public static function callBestMethod($class_name,$method,$args = array()){
+  
+    // canary...
+    if(empty($class_name)){
+      throw new UnexpectedValueException('$class_name was empty');
+    }else{
+      $class_name = montage_core::getBestClassName($class_name);
+      if(empty($class_name)){ 
+        throw new InvalidArgumentException(
+          sprintf('No class (%s) exists',$class_name)
+        );
+      }//if
+    }//if/else
+    if(empty($method)){ throw new UnexpectedValueException('$method was empty'); }//if
+    
+    $rclass = new ReflectionClass($class_name);
+    $rmethod = $rclass->getMethod($method);
+    
+    // @todo: find out what $object means
+    return $rmethod->invokeArgs($object,$args);
+  
+    return empty($args)
+      ? call_user_func($callback)
+      : call_user_func_array($callback,$args);
+  
+  }//method
+
   /**
    *  create and return an instance of $class_name
    *      

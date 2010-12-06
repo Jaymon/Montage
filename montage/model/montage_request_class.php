@@ -57,7 +57,7 @@ class montage_request extends montage_base {
             
           }else{
           
-            $path_list = array_values(array_filter(preg_split('#\\/#u',$arg_map[0])));
+            $path_list = array_values(array_filter(explode('/',str_replace('\\','/',$arg_map[0]))));
             $arg_map = array_slice($arg_map,1); // strip off the controller path
             
           }//if
@@ -90,7 +90,7 @@ class montage_request extends montage_base {
       // we don't care about the GET vars, so ignore them...
       $request_uri = $this->getServerField('REQUEST_URI');
       $request_uri = explode('?',$request_uri);
-      $request_path_list = preg_split('#\\/#u',$request_uri[0]);
+      $request_path_list = explode('/',str_replace('\\','/',$request_uri[0]));
       
       // find the difference between ROOT and REQUEST and that will decide the controller::method to use...
       $path_list = montage_path::getIntersection($request_path_list,$root_path_list);
@@ -115,7 +115,7 @@ class montage_request extends montage_base {
       // see if we have any base path on top of the host...
       $base_path = $this->getServerField(array('SCRIPT_NAME','PHP_SELF'),'');
       if(!empty($base_path)){
-        $base_path = join('/',array_slice(preg_split('#\\/#u',$base_path),0,-1));
+        $base_path = join('/',array_slice(explode('/',str_replace('\\','/',$base_path)),0,-1));
       }//if
       
       $this->setBase(

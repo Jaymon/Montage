@@ -664,7 +664,20 @@ class montage_url extends montage_base {
     $ret_str .= empty($base_bits['path']) ? '' : $base_bits['path'];
     $ret_str .= (mb_substr($ret_str,-1) == self::URL_SEP) ? '' : self::URL_SEP;
     
-    $query_str = empty($base_bits['query']) ? '' : '?'.$base_bits['query'];
+    ///$query_str = empty($base_bits['query']) ? '' : '?'.$base_bits['query'];
+    if(!empty($base_bits['query'])){
+    
+      $query_map = array();
+      parse_str(htmlspecialchars_decode($base_bits['query']),$query_map);
+    
+      if(empty($field_map)){
+        $field_map = $query_map;
+      }else{
+        // field map dominates the original query fields...
+        $field_map = array_merge($query_map,$field_map);
+      }//if/else
+    
+    }//if
     
     // add mod_rewrite url vars to the end of the url if there are any...
     if(!empty($path_list)){
@@ -698,7 +711,7 @@ class montage_url extends montage_base {
     
     }//if
     
-    $ret_str .= $query_str; // add any query string back on
+    ///$ret_str .= $query_str; // add any query string back on
     
     // add any get vars to the url...
     $ret_str = $this->append($ret_str,$field_map);
