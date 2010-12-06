@@ -12,6 +12,74 @@
 class montage_text extends montage_helper {
 
   /**
+   *  turns $val into something that could be used as a path bit
+   *  
+   *  basically, take some $val and turn it into a path bit
+   *  
+   *  @example
+   *    $val = 'This is a String WITH spaces and a /';
+   *    self::convert($val); // -> 'this_string_spaces'           
+   *      
+   *  @since  2-4-10   
+   *  @param  string|array  $val  a normal string to be converted into a path string
+   *  @param  integer $char_limit max chars $input can be
+   *  @param  string  $space_delim  what you want to use for spaces (usually dash or underscore)            
+   *  @return string|array  path safe string
+   */
+  static public function convert($val,$char_limit = 0,$space_delim = '_'){
+  
+    // canary...
+    if(empty($val)){ return is_array($val) ? array() : ''; }//if
+    
+    $ret_list = array();
+    
+    $ret_as_list = false;
+    if(is_array($val)){
+      $ret_as_list = true;
+    }else{
+      $val = array($val);
+    }//if/else
+  
+    foreach($val as $v){
+    
+      // get rid of whitespace fat...
+      $ret_str = trim($v);
+      
+      // replace anything that isn't a space or word char with nothing...
+      $ret_str = preg_replace('/[^\w \-]/','',$ret_str);
+      
+      // make everything lower case...
+      $ret_str = mb_strtolower($ret_str);
+      
+      // get rid of stop words and join the string with the delim...
+      $ret_str = join($space_delim,array_filter(montage_text::killStopWords($ret_str)));
+    
+      // impose a character limit if there is one...
+      if($char_limit > 0){
+      
+        $ret_str = montage_text::getWordSubStr($ret_str,0,$char_limit);
+        
+        /* since we're using getWordSubStr instead of mb_substr this shouldn't be needed anymore
+        // make sure there isn't something dumb on the end like a "_", or just contains ___...
+        $regex_space_delim = preg_quote($space_delim);
+        $ret_str = preg_replace(
+          sprintf('/(?:^[%s]+)|(?:[%s]+$)/',$regex_space_delim,$regex_space_delim)
+          '',
+          $ret_str
+        );
+        */
+        
+      }//if
+      
+      $ret_list[] = $ret_str;
+      
+    }//foreach
+    
+    return $ret_as_list ? $ret_list : $ret_list[0];
+  
+  }//method
+
+  /**
    *  return true if a string is binary
    *   
    *  this method is a cross between http://bytes.com/topic/php/answers/432633-how-tell-if-file-binary

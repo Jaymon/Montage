@@ -120,6 +120,21 @@ if(MONTAGE_DEBUG){
 
 try{
   
+  /* @todo
+  1 - create a montage_cache instance
+  2 - create a montage_class instance
+  3 - have montage_class load the core
+  4 - create a configuration instance and populate it
+  5 - pass the configuration into the core instance to start the core
+    a - the core instance, after loading all the path can set up the dependancy injection container (montage_service)
+        so that when something like montage::getRequest() gets called it can create an instance and
+        use that instance to load the request
+  6 - set montage_cache and montage_class into the montage Dependancy injection container
+  */ 
+  
+  
+  
+  
   // start and configure the core (this does all the heavy lifting like find classes and
   // configure the autoloader and run the defined montage_start classes)...
   montage_core::start(
