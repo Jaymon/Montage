@@ -29,10 +29,99 @@ class montage_path {
   public function __toString(){ return $this->path; }//method
   
   public function canWrite(){ return is_writable($this->path); }//method
+  public function canRead(){ return is_readable($this->path); }//method
   
   /**
-   *  make sure a path exists and is writable, also make sure it doesn't end with
-   *  a directory separator
+   *  get immediate children in the given path
+   *  
+   *  children are defined as all the contents in the given path 1 level deep (ie, the contents
+   *  of folders inside the path won't be returned, just the folder names)         
+   *
+   *  @since  1-17-11
+   *  @param  string  $regex  if you only want certain files/folders to be returned, you can match on the regex
+   *  @return array array with files and folders keys set to found/matching contents      
+   */
+  public function getChildren($regex = ''){
+  
+    $ret_map = array('files' => array(),'folders' => array());
+  
+    ///$iterator = new DirectoryIterator($this->path);
+    $iterator = new FilesystemIterator(
+      $this->path,
+      FilesystemIterator::CURRENT_AS_FILEINFO | FilesystemIterator::KEY_AS_PATHNAME | FilesystemIterator::SKIP_DOTS
+    );
+    if(!empty($regex)){
+    
+      $iterator = new RegexIterator($iterator,$regex,RegexIterator::MATCH);
+    
+    }//if/else
+  
+    foreach($iterator as $key => $val){
+    
+      if($val->isFile()){
+      
+        $ret_map['files'][] = $key;
+      
+      }else{
+      
+        $ret_map['folders'][] = $key;
+      
+      }//if/else
+    
+    }//foreach
+  
+    return $ret_map;
+  
+  }//method
+  
+  /**
+   *  get all contents inside the given path
+   *  
+   *  descendants are the contents of all folders and files found under the path         
+   *
+   *  @since  1-17-11
+   *  @param  string  $regex  if you only want certain files/folders to be returned, you can match on the regex
+   *  @return array array with files and folders keys set to found/matching contents      
+   */
+  public function getDescendants($regex = ''){
+  
+    $ret_map = array('files' => array(),'folders' => array());
+  
+    $iterator = new RecursiveIteratorIterator(
+      new RecursiveDirectoryIterator(
+        $this->path,
+        FilesystemIterator::CURRENT_AS_FILEINFO | FilesystemIterator::KEY_AS_PATHNAME | FilesystemIterator::SKIP_DOTS
+      ),
+      RecursiveIteratorIterator::SELF_FIRST
+    );
+    if(!empty($regex)){
+    
+      $iterator = new RegexIterator($iterator,$regex,RegexIterator::MATCH);
+    
+    }//if/else
+  
+    foreach($iterator as $key => $val){
+    
+      ///out::e($key);
+    
+      if($val->isFile()){
+      
+        $ret_map['files'][] = $key;
+      
+      }else{
+      
+        $ret_map['folders'][] = $key;
+      
+      }//if/else
+    
+    }//foreach
+    
+    return $ret_map;
+  
+  }//method
+  
+  /**
+   *  make sure a path exists and it doesn't end with a directory separator
    *  
    *  @param  string  $path
    *  @return string  the $path
@@ -63,7 +152,7 @@ class montage_path {
   }//method
   
   /**
-   *  format $path to a standard format so we can guarrantee that all paths are formatted
+   *  format $path to a standard format so we can guarantee that all paths are formatted
    *  the same
    *  
    *  @since  4-20-10   
@@ -104,8 +193,9 @@ class montage_path {
       if(is_array($path_bit)){
 
         foreach($path_bit as $pb){
+          $pb = trim($pb,'\\/');
           if(!empty($pb) || !ctype_space($pb)){
-            $ret_list[] = trim($pb,'\\/');
+            $ret_list[] = $pb;
           }//if
         }//foreach
         
@@ -122,88 +212,6 @@ class montage_path {
     
     return join(DIRECTORY_SEPARATOR,$ret_list);
     
-  }//method
-  
-  /**
-   *  get all the subdirectories
-   *  
-   *  @param  boolean $go_deep  if true, then get all the sub directories recursively
-   *  @return array an array of sub-directories, 1 level deep if $go_deep = false, otherwise
-   *                all directories
-   */
-  public function getSubDirs($go_deep = true){
-  
-    // canary...
-    if(!is_dir($this->path)){
-      throw new RuntimeException(
-        sprintf('"%s" is not a directory',$this->path)
-      );
-    }//if
-    
-    return $this->_getSubDirs($this->path,$go_deep);
-      
-  }//method
-  
-  /**
-   *  recursively get all the child directories in a given directory
-   *  
-   *  @param  string  $path a valid directory path
-   *  @param  boolean $go_deep  if true, then get all the directories recursively
-   *  @return array an array of sub-directories, 1 level deep if $go_deep = false, otherwise
-   *                all directories   
-   */
-  protected function _getSubDirs($path,$go_deep){
-  
-    $ret_list = array();
-  
-    $path_regex = join(DIRECTORY_SEPARATOR,array($path,'*'));
-    $list = glob($path_regex,GLOB_ONLYDIR);
-    
-    if($go_deep){
-    
-      if(!empty($list)){
-        
-        foreach($list as $path){
-          $sub_list = $this->_getSubDirs($path,$go_deep);
-          array_unshift($sub_list,$path);
-          $ret_list = array_merge($ret_list,$sub_list);
-        }//foreach
-        
-      }//if
-      
-    }//if
-    
-    return $ret_list;
-  
-  }//method
-  
-  public function getFiles($regex = ''){
-
-    $ret_list = array();
-
-    $file_iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($this->path));
-    foreach($file_iterator as $file){
-      
-      $filepath = $file->getRealPath();
-    
-      if(empty($regex)){
-      
-        $ret_list[] = $filepath;
-        
-      }else{
-      
-        if(preg_match($regex,$filepath)){
-      
-          $ret_list[] = $filepath;
-          
-        }//if
-          
-      }//if/else
-      
-    }//foreach
-    
-    return $ret_list;
-
   }//method
 
   /**

@@ -29,6 +29,10 @@ class montage_path_Test extends montage_test_base {
       'in' => array($base,array('montage_path','foo'),'1'),
       'path_str' => join(DIRECTORY_SEPARATOR,array($base,'montage_path','foo','1'))
     );
+    $test_list[] = array(
+      'in' => array(new montage_path($base),array('montage_path','foo'),'1'),
+      'path_str' => join(DIRECTORY_SEPARATOR,array($base,'montage_path','foo','1'))
+    );
     
     foreach($test_list as $test_map){
     
@@ -40,6 +44,71 @@ class montage_path_Test extends montage_test_base {
     }//foreach
   
   }//method
+  
+  public function testChildren(){
+  
+    $base = $this->getClassFixtureBase();
+    $instance = new montage_path($base,'montage_path');
+    
+    $test_list = array();
+    $test_list[] = array(
+      'in' => '',
+      'out' => array(
+        'files' => array(
+          join(DIRECTORY_SEPARATOR,array($instance->__toString(),'che.txt'))
+        ),
+        'folders' => array(
+          join(DIRECTORY_SEPARATOR,array($instance->__toString(),'bar')),
+          join(DIRECTORY_SEPARATOR,array($instance->__toString(),'foo'))
+        )
+      )
+    );
+    $test_list[] = array(
+      'in' => '#che#',
+      'out' => array(
+        'files' => array(
+          join(DIRECTORY_SEPARATOR,array($instance->__toString(),'che.txt'))
+        ),
+        'folders' => array()
+      )
+    );
+    $test_list[] = array(
+      'in' => '#montage_path#',
+      'out' => array(
+        'files' => array(
+          join(DIRECTORY_SEPARATOR,array($instance->__toString(),'che.txt'))
+        ),
+        'folders' => array(
+          join(DIRECTORY_SEPARATOR,array($instance->__toString(),'bar')),
+          join(DIRECTORY_SEPARATOR,array($instance->__toString(),'foo'))
+        )
+      )
+    );
+    
+    foreach($test_list as $test_map){
+    
+      $actual = call_user_func(array($instance,'getFiles'),$test_map['in']);
+      $this->assertEquals($test_map['out'],$actual);
+    
+    }//foreach
+  
+    return;
+    
+    
+    $actual = $instance->getSubDirs();
+    $expected = array(
+      join(DIRECTORY_SEPARATOR,array($instance->__toString(),'bar')),
+      join(DIRECTORY_SEPARATOR,array($instance->__toString(),'bar','1')),
+      join(DIRECTORY_SEPARATOR,array($instance->__toString(),'bar','2')),
+      join(DIRECTORY_SEPARATOR,array($instance->__toString(),'bar','3')),
+      join(DIRECTORY_SEPARATOR,array($instance->__toString(),'foo')),
+      join(DIRECTORY_SEPARATOR,array($instance->__toString(),'foo','1'))
+    );
+    
+    $this->assertEquals($expected,$actual);
+  
+  }//method
+  
   
   public function testSubDir(){
   

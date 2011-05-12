@@ -6,7 +6,7 @@
  *  @version 0.3
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 2-22-10
- *  @package mingo 
+ *  @package montage
  ******************************************************************************/
 class montage_url extends montage_base {
 
@@ -579,7 +579,7 @@ class montage_url extends montage_base {
   }//method
   
   /**
-   *  given a $scheme, $$base, $path or combination of the 3 build a url
+   *  given a $scheme, $base, $path or combination of the 3 build a url
    *  
    *  @param  string  $scheme can be one of the SCHEME_* constants
    *  @param  string  $$base  usually something like example.com
