@@ -27,7 +27,62 @@ use out;
 
 class Classes {
 
+  /**
+   *  hold all the classes that could possibly be loadable
+   *  
+   *  the structure is: each key is a the class_key name, with path and name key/vals for
+   *  each class_key
+   *  
+   *  @var  array
+   */
+  protected $class_map = array();
+  
+  /**
+   *  map all the child classes to their parents
+   *  
+   *  this is handy for making sure a given class inherits what it should
+   *  
+   *  @var  array
+   */
+  protected $parent_class_map = array();
+
   public function __construct(){
+  
+  }//method
+
+  /**
+   *  format the class key
+   *  
+   *  the class key is basically the class name standardized, this is handy to make
+   *  classes case-insensitive (because they aren't in php)           
+   *  
+   *  @return string      
+   */
+  protected function normalizeClassName($class_name){
+  
+    // canary...
+    if(empty($class_name)){ throw new \InvalidArgumentException('$class_name was empty'); }//method
+  
+    // make sure that namespace names are normalized completely and all have the same (be it \\ or \)...
+    ///$class_name = preg_replace('#\\+#','\\',$class_name);
+  
+    // make the namespace fully qualified...
+    if($class_name[0] !== '\\'){ $class_name = sprintf('\\%s',$class_name); }//if
+  
+    return mb_strtoupper($class_name);
+    
+  }//method
+  
+  public function findInstance($class_name){
+  
+    out::e($class_name);
+  
+    $key = $this->normalizeClassName($class_name);
+    out::e($key);
+    
+    
+    out::e($this->class_map,$this->parent_class_map);
+  
   
   }//method
 
@@ -37,22 +92,36 @@ class Classes {
       $path = new Path($path);
     }//if
   
-    $ret_list = array();
+    $ret_count = 0;
   
-    $descendant_list = $path->getDescendants('#(?:\.php|\.inc)$#i');
+    $descendant_list = $path->getDescendants('#(?:php(?:\d+)?|inc|phtml)$#i');
     foreach($descendant_list['files'] as $file){
     
-      $this->findClasses(file_get_contents($file));
-    
+      $class_list = $this->findClasses(file_get_contents($file));
+      foreach($class_list as $class_map){
       
+        $key = $this->normalizeClassName($class_map['class']);
+        $class_map['last_modified'] = filemtime($file);
+        $this->class_map[$key] = $class_map;
+        
+        // add class as child to all its parent classes...
+        foreach(array_merge($class_map['extends'],$class_map['implements']) as $parent_class){
+          $parent_key = $this->normalizeClassName($parent_class);
+          if(!isset($this->parent_class_map[$parent_key])){
+            $this->parent_class_map[$parent_key] = array();
+          }//if
+        
+          $this->parent_class_map[$parent_key][] = $key;
+        
+        }//if
+        
+        $ret_count++;
       
-      ///out::e($tokens);
-      ///out::x();
+      }//foreach
     
     }//foreach
     
-    
-    out::e($ret_list);
+    return $ret_count;
   
   }//method
   
@@ -61,6 +130,7 @@ class Classes {
     // canary...
     if(empty($code)){ throw new \InvalidArgumentException('$code was empty'); }//method
   
+    $ret_list = array();
     $tokens = token_get_all($code);
     
     /*
@@ -69,7 +139,7 @@ class Classes {
     }//foreach
     out::e($tokens); // */
 
-    $namespace = '\\';
+    $namespace = '';
     $use_map = array();
     
     for($i = 0, $total_tokens = count($tokens); $i < $total_tokens ;$i++){
@@ -94,9 +164,11 @@ class Classes {
             break;
           
           case T_CLASS:
+          case T_INTERFACE:
 
             list($i,$map) = $this->getClass($i,$tokens,$namespace,$use_map);
-            out::e($map);
+            $ret_list[] = $map;
+
             break;
           
         }//switch
@@ -106,7 +178,8 @@ class Classes {
     }//foreach
   
     ///out::e($namespace,$use_map);
-  
+    
+    return $ret_list;
   
   }//method
   
@@ -253,7 +326,7 @@ class Classes {
     }//for
   
     $ret_map = array(
-      'class' => $class,
+      'class' => $this->getClassName($class,$namespace,$use_map),
       'extends' => $extends_list,
       'implements' => $implements_list
     );
@@ -336,7 +409,7 @@ class Classes {
     $namespace = '';
           
     // go until we hit the end of the line
-    for($i = $i + 1; $tokens[$i] !== ';' ;$i++){
+    for($i = $i + 1; ($tokens[$i] !== ';') && $tokens[$i] !== '{' ;$i++){
       $namespace .= is_string($tokens[$i]) ? $tokens[$i] : $tokens[$i][1];
     }//for
   

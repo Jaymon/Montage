@@ -4,8 +4,11 @@ use ReflectionClass;
 use Montage\Classes;
 
 require_once(join(DIRECTORY_SEPARATOR,array(__DIR__,'Test_class.php')));
-require_once('E:\Projects\sandbox\montage\_active\Montage\Path_class.php');
-require_once('E:\Projects\sandbox\montage\_active\Montage\Classes_class.php');
+require_once(join(DIRECTORY_SEPARATOR,array(__DIR__,'..','..','Path_class.php')));
+require_once(join(DIRECTORY_SEPARATOR,array(__DIR__,'..','..','Classes_class.php')));
+
+///require_once('E:\Projects\sandbox\montage\_active\Montage\Path_class.php');
+///require_once('E:\Projects\sandbox\montage\_active\Montage\Classes_class.php');
 require_once('out_class.php');
 
 class ClassesTest extends Test {
@@ -13,6 +16,28 @@ class ClassesTest extends Test {
   public function testFindClasses(){
   
     $c = new Classes();
+    
+    $c->findClasses(
+      '<'.'?php
+      
+      namespace foo {
+      
+        class foo extends \bang\boom\pow,che\bar {}
+        
+      }
+      
+      namespace bar {
+      
+        use foo;
+      
+        class bar implements \Serializable,\Countable {}
+      
+      }
+      
+      ?'.'>'
+    );
+    return;
+    
     
     $c->findClasses(
       '<'.'?php

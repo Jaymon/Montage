@@ -24,6 +24,7 @@ namespace Montage;
 
 use Montage\Path;
 use Montage\Classes;
+///use Montage\Request\RequestInterface;
 
 class Core {
 
@@ -31,15 +32,42 @@ class Core {
   
   protected $framework_path = '';
 
-  public function __construct($namespace,$debug_level,$app_path){
+  protected $classes = null;
+
+  protected $field_map = array();
+
+  public function __construct($env,$debug_level,$app_path){
   
     ///out::e($namespace,$debug_level,$app_path);
     
-    $this->app_path = $app_path;
-    $class = new Classes();
-    $class->addPath($this->getFrameworkPath());
-    $class->addPath($app_path);
+    $this->field_map['env'] = $env;
+    $this->field_map['debug_level'] = $debug_level;
     
+    $this->app_path = $app_path;
+    $this->classes = new Classes();
+    $this->classes->addPath($this->getFrameworkPath());
+    $this->classes->addPath($app_path);
+    
+  }//method
+
+  public function handle(){
+  
+    // start the Config classes...
+    $config_instance_map = array();
+    // findInstance() for getBestInstance()?
+    ///$config_instance_map[] = $this->classes->getInstance('Config\Config'); // global
+    ///$config_instance_map[] = $this->classes->getInstance(sprintf('Config\%s',$this->field_map['env'])); // environment
+  
+    $request = $this->classes->findInstance('Montage\Interfaces\Request');
+  
+    ///$forward = $this->classes->getInstance('Montage\Forward');
+    
+    
+  
+  
+  
+  
+  
   }//method
 
   public function getFrameworkPath(){
