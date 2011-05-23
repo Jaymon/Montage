@@ -48,8 +48,10 @@ class Core {
     $this->classes->addPath($this->getFrameworkPath());
     $this->classes->addPath($app_path);
     
+    spl_autoload_register(array($this->classes,'load'));
+    
   }//method
-
+  
   public function handle(){
   
     // start the Config classes...
