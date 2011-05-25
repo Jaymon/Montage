@@ -1,19 +1,9 @@
 <?php
 /**
- *  this class handles all the discovering and auto-loading of classes, it also has
- *  methods to let the developer easily get class information and class relationships  
+ *  the kernal/core that translates the request to the response
  *  
- *  this class can be mostly left alone unless you want to set more class paths 
- *  (use {@link setPath()}) than what are used by default, or if you want to add
- *  a custom autoloader (use {@link appendClassLoader()}) 
- *
- *  class paths checked by default:
- *    [MONTAGE_PATH]/model
- *    [MONTAGE_APP_PATH]/settings
- *    [MONTAGE_PATH]/plugins
- *    [MONTAGE_APP_PATH]/plugins  
- *    [MONTAGE_APP_PATH]/model
- *    [MONTAGE_APP_PATH]/controller/$controller
+ *  other names: handler, sequence, assembler
+ *  http://en.wikipedia.org/wiki/Montage_%28filmmaking%29   
  *   
  *  @version 0.6
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -24,9 +14,13 @@ namespace Montage;
 
 use Montage\Path;
 use Montage\Classes;
+
+use Montage\Interfaces\Coupling;
+use Montage\Coupler;
+
 ///use Montage\Request\RequestInterface;
 
-class Core {
+class Core implements Coupling {
 
   protected $app_path = '';
   
@@ -35,6 +29,8 @@ class Core {
   protected $classes = null;
 
   protected $field_map = array();
+  
+  protected $coupler = null;
 
   public function __construct($env,$debug_level,$app_path){
   
@@ -47,6 +43,10 @@ class Core {
     $this->classes = new Classes();
     $this->classes->addPath($this->getFrameworkPath());
     $this->classes->addPath($app_path);
+    
+    $coupler_class = $this->classes->findClassName('Montage\Coupler');
+    $coupler = new $coupler_class($this->classes);
+    $this->setCoupler($coupler);
     
     spl_autoload_register(array($this->classes,'load'));
     
@@ -71,6 +71,12 @@ class Core {
   
   
   }//method
+
+  public function setCoupler(Coupling $coupler){
+    $this->coupler = $coupler;
+  }//method
+  
+  public function getCoupler(){ return $this->coupler; }//method
 
   public function getFrameworkPath(){
   
