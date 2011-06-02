@@ -1,5 +1,10 @@
 <?php
 /**
+ *  I almost named this class Polymorphism
+ *  http://en.wikipedia.org/wiki/Polymorphism_in_object-oriented_programming
+ *  http://en.wikipedia.org/wiki/Polymorphism_%28computer_science%29  
+ *
+ *
  *  this class handles all the discovering and auto-loading of classes, it also has
  *  methods to let the developer easily get class information and class relationships  
  *  
@@ -20,12 +25,12 @@
  *  @since 12-28-09
  *  @package montage 
  ******************************************************************************/
-namespace Montage;
+namespace Montage\Dependency;
 
 use Montage\Path;
 use out;
 
-class Classes {
+class Reflection implements \Reflector {
 
   /**
    *  hold all the classes that could possibly be loadable
@@ -48,7 +53,12 @@ class Classes {
 
   public function __construct(){
   
+    spl_autoload_register(array($this,'loadClass'));
+  
   }//method
+  
+  public static function export(){ return ''; }//method
+  public function __toString(){ return ''; }//method
   
   /**
    *  load a class
@@ -58,7 +68,7 @@ class Classes {
    *      
    *  @return boolean true if the class was found, false if not (so other autoloaders can have a chance)
    */
-  public function load($class_name){
+  public function loadClass($class_name){
   
     // if you just get blank pages: http://www.php.net/manual/en/function.error-reporting.php#28181
     //  http://www.php.net/manual/en/function.include-once.php#53239
