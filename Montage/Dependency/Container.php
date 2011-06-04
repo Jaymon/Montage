@@ -9,9 +9,10 @@
  ******************************************************************************/
 namespace Montage\Dependency;
 
+use Montage\Field;
 use out;
 
-class Container {
+class Container extends Field {
 
   protected $instance_map = array();
 

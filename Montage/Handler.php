@@ -17,15 +17,17 @@ namespace Montage;
 require_once(__DIR__.'/Dependency/Injector.php');
 require_once(__DIR__.'/Dependency/Reflection.php');
 require_once(__DIR__.'/Path.php');
+require_once(__DIR__.'/Field.php');
 
 use Montage\Path;
+use Montage\Field;
 use out;
 
 use Montage\Dependency\Reflection;
 use Montage\Dependency\Container;
 use Montage\Dependency\Injector;
 
-class Handler implements Injector {
+class Handler extends Field implements Injector {
 
   protected $app_path = '';
   
@@ -44,8 +46,8 @@ class Handler implements Injector {
   
     ///out::e($namespace,$debug_level,$app_path);
     
-    $this->field_map['env'] = $env;
-    $this->field_map['debug_level'] = $debug_level;
+    $this->setField('env',$env);
+    $this->setField('debug_level',$debug_level);
     
     $this->app_path = $app_path;
     $reflection = new Reflection();
@@ -66,7 +68,7 @@ class Handler implements Injector {
     ///out::i($rconstructor);
     foreach($rparams as $rparam){
       out::i($rparam);
-      out::i($rparam->getClass());
+      out::i($rparam->getClass()); // class name if object, null if no class
     }//method
   
   
