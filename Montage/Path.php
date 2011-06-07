@@ -145,6 +145,9 @@ class Path {
       throw new InvalidArgumentException('cannot verify that an empty $path exists');
     }//if
     
+    // make sure the path is a full valid path, none of this ../../ type stuff...
+    $path = realpath($path);
+    
     // make sure path is directory, try to create it if it isn't...
     if(!is_dir($path)){
       if(!mkdir($path,0777,true)){
