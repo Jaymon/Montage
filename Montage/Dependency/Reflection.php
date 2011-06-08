@@ -27,6 +27,7 @@
  ******************************************************************************/
 namespace Montage\Dependency;
 
+use \ReflectionClass;
 use Montage\Path;
 use out;
 
@@ -57,8 +58,14 @@ class Reflection implements \Reflector {
   
   }//method
   
+  public function __destruct(){
+  
+    spl_autoload_unregister(array($this,'loadClass'));
+  
+  }//method
+  
   public static function export(){ return ''; }//method
-  public function __toString(){ return ''; }//method
+  public function __toString(){ return spl_object_hash($this); }//method
   
   /**
    *  load a class
@@ -89,7 +96,7 @@ class Reflection implements \Reflector {
       $ret_bool = false;
       
     }//if/else
-    
+
     return $ret_bool;
   
   }//method
@@ -117,6 +124,12 @@ class Reflection implements \Reflector {
     
   }//method
   
+  /**
+   *  given a class name, find the best child class (eg, absolute descendant) for the class
+   *
+   *  @param  string  $class_name
+   *  @return string  the class name of the absolute descendant of the $class_name
+   */
   public function findClassName($class_name){
 
     $found_key = '';
@@ -161,7 +174,7 @@ class Reflection implements \Reflector {
         
       }else{
       
-        throw new UnexpectedValueException(sprintf('no class %s was found',$class_name));
+        throw new \UnexpectedValueException(sprintf('no class %s was found',$class_name));
       
       }//if/else
       
@@ -186,29 +199,35 @@ class Reflection implements \Reflector {
       $class_list = $this->findClasses(file_get_contents($file));
       foreach($class_list as $class_map){
       
-        $key = $this->normalizeClassName($class_map['class']);
-        $class_map['last_modified'] = filemtime($file);
-        $class_map['path'] = $file;
-        $this->class_map[$key] = $class_map;
-        
-        // add class as child to all its parent classes...
-        foreach(array_merge($class_map['extends'],$class_map['implements']) as $parent_class){
-          $parent_key = $this->normalizeClassName($parent_class);
-          if(!isset($this->parent_class_map[$parent_key])){
-            $this->parent_class_map[$parent_key] = array();
-          }//if
-        
-          $this->parent_class_map[$parent_key][] = $key;
-        
+        if($this->setClass($class_map['class'],$file,$class_map['extends'],$class_map['implements'])){
+          $ret_count++;
         }//if
-        
-        $ret_count++;
       
       }//foreach
     
     }//foreach
     
     return $ret_count;
+  
+  }//method
+  
+  /**
+   *  if the class was defined outside of any paths then use this method so this class
+   *  will know about it    
+   *
+   *  @since  6-7-11
+   *  @param  string  $class_name the class that this instance should know about
+   *  @return boolean         
+   */
+  public function addClass($class_name){
+  
+    $rclass = new ReflectionClass($class_name);
+    $extend_list = array();
+    if($rextend = $rclass->getParentClass()){
+      $extend_list[] = $rextend->getName();
+    }//if
+    
+    return $this->setClass($class_name,$rclass->getFileName(),$extend_list,$rclass->getInterfaceNames());
   
   }//method
   
@@ -502,6 +521,33 @@ class Reflection implements \Reflector {
   
     $namespace = sprintf('\\%s',trim($namespace));
     return array($i,$namespace);
+  
+  }//method
+  
+  /**
+   *
+   *  @since  6-7-11
+   */
+  protected function setClass($class_name,$class_file,array $extend_list = array(),array $implement_list = array()){
+  
+    $class_map = array();
+    $key = $this->normalizeClassName($class_name);
+    $class_map['last_modified'] = filemtime($class_file);
+    $class_map['path'] = $class_file;
+    $this->class_map[$key] = $class_map;
+    
+    // add class as child to all its parent classes...
+    foreach(array_merge($extend_list,$implements_list) as $parent_class){
+      $parent_key = $this->normalizeClassName($parent_class);
+      if(!isset($this->parent_class_map[$parent_key])){
+        $this->parent_class_map[$parent_key] = array();
+      }//if
+    
+      $this->parent_class_map[$parent_key][] = $key;
+    
+    }//if
+    
+    return true;
   
   }//method
 

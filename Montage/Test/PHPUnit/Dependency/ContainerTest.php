@@ -21,13 +21,28 @@ class ContainerTest extends Test {
 
   public function setUp(){
   
+    ///out::e($this->container);
+  
     $reflection = new Reflection();
     $reflection->addPath(__DIR__.'/../../Fixtures/Dependency');
     
     $this->container = new Container($reflection);
+    
+    ///out::e(spl_autoload_functions());
   
   }//method
   
+  public function tearDown(){
+  
+    // we need to unregister the autoloader...
+    $reflection = $this->container->getReflection();
+    $reflection->__destruct();
+  
+  }//method
+  
+  /**
+   *  make sure the DIC will create class instances for type hinted constructor params
+   */
   public function testFindInstanceNoParams(){
   
     $instance = $this->container->findInstance('Montage\Test\Fixtures\Dependency\Foo');
@@ -36,6 +51,10 @@ class ContainerTest extends Test {
   
   }//method
   
+  /**
+   *  make sure you can set fields and those fields will be used for the class's __construct()
+   *  params
+   */ 
   public function testFindInstanceFieldParams(){
   
     $this->container->setField('one',__FUNCTION__);
@@ -49,54 +68,5 @@ class ContainerTest extends Test {
     $this->assertNull($instance->three);
     
   }//method
-
-  /**
-   *  tests creating Path objects passing in different random bits   
-   */
-  public function xtestCreation(){
-  
-    $base = $this->getFixture();
-    
-    $test_list = array();
-    $test_list[] = array(
-      'in' => array($base,'Path'),
-      'path_str' => join(DIRECTORY_SEPARATOR,array($base,'Path'))
-    );
-    $test_list[] = array(
-      'in' => array($base,'Path/'),
-      'path_str' => join(DIRECTORY_SEPARATOR,array($base,'Path'))
-    );
-    $test_list[] = array(
-      'in' => array($base,'\\Path'),
-      'path_str' => join(DIRECTORY_SEPARATOR,array($base,'Path'))
-    );
-    $test_list[] = array(
-      'in' => array($base,'/Path'),
-      'path_str' => join(DIRECTORY_SEPARATOR,array($base,'Path'))
-    );
-    $test_list[] = array(
-      'in' => array($base,array('Path','foo'),'1'),
-      'path_str' => join(DIRECTORY_SEPARATOR,array($base,'Path','foo','1'))
-    );
-    $test_list[] = array(
-      'in' => array(new Path($base),array('Path','foo'),'1'),
-      'path_str' => join(DIRECTORY_SEPARATOR,array($base,'Path','foo','1'))
-    );
-    $test_list[] = array(
-      'in' => array($base,array(array('Path','foo')),' ','','1'),
-      'path_str' => join(DIRECTORY_SEPARATOR,array($base,'Path','foo','1'))
-    );
-    
-    foreach($test_list as $test_map){
-    
-      $rclass = new ReflectionClass('Montage\\Path');
-      $instance = $rclass->newInstanceArgs($test_map['in']);
-      
-      $this->assertEquals($test_map['path_str'],$instance->__toString());
-    
-    }//foreach
-  
-  }//method
-  
 
 }//class

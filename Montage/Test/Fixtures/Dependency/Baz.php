@@ -4,9 +4,9 @@ class Baz {
 
   public $one = '';
   public $two = null;
-  public $three = null;
+  public $three = 0;
 
-  public function __construct($one,$two,$three = 0){
+  public function __construct($one,$two,$three = null){
   
     $this->one = $one;
     $this->two = $two;
