@@ -45,21 +45,72 @@ class Container extends Field {
   
   }//method
   
-  public function findInstance($class_name,$params = array()){
-
+  /**
+   *  when you know what class you specifically want, use this method over {@link findInstance()}
+   *
+   *  @param  string  $class_name the name of the class you are looking for
+   *  @param  array $params any params you want to pass into the constructor of the instance      
+   */
+  public function getInstance($class_name,$params = array()){
+  
+    // canary...
+    if(empty($class_name)){ throw new \InvalidArgumentException('$class_name was empty'); }//if
+  
     $ret_instance = null;
     $params = (array)$params;
-    $reflection = $this->getReflection();
-    
-    $instance_class_name = $reflection->findClassName($class_name);
   
-    if(!$this->hasInstance($instance_class_name)){
+    if(!$this->hasInstance($class_name)){
     
-      $this->instance_map[$instance_class_name] = $this->getNewInstance($instance_class_name,$params);
+      $this->instance_map[$class_name] = $this->getNewInstance($class_name,$params);
     
     }//if/else
   
-    $ret_instance = $this->instance_map[$instance_class_name];
+    return $this->instance_map[$class_name];
+  
+  }//method
+  
+  /**
+   *  find the absolute descendant of the class(es) you pass in
+   *
+   *  @param  string|array  $class_name the name(s) of the class(es) you are looking for
+   *  @param  array $params any params you want to pass into the constructor of the instance      
+   */
+  public function findInstance($class_name,$params = array()){
+
+    $ret_instance = null;
+    $class_name = (array)$class_name;
+    $params = (array)$params;
+    $reflection = $this->getReflection();
+    $instance_class_name = '';
+    
+    foreach($class_name as $cn){
+    
+      try{
+    
+        $instance_class_name = $reflection->findClassName($cn);
+        
+      }catch(Exception $e){}//try/catch
+      
+    }//foreach
+  
+    if(empty($instance_class_name)){
+    
+      throw new \UnexpectedValueException(
+        sprintf('Unable to find suitable class using [%s]',join(',',$class_name))
+      );
+    
+    }else{
+    
+      if(!$this->hasInstance($instance_class_name)){
+      
+        $this->instance_map[$instance_class_name] = $this->getNewInstance($instance_class_name,$params);
+      
+      }//if/else
+    
+      $ret_instance = $this->instance_map[$instance_class_name];
+      
+    }//if/else
+      
     return $ret_instance;
     
   }//method

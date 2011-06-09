@@ -187,8 +187,15 @@ class Reflection implements \Reflector {
   
   public function addPath($path){
   
+    // canary...
     if(!($path instanceof Path)){
-      $path = new Path($path);
+      if(is_dir($path)){
+        $path = new Path($path);
+      }else{
+        throw new \InvalidArgumentException(
+          sprintf('$path (%s) was not a valid directory',$path)
+        );
+      }//if/else
     }//if
   
     $ret_count = 0;
@@ -228,6 +235,49 @@ class Reflection implements \Reflector {
     }//if
     
     return $this->setClass($class_name,$rclass->getFileName(),$extend_list,$rclass->getInterfaceNames());
+  
+  }//method
+  
+  /**
+   *  true if the class is known to this instance
+   *  
+   *  @since  6-8-11
+   *  @param  string  $class_name
+   *  @return boolean
+   */
+  public function hasClass($class_name){
+  
+    return empty($class_name) ? false : isset($this->class_map[$this->normalizeClassName($class_name)]);
+  
+  }//method
+  
+  /**
+   *  return true if $child_class_name is a child of $parent_class_name
+   *  
+   *  child being defined in this context as descendant of the parent class
+   * 
+   *  @since  6-8-11        
+   *  @param  string  $child_class_name
+   *  @param  string  $parent_class_name      
+   *  @return boolean
+   */
+  public function isChild($child_class_name,$parent_class_name){
+  
+    // canary...
+    if(empty($child_class_name)){ return false; }//if
+    if(empty($parent_class_name)){ return false; }//if
+  
+    $ret_bool = false;
+    
+    $parent_key = $this->normalizeClassName($parent_class_name);
+    if(isset($this->parent_class_map[$parent_key])){
+      
+      $child_key = $this->normalizeClassName($child_class_name);
+      $ret_bool = in_array($child_key,$this->parent_class_map[$parent_key],true);
+      
+    }//if
+    
+    return $ret_bool;
   
   }//method
   
@@ -532,12 +582,13 @@ class Reflection implements \Reflector {
   
     $class_map = array();
     $key = $this->normalizeClassName($class_name);
+    $class_map['class'] = $class_name;
     $class_map['last_modified'] = filemtime($class_file);
     $class_map['path'] = $class_file;
     $this->class_map[$key] = $class_map;
     
     // add class as child to all its parent classes...
-    foreach(array_merge($extend_list,$implements_list) as $parent_class){
+    foreach(array_merge($extend_list,$implement_list) as $parent_class){
       $parent_key = $this->normalizeClassName($parent_class);
       if(!isset($this->parent_class_map[$parent_key])){
         $this->parent_class_map[$parent_key] = array();

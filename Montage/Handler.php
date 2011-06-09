@@ -44,6 +44,14 @@ class Handler extends Field implements Injector {
 
   public function __construct($env,$debug_level,$app_path){
   
+    // canary...
+    if(empty($env)){
+      throw new InvalidArgumentException('$env was empty, please set $env to something like "dev" or "prod"');
+    }//if
+    if(empty($app_path)){
+      throw new InvalidArgumentException('$app_path was empty, please set it to the root path of your app');
+    }//if
+  
     ///out::e($namespace,$debug_level,$app_path);
     
     $this->setField('env',$env);
@@ -62,15 +70,7 @@ class Handler extends Field implements Injector {
   
   public function handle(){
   
-    $r = new \ReflectionObject($this->getContainer());
-    $rconstructor = $r->getConstructor();
-    $rparams = $rconstructor->getParameters();
-    ///out::i($rconstructor);
-    foreach($rparams as $rparam){
-      out::i($rparam);
-      out::i($rparam->getClass()); // class name if object, null if no class
-    }//method
-  
+    $env = $this->getField('env');
   
     // start the Config classes...
     $config_instance_map = array();
@@ -80,7 +80,13 @@ class Handler extends Field implements Injector {
   
     ///$request = $this->classes->findInstance('Montage\Interfaces\Request');
   
-    ///$forward = $this->classes->getInstance('Montage\Forward');
+    $forward_list = array(
+      sprintf('%s\Forward',$env),
+      'Montage\Forward'
+    );
+  
+    $forward = $this->classes->findInstance($forward_list);
+    
     
     
   

@@ -30,8 +30,9 @@ interface Request {
    *    'path' => 'path/used/after/php'
    *    'args' => $_SERVER['argv']
    *  )
-   *      
-   */        
+   *
+   *  @return array
+   */
   public function getInput();
 
 }//method
