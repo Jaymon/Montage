@@ -59,14 +59,8 @@ class Forward {
   
     $namespace = 'cli';
     
+    list($namespace,$path) = $this->findNamespace('cli',$path,$args);
     out::e($path);
-    
-    // change namespace if one was found...
-    $path_bits = explode('.',$path,2);
-    if(isset($path_bits[1])){
-      $namespace = $path_bits[0];
-      $path = $path_bits[1];
-    }//if
     
     $ret = $this->find($namespace,explode('/',$path));
     out::e($ret);
@@ -307,6 +301,19 @@ class Forward {
     $ret_list[] = 'Montage\Controller';
   
     return $ret_list;
+  
+  }//method
+  
+  protected function findNamespace($namespace,$path,array $args){
+  
+    // change namespace if one was found...
+    $path_bits = explode('.',$path,2);
+    if(isset($path_bits[1])){
+      $namespace = $path_bits[0];
+      $path = $path_bits[1];
+    }//if
+  
+    return array($namespace,$path);
   
   }//method
   
