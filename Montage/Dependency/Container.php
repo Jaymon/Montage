@@ -31,6 +31,8 @@ class Container extends Field {
   final public function __construct(Reflection $reflection){
   
     $this->reflection = $reflection;
+    // put it in the instance map also so it is easy for classes to grab it as a dependency...
+    $this->instance_map[get_class($this->reflection)] = $this->reflection;
   
   }//method
   

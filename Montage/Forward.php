@@ -59,9 +59,14 @@ class Forward {
   
     $namespace = 'cli';
     
+    out::e($path);
+    
     // change namespace if one was found...
     $path_bits = explode('.',$path,2);
-    if(isset($path_bits[1])){ $namespace = $path_bits[0]; }//if
+    if(isset($path_bits[1])){
+      $namespace = $path_bits[0];
+      $path = $path_bits[1];
+    }//if
     
     $ret = $this->find($namespace,explode('/',$path));
     out::e($ret);
@@ -84,10 +89,10 @@ class Forward {
    *  @param  array $path_list  the path list (eg, a string path split with DIRECTORY_SEPARATOR)
    *  @return array array($controller_class_name,$controller_method,$controller_method_args)
    */
-  public function find($namespace,array $path_list){
+  protected function find($namespace,array $path_list){
   
     $namespace_list = $this->getNamespaces($namespace);
-    $class_name = $this->getClassName($this->defaul_class_name);
+    $class_name = $this->getClassName($this->default_class);
     $method_name = $this->getMethodName($this->default_method);
     $method_args = array();
     $reflection = $this->reflection;
@@ -97,6 +102,7 @@ class Forward {
     if(!empty($path_list[0])){ // we have atlead controller/
       
       $maybe_class_name = $this->findClassName($namespace_list,$path_list[0]);
+      out::e($maybe_class_name);
       
       if($reflection->isChild($maybe_class_name,$this->class_interface)){ // confirmed controller/
       
@@ -229,6 +235,8 @@ class Forward {
     
       $ret_class_name = sprintf('%s\%s',$namespace,$class_name);
     
+      out::e($ret_class_name);
+    
       if($this->reflection->hasClass($ret_class_name)){
         if($this->reflection->isChild($ret_class_name,$this->class_interface)){
           break;
@@ -244,12 +252,12 @@ class Forward {
   }//method
   
   /**
-   *  gets the "usable" controller class name
+   *  gets the "usable" controller class name, this is not the full namespaced class name
    *  
    *  @param  string  $class_name  the potential controller class name
    *  @return string
    */
-  protected function getClassName($namespace,$class_name){
+  protected function getClassName($class_name){
   
     // canary...
     if(empty($class_name)){
