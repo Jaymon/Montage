@@ -4,22 +4,18 @@
  *  http://en.wikipedia.org/wiki/Polymorphism_in_object-oriented_programming
  *  http://en.wikipedia.org/wiki/Polymorphism_%28computer_science%29  
  *
- *
- *  this class handles all the discovering and auto-loading of classes, it also has
- *  methods to let the developer easily get class information and class relationships  
+ *  this class keeps class relationship info for any path (see {@link addPath()}) or
+ *  class (see {@link addClass()}) that have been added to this instance, this allows
+ *  you to get detailed info about whether a class is related to another class and to
+ *  be able to find things like absolute descnendents of classes   
+ *  
+ *  this class handles all the discovering and auto-loading of classes that it knows
+ *  about, it also has methods to let the developer easily get class information 
+ *  and class relationships of its internal class structure  
  *  
  *  this class can be mostly left alone unless you want to set more class paths 
- *  (use {@link setPath()}) than what are used by default, or if you want to add
- *  a custom autoloader (use {@link appendClassLoader()}) 
+ *  (use {@link addPath()}) than what are used by default
  *
- *  class paths checked by default:
- *    [MONTAGE_PATH]/model
- *    [MONTAGE_APP_PATH]/settings
- *    [MONTAGE_PATH]/plugins
- *    [MONTAGE_APP_PATH]/plugins  
- *    [MONTAGE_APP_PATH]/model
- *    [MONTAGE_APP_PATH]/controller/$controller
- *   
  *  @version 0.6
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 12-28-09
@@ -243,11 +239,29 @@ class Reflection implements \Reflector {
    *  
    *  @since  6-8-11
    *  @param  string  $class_name
+   *  @param  string  $parent_class_name  if passed in then the $class_name must also be a child of this class   
    *  @return boolean
    */
-  public function hasClass($class_name){
+  public function hasClass($class_name,$parent_class_name = ''){
   
-    return empty($class_name) ? false : isset($this->class_map[$this->normalizeClassName($class_name)]);
+    $ret_bool = false;
+    if(!empty($class_name)){
+    
+      $class_key = $this->normalizeClassName($class_name);
+    
+      if(isset($this->class_map[$class_key])){
+      
+        if(empty($parent_class_name)){
+          $ret_bool = true;
+        }else{
+          $ret_bool = $this->inheritClass($class_key,$parent_class_name);
+        }//if/else
+      
+      }//if
+    
+    }//if
+  
+    return $ret_bool;
   
   }//method
   
@@ -261,19 +275,43 @@ class Reflection implements \Reflector {
    *  @param  string  $parent_class_name      
    *  @return boolean
    */
-  public function isChild($child_class_name,$parent_class_name){
+  public function isChildClass($child_class_name,$parent_class_name){
   
     // canary...
     if(empty($child_class_name)){ return false; }//if
     if(empty($parent_class_name)){ return false; }//if
   
+    $ret_bool = $this->isParentClass($parent_class_name,$child_class_name);
+    return $ret_bool;
+  
+  }//method
+  
+  /**
+   *  true if the passed in $parent_class_name is a parent to any class
+   * 
+   *  @since  6-10-11    
+   *  @param  string  $parent_class_name
+   *  @param  string  $child_class_name if not-empty, then the parent must be a parent of this class
+   *  @return boolean
+   */
+  public function isParentClass($parent_class_name,$child_class_name = ''){
+  
+    // canary...
+    if(empty($parent_class_name)){ return false; }//if
+  
     $ret_bool = false;
     
     $parent_key = $this->normalizeClassName($parent_class_name);
-    if(isset($this->parent_class_map[$parent_key])){
+    if(!empty($this->parent_class_map[$parent_key])){
+    
+      $ret_bool = true;
+    
+      if(!empty($child_class_name)){
       
-      $child_key = $this->normalizeClassName($child_class_name);
-      $ret_bool = in_array($child_key,$this->parent_class_map[$parent_key],true);
+        $child_key = $this->normalizeClassName($child_class_name);
+        $ret_bool = in_array($child_key,$this->parent_class_map[$parent_key],true);
+      
+      }//if
       
     }//if
     
@@ -399,8 +437,6 @@ class Reflection implements \Reflector {
       if(is_string($tokens[$i])){
       
         if($tokens[$i] === ','){
-
-          out::e($parent_class);
 
           $parent_class_list[] = $this->getClassName($parent_class,$namespace,$use_map);
           $parent_class = '';

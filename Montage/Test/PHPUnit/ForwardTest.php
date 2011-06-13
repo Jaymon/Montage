@@ -48,11 +48,11 @@ class ForwardTest extends Test {
   
   }//method
 
-  public function testFindCLI(){
+  public function testFind(){
   
     $test_list = array();
     $test_list[] = array(
-      'in' => array('foo.bar/baz',array()),
+      'in' => array('','bar/baz',array()),
       'out' => array()
     );
     

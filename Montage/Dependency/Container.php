@@ -19,9 +19,9 @@ class Container extends Field {
    *  the reflection class is kept outside the {@link $instance_map} because it
    *  is needed for lost of things   
    *
-   *  @var  Reflection   
+   *  @var  string  the passed in Reflection instances full class name   
    */
-  protected $reflection = null;
+  protected $reflection_class_name = '';
 
   protected $instance_map = array();
 
@@ -30,13 +30,12 @@ class Container extends Field {
    */
   final public function __construct(Reflection $reflection){
   
-    $this->reflection = $reflection;
-    // put it in the instance map also so it is easy for classes to grab it as a dependency...
-    $this->instance_map[get_class($this->reflection)] = $this->reflection;
+    $this->reflection_class_name = get_class($reflection);
+    $this->instance_map[$this->reflection_class_name] = $this->reflection;
   
   }//method
   
-  public function getReflection(){ return $this->reflection; }//method
+  public function getReflection(){ return $this->instance_map[$this->reflection_class_name]; }//method
   
   public function hasInstance($class_name){ return isset($this->instance_map[$class_name]); }//method
   

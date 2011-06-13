@@ -26,6 +26,8 @@ class Forward {
   
   protected $class_interface = 'Montage\Controller\Controllable';
   
+  protected $class_namespace = 'Controller';
+  
   /**
    *  in case of exception while handling a request, the class with this name will be called
    *  
@@ -71,9 +73,81 @@ class Forward {
   
   }//method
   
-  public function findHTTP($host,$path,array $args = array()){
+  public function find($host,$path,array $args = array()){
   
-    $namespace = 'www';
+    $path_list = explode('/',$path);
+    $class_name = $this->normalizeClass($this->default_class);
+    $method_name = $this->normalizeMethod($this->default_method);
+    $method_args = array();
+    $reflection = $this->reflection;
+  
+    // we check in order:
+    // 1 - \Controller\$path_list[0]
+    // 2 - \Controller\IndexController
+    // 3 - \Montage\Controller\IndexController
+  
+    // first let's find the controller...
+    if(!empty($path_list[0])){
+    
+      
+    
+    
+    }//if
+  
+  
+  
+  
+    // find the controller, method, and method arguments...
+    $method_args = $path_list;
+    if(!empty($path_list[0])){ // we have at least controller/
+      
+      $maybe_class_name = $this->resolveClass($this->class_namespace,$path_list[0]);
+      $is_valid = $reflection->hasClass(
+        $maybe_class_name,
+        $this->class_interface
+      );
+      
+      if($is_valid){ // confirmed controller/
+      
+        $class_name = $maybe_class_name;
+        
+        if(!empty($path_list[1])){ // we might have controller/method/
+        
+          $maybe_method = $this->normalizeMethod($path_list[1]);
+        
+          // if the controller method does not exist then use the default...
+          if(method_exists($class_name,$maybe_method)){ // confirmed controller/method
+          
+            $method_name = $maybe_method;
+            $method_args = array_slice($path_list,2);
+            
+          }else{ // we have controller/$arg instead
+          
+            $method_args = array_slice($path_list,1);
+            
+          }//if/else
+          
+        }else{ // we just had controller/ no arguments
+        
+          $method_args = array_slice($path_list,1);
+          
+        }//if/else
+        
+      }else{ // do we have method/ instead of controller/ ?
+      
+        $maybe_method = $this->normalizeMethod($path_list[0]);
+        if(method_exists($class_name,$maybe_method)){ // confirmed method/
+        
+          $method_name = $maybe_method;
+          $method_args = array_slice($path_list,1);
+          
+        }//if
+         
+      }//if/else
+      
+    }//if
+  
+    return array($class_name,$method_name,$method_args);
   
   }//method
 
@@ -83,7 +157,7 @@ class Forward {
    *  @param  array $path_list  the path list (eg, a string path split with DIRECTORY_SEPARATOR)
    *  @return array array($controller_class_name,$controller_method,$controller_method_args)
    */
-  protected function find($namespace,array $path_list){
+  /* protected function findControllerAndMethod($namespace,array $path_list){
   
     $namespace_list = $this->getNamespaces($namespace);
     $class_name = $this->getClassName($this->default_class);
@@ -140,7 +214,7 @@ class Forward {
   
     return array($class_name,$method_name,$method_args);
   
-  }//method
+  }//method */
   
   /**
    *  assure the controller class name and method are valid and callable
@@ -221,9 +295,11 @@ class Forward {
   
   }//method
   
-  protected function findClassName(array $namespace_list,$class_name){
+  protected function findClassName($class_name){
   
-    $class_name = $this->getClassName($class_name);
+    $class_name = $this->resolveClassName
+  
+    $class_name = $this->normalizeClassName($class_name);
     
     foreach($namespace_list as $namespace){
     
@@ -245,13 +321,23 @@ class Forward {
   
   }//method
   
+  protected function resolveClass($namespace,$class_name){
+  
+    $class_name = $this->normalizeClass($class_name);
+    return sprintf('%s\%s',$namespace,$class_name);
+  
+  }//method
+  
   /**
    *  gets the "usable" controller class name, this is not the full namespaced class name
    *  
+   *  basically, if you pass in something like "foo" then this will return "FooController"
+   *  which is the non-resolved classname before the namespace is added    
+   *      
    *  @param  string  $class_name  the potential controller class name
    *  @return string
    */
-  protected function getClassName($class_name){
+  protected function normalizeClass($class_name){
   
     // canary...
     if(empty($class_name)){
@@ -259,7 +345,7 @@ class Forward {
     }//if
     if(mb_stripos($class_name,$this->class_postfix) > 0){ return $class_name; }//if
   
-    return sprintf('%s%s',$class_name,$this->class_postfix);
+    return sprintf('%s%s',ucfirst($class_name),$this->class_postfix);
   
   }//method
   
@@ -270,7 +356,7 @@ class Forward {
    *                                that will be made into the full name (eg, foo gets turned into handleFoo)      
    *  @return string
    */
-  protected function getMethodName($method_name){
+  protected function normalizeMethod($method_name){
   
     // canary...
     if(empty($method_name)){
