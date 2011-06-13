@@ -18,13 +18,6 @@ interface Controllable {
   public function preHandle();
   
   /**
-   *  this is the default controller method for this controller
-   *  
-   *  this method is called if this controller is activated but no method is given
-   */
-  public function handleIndex();
-  
-  /**
    *  override to allow your controller to do stuff right after the handle method is called
    */
   public function postHandle();

@@ -235,6 +235,32 @@ class Reflection implements \Reflector {
   }//method
   
   /**
+   *  removes a class from the mappings
+   *  
+   *  @since  6-13-11
+   *  @param  string  $class_name
+   *  @return boolean
+   */
+  public function killClass($class_name){
+  
+    // canary...
+    if(empty($class_name)){ throw new \InvalidArgumentException('$class_name was empty'); }//if
+    
+    $class_key = $this->normalizeClassName($class_name);
+  
+    if(isset($this->class_map[$class_key])){
+      unset($this->class_map[$class_key]);
+    }//if
+  
+    if(isset($this->parent_class_map[$class_key])){
+      unset($this->parent_class_map[$class_key]);
+    }//if
+  
+    return true;
+  
+  }//method
+  
+  /**
    *  true if the class is known to this instance
    *  
    *  @since  6-8-11
@@ -254,7 +280,7 @@ class Reflection implements \Reflector {
         if(empty($parent_class_name)){
           $ret_bool = true;
         }else{
-          $ret_bool = $this->inheritClass($class_key,$parent_class_name);
+          $ret_bool = $this->isChildClass($class_key,$parent_class_name);
         }//if/else
       
       }//if

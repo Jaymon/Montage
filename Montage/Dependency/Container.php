@@ -31,7 +31,7 @@ class Container extends Field {
   final public function __construct(Reflection $reflection){
   
     $this->reflection_class_name = get_class($reflection);
-    $this->instance_map[$this->reflection_class_name] = $this->reflection;
+    $this->instance_map[$this->reflection_class_name] = $reflection;
   
   }//method
   

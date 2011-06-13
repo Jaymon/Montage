@@ -1,5 +1,4 @@
 <?php
-
 /**
  *  handles deciding which controller::method to forward to
  *  
@@ -15,18 +14,24 @@ use out;
 
 class Forward {
 
-  /**
-   *  hold the default controller class that will be used if another class isn't found
-   *  
-   *  class must extend montage_controller      
-   */
-  protected $default_class = 'Index';
-  
   protected $class_postfix = 'Controller';
   
   protected $class_interface = 'Montage\Controller\Controllable';
   
   protected $class_namespace = 'Controller';
+  
+  protected $class_default_list = array(
+    'Controller\IndexController',
+    'Montage\Controller\IndexController'
+  );
+  
+  /**
+   *  this prefix will be used to decide what a vanilla method name coming in will be
+   *  prefixed with when {@link getControllerMethodName()} is called
+   */
+  protected $method_prefix = 'handle';
+  
+  protected $method_default = 'handleIndex';
   
   /**
    *  in case of exception while handling a request, the class with this name will be called
@@ -34,17 +39,6 @@ class Forward {
    *  class must extend montage_controller      
    */
   protected $exception_class = 'Exception';
-  
-  /**
-   *  this prefix will be used to decide what a vanilla method name coming in will be
-   *  prefixed with when {@link getControllerMethodName()} is called
-   */
-  protected $method_prefix = 'Handle';
-  
-  /**
-   *  hold the default controller method that will be called if no other method is found
-   */
-  protected $default_method = 'Index';
   
   protected $reflection = null;
   
@@ -76,8 +70,8 @@ class Forward {
   public function find($host,$path,array $args = array()){
   
     $path_list = explode('/',$path);
-    $class_name = $this->normalizeClass($this->default_class);
-    $method_name = $this->normalizeMethod($this->default_method);
+    $class_name = '';
+    $method_name = '';
     $method_args = array();
     $reflection = $this->reflection;
   
@@ -86,135 +80,83 @@ class Forward {
     // 2 - \Controller\IndexController
     // 3 - \Montage\Controller\IndexController
   
-    // first let's find the controller...
+    // see if the controller was passed in from the request string...
     if(!empty($path_list[0])){
     
-      
+      $class_name = $this->normalizeClass($this->class_namespace,$path_list[0]);
     
+      if($reflection->hasClass($class_name,$this->class_interface)){
+      
+        $path_list = array_slice($path_list,1);
+      
+      }else{
+      
+        $class_name = '';
+      
+      }//if
     
     }//if
   
-  
-  
-  
-    // find the controller, method, and method arguments...
-    $method_args = $path_list;
-    if(!empty($path_list[0])){ // we have at least controller/
+    if(empty($class_name)){
+    
+      foreach($this->class_default_list as $class_name){
       
-      $maybe_class_name = $this->resolveClass($this->class_namespace,$path_list[0]);
-      $is_valid = $reflection->hasClass(
-        $maybe_class_name,
-        $this->class_interface
-      );
+        if($reflection->hasClass($class_name,$this->class_interface)){
+          break;
+        }else{
+          $class_name = '';
+        }//if/else
       
-      if($is_valid){ // confirmed controller/
+      }//foreach
       
-        $class_name = $maybe_class_name;
+      if(empty($class_name)){
+        throw new \UnexepectedValueException(
+          'A suitable Controller class could not be found to handle the request'
+        );
+      }//if
+    
+    }//if
+  
+    // check in order:
+    // 1 - $class_name/$path_list[0]
+    // 2 - $class_name/$this->method_default
+  
+    // find the method...
+    if(!empty($path_list[0])){
+    
+      $method_name = $this->normalizeMethod($path_list[0]);
         
-        if(!empty($path_list[1])){ // we might have controller/method/
+      // if the controller method does not exist then use the default...
+      if(method_exists($class_name,$method_name)){ // confirmed controller/method
+      
+        $method_args = array_slice($path_list,1);
         
-          $maybe_method = $this->normalizeMethod($path_list[1]);
+      }else{
+      
+        // check for controller/$arg using the default method...
+        $method_name = $this->method_default;
+        if(method_exists($class_name,$method_name)){
         
-          // if the controller method does not exist then use the default...
-          if(method_exists($class_name,$maybe_method)){ // confirmed controller/method
-          
-            $method_name = $maybe_method;
-            $method_args = array_slice($path_list,2);
-            
-          }else{ // we have controller/$arg instead
-          
-            $method_args = array_slice($path_list,1);
-            
-          }//if/else
-          
-        }else{ // we just had controller/ no arguments
+          $method_args = $path_list;
         
-          $method_args = array_slice($path_list,1);
-          
+        }else{
+        
+          throw new \UnexpectedValueException(
+            sprintf(
+              'Could not find a suitable method in %s to handle the request',
+              $class_name
+            )
+          );
+        
         }//if/else
         
-      }else{ // do we have method/ instead of controller/ ?
-      
-        $maybe_method = $this->normalizeMethod($path_list[0]);
-        if(method_exists($class_name,$maybe_method)){ // confirmed method/
-        
-          $method_name = $maybe_method;
-          $method_args = array_slice($path_list,1);
-          
-        }//if
-         
       }//if/else
-      
+    
     }//if
   
     return array($class_name,$method_name,$method_args);
   
   }//method
-
-  /**
-   *  find a controller::method from the path parts in $path_list
-   *  
-   *  @param  array $path_list  the path list (eg, a string path split with DIRECTORY_SEPARATOR)
-   *  @return array array($controller_class_name,$controller_method,$controller_method_args)
-   */
-  /* protected function findControllerAndMethod($namespace,array $path_list){
-  
-    $namespace_list = $this->getNamespaces($namespace);
-    $class_name = $this->getClassName($this->default_class);
-    $method_name = $this->getMethodName($this->default_method);
-    $method_args = array();
-    $reflection = $this->reflection;
-  
-    // find the controller, method, and method arguments...
-    $method_args = $path_list;
-    if(!empty($path_list[0])){ // we have atlead controller/
-      
-      $maybe_class_name = $this->findClassName($namespace_list,$path_list[0]);
-      out::e($maybe_class_name);
-      
-      if($reflection->isChild($maybe_class_name,$this->class_interface)){ // confirmed controller/
-      
-        $class_name = $maybe_class_name;
-        
-        if(!empty($path_list[1])){ // we might have controller/method/
-        
-          $maybe_method = $this->getMethodName($path_list[1]);
-        
-          // if the controller method does not exist then use the default...
-          if(method_exists($class_name,$maybe_method)){ // confirmed controller/method
-          
-            $method_name = $maybe_method;
-            $method_args = array_slice($path_list,2);
-            
-          }else{ // we have controller/$arg instead
-          
-            $method_args = array_slice($path_list,1);
-            
-          }//if/else
-          
-        }else{ // we just had controller/ no arguments
-        
-          $method_args = array_slice($path_list,1);
-          
-        }//if/else
-        
-      }else{ // do we have method/ instead of controller/ ?
-      
-        $maybe_method = $this->getMethodName($path_list[0]);
-        if(method_exists($class_name,$maybe_method)){ // confirmed method/
-        
-          $method_name = $maybe_method;
-          $method_args = array_slice($path_list,1);
-          
-        }//if
-         
-      }//if/else
-      
-    }//if
-  
-    return array($class_name,$method_name,$method_args);
-  
-  }//method */
   
   /**
    *  assure the controller class name and method are valid and callable
@@ -295,57 +237,27 @@ class Forward {
   
   }//method
   
-  protected function findClassName($class_name){
-  
-    $class_name = $this->resolveClassName
-  
-    $class_name = $this->normalizeClassName($class_name);
-    
-    foreach($namespace_list as $namespace){
-    
-      $ret_class_name = sprintf('%s\%s',$namespace,$class_name);
-    
-      out::e($ret_class_name);
-    
-      if($this->reflection->hasClass($ret_class_name)){
-        if($this->reflection->isChild($ret_class_name,$this->class_interface)){
-          break;
-        }//if
-      }//if
-    
-      $ret_class_name = '';
-    
-    }//foreach
-    
-    return $ret_class_name;
-  
-  }//method
-  
-  protected function resolveClass($namespace,$class_name){
-  
-    $class_name = $this->normalizeClass($class_name);
-    return sprintf('%s\%s',$namespace,$class_name);
-  
-  }//method
-  
   /**
-   *  gets the "usable" controller class name, this is not the full namespaced class name
+   *  gets the "usable" controller class name
    *  
    *  basically, if you pass in something like "foo" then this will return "FooController"
    *  which is the non-resolved classname before the namespace is added    
    *      
+   *  @param  string  $namespace  the namespace you want to prepend to the $class_name   
    *  @param  string  $class_name  the potential controller class name
    *  @return string
    */
-  protected function normalizeClass($class_name){
+  protected function normalizeClass($namespace,$class_name){
   
     // canary...
     if(empty($class_name)){
       throw new \InvalidArgumentException('$class_name was empty');
     }//if
-    if(mb_stripos($class_name,$this->class_postfix) > 0){ return $class_name; }//if
+    if(mb_stripos($class_name,$this->class_postfix) === false){
+      $class_name = sprintf('%s%s',ucfirst($class_name),$this->class_postfix);
+    }//if
   
-    return sprintf('%s%s',ucfirst($class_name),$this->class_postfix);
+    return sprintf('%s\%s',$namespace,$class_name);
   
   }//method
   
@@ -371,35 +283,6 @@ class Forward {
     );
   
     return $method_name;
-  
-  }//method
-  
-  protected function getNamespaces($namespace = ''){
-  
-    $ret_list = array();
-  
-    $base_namespace = 'Montage\Controller';
-    if(!empty($namespace)){
-      $ret_list[] = sprintf('%s\%s',$base_namespace,$namespace);
-    }//if
-    
-    $ret_list[] = $base_namespace;
-    $ret_list[] = 'Montage\Controller';
-  
-    return $ret_list;
-  
-  }//method
-  
-  protected function findNamespace($namespace,$path,array $args){
-  
-    // change namespace if one was found...
-    $path_bits = explode('.',$path,2);
-    if(isset($path_bits[1])){
-      $namespace = $path_bits[0];
-      $path = $path_bits[1];
-    }//if
-  
-    return array($namespace,$path);
   
   }//method
   

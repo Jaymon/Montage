@@ -71,6 +71,7 @@ class Handler extends Field implements Injector {
   public function handle(){
   
     $env = $this->getField('env');
+    $container = $this->getContainer();
   
     // start the Config classes...
     $config_instance_map = array();
@@ -78,16 +79,15 @@ class Handler extends Field implements Injector {
     ///$config_instance_map[] = $this->classes->getInstance('Config\Config'); // global
     ///$config_instance_map[] = $this->classes->getInstance(sprintf('Config\%s',$this->field_map['env'])); // environment
   
-    ///$request = $this->classes->findInstance('Montage\Interfaces\Request');
+    // get the request instance...
+    $request = $container->findInstance('Montage\Request\Requestable');
   
-    $forward_list = array(
-      sprintf('%s\Forward',$env),
-      'Montage\Forward'
+    // decide where the request should be forwarded to...
+    $forward = $container->findInstance('Montage\Controller\Forward');
+    list($controller_class,$controller_method,$controller_method_args) = $forward->find(
+      $request->getHost(),
+      $request->getPath()
     );
-  
-    $forward = $this->classes->findInstance($forward_list);
-    
-    
     
   
   
