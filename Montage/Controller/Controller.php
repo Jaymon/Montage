@@ -21,13 +21,6 @@ abstract class Controller extends Field implements Controllable {
   public function preHandle(){}//method
   
   /**
-   *  this is the default controller method for this controller
-   *  
-   *  this method is called if this controller is activated but no method is given
-   */
-  abstract public function handleIndex();
-  
-  /**
    *  override to allow your controller to do stuff right after the handle method is called
    */
   public function postHandle(){}//method

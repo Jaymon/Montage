@@ -3,7 +3,9 @@
  *  the kernal/core that translates the request to the response
  *  
  *  other names: handler, sequence, assembler, dispatcher, scheduler
- *  http://en.wikipedia.org/wiki/Montage_%28filmmaking%29   
+ *  http://en.wikipedia.org/wiki/Montage_%28filmmaking%29  
+ *  
+ *  the best name might be Server
  *   
  *  @version 0.6
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -64,6 +66,9 @@ class Handler extends Field implements Injector {
     
     $container_class_name = $reflection->findClassName('Montage\Dependency\Container');
     $container = new $container_class_name($reflection);
+    // just in case, container should know about this instance for circular-dependency goodness...
+    $container->setInstance($this);
+    
     $this->setContainer($container);
     
   }//method
@@ -84,15 +89,56 @@ class Handler extends Field implements Injector {
   
     // decide where the request should be forwarded to...
     $forward = $container->findInstance('Montage\Controller\Forward');
-    list($controller_class,$controller_method,$controller_method_args) = $forward->find(
+    list($controller_class,$controller_method,$controller_method_params) = $forward->find(
       $request->getHost(),
       $request->getPath()
     );
     
+    while(true){
+      
+      try{
+      
+        $this->handleController($controller_class,$controller_method,$controller_method_params);
+        
+      }catch(Exception $e){
+      
+        list($controller_class,$controller_method,$controller_method_params) = $forward->findException($e);
+      
+      }//try/catch
   
+    }//while
   
+  }//method
+
+  protected function handleController($class_name,$method,array $params = array()){
   
+    out::e($class_name,$method,$params);
   
+    $container = $this->getContainer();
+    
+    $controller = $container->findInstance($class_name);
+    $rmethod = new \ReflectionMethod($controller,$method);
+    $rmethod_params = $container->normalizeParams($rmethod,$params);
+    
+    // make sure there are enough required params...
+    $required_param_count = $rmethod->getNumberOfParameters();
+    if($required_param_count !== count($rmethod_params)){
+      throw new \LengthException(
+        sprintf(
+          '%s::%s expects %s arguments to be passed to it, but %s args were passed',
+          $class_name,
+          $method,
+          $required_param_count,
+          count($rmethod_params)
+        )
+      );
+    }//if
+    
+    $controller->preHandle();
+    $ret_mixed = $rmethod->invokeArgs($controller,$rmethod_params);
+    $controller->postHandle();
+    
+    return $ret_mixed;
   
   }//method
 

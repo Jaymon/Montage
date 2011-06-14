@@ -2,12 +2,15 @@
 /**
  *  handles deciding which controller::method to forward to
  *  
+ *  this class should be renamed to something like Finder or Matcher, though
+ *  Matcher::find() sounds strange   
+ *  
  *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 4-6-10
  *  @package montage
  ******************************************************************************/       
-namespace Montage;
+namespace Montage\Controller;
 
 use Montage\Dependency\Reflection;
 use out;
@@ -38,7 +41,10 @@ class Forward {
    *  
    *  class must extend montage_controller      
    */
-  protected $exception_class = 'Exception';
+  protected $class_exception_list = array(
+    'Controller\ExceptionController',
+    'Montage\Controller\ExceptionController'
+  );
   
   protected $reflection = null;
   
@@ -69,10 +75,10 @@ class Forward {
   
   public function find($host,$path,array $args = array()){
   
-    $path_list = explode('/',$path);
+    $path_list = array_filter(explode('/',$path)); // ignore empty values
     $class_name = '';
     $method_name = '';
-    $method_args = array();
+    $method_params = array();
     $reflection = $this->reflection;
   
     // we check in order:
@@ -99,9 +105,11 @@ class Forward {
   
     if(empty($class_name)){
     
+      ///out::i($reflection);
+    
       foreach($this->class_default_list as $class_name){
       
-        if($reflection->hasClass($class_name,$this->class_interface)){
+        if($reflection->isChildClass($class_name,$this->class_interface)){
           break;
         }else{
           $class_name = '';
@@ -110,8 +118,12 @@ class Forward {
       }//foreach
       
       if(empty($class_name)){
-        throw new \UnexepectedValueException(
-          'A suitable Controller class could not be found to handle the request'
+        throw new \UnexpectedValueException(
+          sprintf(
+            'A suitable Controller class could not be found to handle the request host: %s, path: %s',
+            $host,
+            $path
+          )
         );
       }//if
     
@@ -129,32 +141,36 @@ class Forward {
       // if the controller method does not exist then use the default...
       if(method_exists($class_name,$method_name)){ // confirmed controller/method
       
-        $method_args = array_slice($path_list,1);
+        $method_params = array_slice($path_list,1);
         
       }else{
-      
-        // check for controller/$arg using the default method...
-        $method_name = $this->method_default;
-        if(method_exists($class_name,$method_name)){
-        
-          $method_args = $path_list;
-        
-        }else{
-        
-          throw new \UnexpectedValueException(
-            sprintf(
-              'Could not find a suitable method in %s to handle the request',
-              $class_name
-            )
-          );
-        
-        }//if/else
-        
+        $method_name = '';
       }//if/else
     
     }//if
-  
-    return array($class_name,$method_name,$method_args);
+    
+    if(empty($method_name)){
+    
+      // check for controller/$arg using the default method...
+      $method_name = $this->method_default;
+      if(method_exists($class_name,$method_name)){
+      
+        $method_params = $path_list;
+      
+      }else{
+      
+        throw new \UnexpectedValueException(
+          sprintf(
+            'Could not find a suitable method in %s to handle the request',
+            $class_name
+          )
+        );
+      
+      }//if/else
+    
+    }//if
+
+    return array($class_name,$method_name,$method_params);
   
   }//method
   
@@ -202,7 +218,7 @@ class Forward {
    *  @param  Exception $e
    *  @return array array($controller_class_name,$controller_method,$controller_method_args)        
    */
-  public function getError(Exception $e){
+  public function findException(Exception $e){
     
     $e_name = get_class($e);
       

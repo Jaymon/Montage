@@ -268,23 +268,14 @@ class Reflection implements \Reflector {
    *  @param  string  $parent_class_name  if passed in then the $class_name must also be a child of this class   
    *  @return boolean
    */
-  public function hasClass($class_name,$parent_class_name = ''){
+  public function hasClass($class_name){
   
     $ret_bool = false;
     if(!empty($class_name)){
     
       $class_key = $this->normalizeClassName($class_name);
-    
-      if(isset($this->class_map[$class_key])){
+      $ret_bool = isset($this->class_map[$class_key]);
       
-        if(empty($parent_class_name)){
-          $ret_bool = true;
-        }else{
-          $ret_bool = $this->isChildClass($class_key,$parent_class_name);
-        }//if/else
-      
-      }//if
-    
     }//if
   
     return $ret_bool;
@@ -306,8 +297,23 @@ class Reflection implements \Reflector {
     // canary...
     if(empty($child_class_name)){ return false; }//if
     if(empty($parent_class_name)){ return false; }//if
+    if(!$this->hasClass($child_class_name)){ return false; }//if
   
-    $ret_bool = $this->isParentClass($parent_class_name,$child_class_name);
+    $ret_bool = false;
+  
+    $parent_key = $this->normalizeClassName($parent_class_name);
+    $parent_list = class_parents($child_class_name,true);
+    $implement_list = class_implements($child_class_name,true);
+    
+    foreach(array_merge($parent_list,$implement_list) as $class_name){
+    
+      if($parent_key === $this->normalizeClassName($class_name)){
+        $ret_bool = true;
+        break;
+      }//if
+    
+    }//foreach
+  
     return $ret_bool;
   
   }//method
@@ -315,12 +321,16 @@ class Reflection implements \Reflector {
   /**
    *  true if the passed in $parent_class_name is a parent to any class
    * 
+   *  this could pull in get_declared_classes() and pull out all parents of those
+   *  also, I just can't decide if reflection should know about stuff that hasn't
+   *  been explicitely set using addPath() or addClass()       
+   *      
    *  @since  6-10-11    
    *  @param  string  $parent_class_name
    *  @param  string  $child_class_name if not-empty, then the parent must be a parent of this class
    *  @return boolean
    */
-  public function isParentClass($parent_class_name,$child_class_name = ''){
+  /* public function isParentClass($parent_class_name,$child_class_name = ''){
   
     // canary...
     if(empty($parent_class_name)){ return false; }//if
@@ -343,7 +353,7 @@ class Reflection implements \Reflector {
     
     return $ret_bool;
   
-  }//method
+  }//method */
   
   public function findClasses($code){
   
@@ -645,7 +655,7 @@ class Reflection implements \Reflector {
     $class_map = array();
     $key = $this->normalizeClassName($class_name);
     $class_map['class'] = $class_name;
-    $class_map['last_modified'] = filemtime($class_file);
+    $class_map['last_modified'] = filemtime($class_file); // use MD5 instead?
     $class_map['path'] = $class_file;
     $this->class_map[$key] = $class_map;
     

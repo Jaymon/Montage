@@ -9,7 +9,7 @@
  ******************************************************************************/
 namespace Montage\Dependency;
 
-use ReflectionClass;
+use ReflectionClass, ReflectionMethod;
 use Montage\Field;
 use out;
 
@@ -17,11 +17,11 @@ class Container extends Field {
 
   /**
    *  the reflection class is kept outside the {@link $instance_map} because it
-   *  is needed for lost of things   
+   *  is needed for lots of things   
    *
    *  @var  string  the passed in Reflection instances full class name   
    */
-  protected $reflection_class_name = '';
+  protected $reflection = null;
 
   protected $instance_map = array();
 
@@ -30,19 +30,21 @@ class Container extends Field {
    */
   final public function __construct(Reflection $reflection){
   
-    $this->reflection_class_name = get_class($reflection);
-    $this->instance_map[$this->reflection_class_name] = $reflection;
-  
+    $this->reflection = $reflection;
+    $this->setInstance($reflection);
+    
   }//method
   
-  public function getReflection(){ return $this->instance_map[$this->reflection_class_name]; }//method
+  public function getReflection(){ return $this->reflection; }//method
   
-  public function hasInstance($class_name){ return isset($this->instance_map[$class_name]); }//method
+  public function hasInstance($class_name){
+    return isset($this->instance_map[$this->getKey($class_name)]);
+  }//method
   
   public function setInstance($instance){
   
-    $class_name = get_class($instance);
-    $this->instance_map[$class_name] = $instance;
+    $class_key = $this->getKey($instance);
+    $this->instance_map[$class_key] = $instance;
   
   }//method
   
@@ -59,14 +61,20 @@ class Container extends Field {
   
     $ret_instance = null;
     $params = (array)$params;
+    $class_key = $this->getKey($class_name);
   
-    if(!$this->hasInstance($class_name)){
+    if(isset($this->instance_map[$class_key])){
     
-      $this->instance_map[$class_name] = $this->getNewInstance($class_name,$params);
+      $ret_instance = $this->instance_map[$class_key];
+      
+    }else{
+    
+      $ret_instance = $this->getNewInstance($class_name,$params);
+      $this->setInstance($ret_instance);
     
     }//if/else
   
-    return $this->instance_map[$class_name];
+    return $ret_instance;
   
   }//method
   
@@ -89,6 +97,7 @@ class Container extends Field {
       try{
     
         $instance_class_name = $reflection->findClassName($cn);
+        break;
         
       }catch(Exception $e){}//try/catch
       
@@ -101,15 +110,20 @@ class Container extends Field {
       );
     
     }else{
-    
-      if(!$this->hasInstance($instance_class_name)){
       
-        $this->instance_map[$instance_class_name] = $this->getNewInstance($instance_class_name,$params);
+      $class_key = $this->getKey($instance_class_name);
+  
+      if(isset($this->instance_map[$class_key])){
+      
+        $ret_instance = $this->instance_map[$class_key];
+        
+      }else{
+    
+        $ret_instance = $this->getNewInstance($instance_class_name,$params);
+        $this->setInstance($ret_instance);
       
       }//if/else
     
-      $ret_instance = $this->instance_map[$instance_class_name];
-      
     }//if/else
       
     return $ret_instance;
@@ -133,8 +147,35 @@ class Container extends Field {
     }//if
   
     $ret_instance = null;
+    $instance_params = array();
+    
+    $params = (array)$params;
     $rclass = new ReflectionClass($class_name);
-    $instance_params = $this->normalizeParams($rclass,$params);
+    
+    // canary, make sure there is a __construct() method since we are passing in arguments...
+    $rconstructor = $rclass->getConstructor();
+    if(empty($rconstructor)){
+      
+      if(!empty($params)){
+        
+        throw new UnexpectedValueException(
+          sprintf(
+            'Normalizing "%s" constructor params will fail because "%s" '
+            .'has no __construct() method, so no constructor arguments can be used to instantiate it. '
+            .'Please add %s::__construct(), or don\'t pass in any constructor arguments',
+            $class_name,
+            $class_name,
+            $class_name
+          )
+        );
+      
+      }//method
+      
+    }else{
+    
+      $instance_params = $this->normalizeParams($rconstructor,$params);
+    
+    }//if/else
     
     if(empty($instance_params)){
     
@@ -151,93 +192,103 @@ class Container extends Field {
   
   }//method
   
-  protected function normalizeParams(ReflectionClass $rclass,array $params){
+  public function normalizeParams(ReflectionMethod $rmethod,array $params){
   
-    // canary, make sure there is a __construct() method since we are passing in arguments...
-    $rconstructor = $rclass->getConstructor();
-    if(empty($rconstructor)){
-      
-      $class_name = $rclass->getName();
-      
-      throw new UnexpectedValueException(
-        sprintf(
-          'Normalizing "%s" constructor params failed because "%s" '
-          .'has no __construct() method, so no constructor arguments can be used to instantiate it. '
-          .'Please add %s::__construct(), or don\'t pass in any constructor arguments',
-          $class_name,
-          $class_name,
-          $class_name
-        )
-      );
-      
-    }//if
+    // canary...
+    if($rmethod->getNumberOfParameters() <= 0){ return $params; }//if
+  
     // canary, params are numeric, so just pass those into the constructor untouched...
-    if(ctype_digit((string)join('',array_keys($params)))){ return $params; }//if
+    ///if(ctype_digit((string)join('',array_keys($params)))){ return $params; }//if
     
     $ret_params = array();
-    $rparams = $rconstructor->getParameters();
+    $rparams = $rmethod->getParameters();
     
-    foreach($rparams as $rparam){
+    foreach($rparams as $index => $rparam){
 
-      $field_name = $rparam->getName();
-    
-      if(array_key_exists($field_name,$params)){
-        
-        $ret_params[] = $params[$field_name];
+      // first try and resolve numeric keys, then do string keys...
+      if(array_key_exists($index,$params)){
+      
+        $ret_params[] = $params[$index];
       
       }else{
+  
+        $field_name = $rparam->getName();
       
-        $rclass = $rparam->getClass();
-        if($rclass === null){
-        
-          if($this->existsField($field_name)){
+        if(array_key_exists($field_name,$params)){
           
-            $ret_params[] = $this->getField($field_name);
-            
-          }else if($rparam->isDefaultValueAvailable()){
-          
-            $ret_params[] = $rparam->getDefaultValue();
-          
-          }else{
-          
-            throw new UnexpectedValueException(
-              sprintf(
-                'no suitable value could be found for %s\'s __construct() param "%s"',
-                $rclass->getName(),
-                $field_name
-              )
-            );
-          
-          }//if/else if/else
+          $ret_params[] = $params[$field_name];
         
         }else{
         
-          $class_name = $rclass->getName();
+          $rclass = $rparam->getClass();
+          if($rclass === null){
           
-          try{
-          
-            $ret_params[] = $this->findInstance($class_name);
+            if($this->existsField($field_name)){
             
-          }catch(Exception $e){
-          
-            if($rparam->isDefaultValueAvailable()){
+              $ret_params[] = $this->getField($field_name);
+              
+            }else if($rparam->isDefaultValueAvailable()){
             
               $ret_params[] = $rparam->getDefaultValue();
             
             }else{
-              throw $e;
-            }//if/else
+            
+              throw new UnexpectedValueException(
+                sprintf(
+                  'no suitable value could be found for %s\'s __construct() param "%s"',
+                  $rclass->getName(),
+                  $field_name
+                )
+              );
+            
+            }//if/else if/else
           
-          }//try/catch
+          }else{
+          
+            $class_name = $rclass->getName();
+            
+            try{
+            
+              $ret_params[] = $this->findInstance($class_name);
+              
+            }catch(Exception $e){
+            
+              if($rparam->isDefaultValueAvailable()){
+              
+                $ret_params[] = $rparam->getDefaultValue();
+              
+              }else{
+                throw $e;
+              }//if/else
+            
+            }//try/catch
+          
+          }//if/else
         
         }//if/else
-      
+        
       }//if/else
       
     }//foreach
     
     return $ret_params;
   
+  }//method
+  
+  /**
+   *  get the key the instance will use for the instance map
+   *
+   *  @since  6-13-11
+   *  @Param  string|object $class   
+   *  @return string      
+   */
+  protected function getKey($class){
+    
+    $class_name = is_object($class)
+      ? get_class($class)
+      : $class;
+  
+    return $this->getReflection()->normalizeClassName($class_name);
   }//method
 
 }//class

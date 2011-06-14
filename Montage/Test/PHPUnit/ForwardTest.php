@@ -74,7 +74,7 @@ namespace Montage\Test\PHPUnit {
 
 }//namespace
 
-namespace Controller {
+namespace Test\Controller {
 
   use Montage\Controller\Controller;
   
