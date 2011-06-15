@@ -2,14 +2,18 @@
 /**
  *  the Dependancy Injection Container is like a service locator  
  * 
- *  @version 0.1
+ *  @todo injectPublicParams() - inject instances via a public param, the problem
+ *  is you would have to docblock the param with a @var field telling what object
+ *  you want, and that would have to use the full namespaced class name   
+ *  
+ *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 6-1-11
  *  @package montage
  ******************************************************************************/
 namespace Montage\Dependency;
 
-use ReflectionClass, ReflectionMethod;
+use ReflectionObject, ReflectionClass, ReflectionMethod;
 use Montage\Field;
 use out;
 
@@ -32,6 +36,7 @@ class Container extends Field {
   
     $this->reflection = $reflection;
     $this->setInstance($reflection);
+    $this->setInstance($this); // we want to be able to inject this also
     
   }//method
   
@@ -187,6 +192,8 @@ class Container extends Field {
       $ret_instance = $rclass->newInstanceArgs($instance_params);
     
     }//if/else
+    
+    $ret_instance = $this->injectSetters($ret_instance,$rclass);
   
     return $ret_instance;
   
@@ -289,6 +296,73 @@ class Container extends Field {
       : $class;
   
     return $this->getReflection()->normalizeClassName($class_name);
+    
+  }//method
+
+  /**
+   *  inject dependencies via setter methods
+   *  
+   *  by default, this class will only inject if the method is of the form:
+   *  setName(ClassName $class) and nothing else. And it will only inject the class
+   *  if it has already created it (it won't be created on the fly like with constructor
+   *  injection). This is because if you are using setter injection then it is most
+   *  likely optional that you want the object instance, if you absolutely must have
+   *  the instance then use constructor injection            
+   *  
+   *  @example:
+   *    setFoo(Foo $foo);                  
+   *
+   *  @since  6-14-11   
+   *  @param  object  $instance the object instance to be injected
+   *  @param  ReflectionClass $rclass the reflection object of the given $instance      
+   *  @return object  $instance with its setters injected
+   */
+  protected function injectSetters($instance,ReflectionClass $rclass = null){
+  
+    // canary...
+    if(empty($instance)){ throw new \InvalidArgumentException('$instance was empty'); }//if
+    if(empty($rclass)){
+      $rclass = new ReflectionObject($instance);
+    }//if
+  
+    $ret_count = 0;
+    
+    $rmethod_list = $rclass->getMethods(ReflectionMethod::IS_PUBLIC);
+    foreach($rmethod_list as $rmethod){
+    
+      $method_name = $rmethod->getName();
+    
+      // only check the method if it is of the form: setNNNN()...
+      if(mb_stripos($method_name,'set') === 0){
+      
+        if($rmethod->getNumberOfParameters() === 1){
+        
+          $rparams = $rmethod->getParameters();
+          foreach($rparams as $rparam){
+          
+            $prclass = $rparam->getClass();
+            if($rclass !== null){
+          
+              $class_name = $prclass->getName();
+              if($this->hasInstance($class_name)){
+              
+                $instance->{$method_name}($this->getInstance($class_name));
+                $ret_count++;
+              
+              }//if
+              
+            }//if
+        
+          }//foreach
+        
+        }//if
+      
+      }//if
+    
+    }//foreach
+  
+    return $ret_count;
+  
   }//method
 
 }//class

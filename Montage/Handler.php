@@ -23,6 +23,7 @@ require_once(__DIR__.'/Field.php');
 
 use Montage\Path;
 use Montage\Field;
+use Montage\Exceptions\NotFoundException;
 use out;
 
 use Montage\Dependency\Reflection;
@@ -83,6 +84,7 @@ class Handler extends Field implements Injector {
     // findInstance() for getBestInstance()?
     ///$config_instance_map[] = $this->classes->getInstance('Config\Config'); // global
     ///$config_instance_map[] = $this->classes->getInstance(sprintf('Config\%s',$this->field_map['env'])); // environment
+    // $this->handleConfig();
   
     // get the request instance...
     $request = $container->findInstance('Montage\Request\Requestable');
@@ -123,7 +125,7 @@ class Handler extends Field implements Injector {
     // make sure there are enough required params...
     $required_param_count = $rmethod->getNumberOfParameters();
     if($required_param_count !== count($rmethod_params)){
-      throw new \LengthException(
+      throw new NotFoundException(
         sprintf(
           '%s::%s expects %s arguments to be passed to it, but %s args were passed',
           $class_name,

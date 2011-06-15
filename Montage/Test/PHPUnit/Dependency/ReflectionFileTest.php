@@ -1,15 +1,17 @@
 <?php
 namespace Montage\Test\PHPUnit;
+
 use ReflectionClass;
-use Montage\Classes;
+use Montage\Dependency\ReflectionFile;
+use out;
 
-require_once(join(DIRECTORY_SEPARATOR,array(__DIR__,'Test_class.php')));
-require_once(join(DIRECTORY_SEPARATOR,array(__DIR__,'..','..','Path_class.php')));
-require_once(join(DIRECTORY_SEPARATOR,array(__DIR__,'..','..','Classes_class.php')));
-
-///require_once('E:\Projects\sandbox\montage\_active\Montage\Path_class.php');
-///require_once('E:\Projects\sandbox\montage\_active\Montage\Classes_class.php');
 require_once('out_class.php');
+  
+require_once(__DIR__.'/../Test.php');
+require_once(__DIR__.'/../../../Path.php');
+
+require_once(__DIR__.'/../../../Dependency/Reflection.php');
+require_once(__DIR__.'/../../../Dependency/ReflectionFile.php');
 
 class ClassesTest extends Test {
 
