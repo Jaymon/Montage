@@ -175,44 +175,6 @@ class Forward {
   }//method
   
   /**
-   *  assure the controller class name and method are valid and callable
-   *  
-   *  @param  string  $controller_class_name
-   *  @param  string  $controller_method
-   *  @return array array($controller_class_name,$controller_method)        
-   */
-  public function get($controller_class_name,$controller_method){
-  
-    $controller_class_name = $this->getControllerClassName($controller_class_name);
-    $controller_method = $this->getControllerMethodName($controller_method);
-  
-    // canary...
-    if(empty($controller_class_name)){
-      throw new UnexpectedValueException('a valid $controller_class_name was not found');
-    }//if
-    if(empty($controller_method)){
-      throw new UnexpectedValueException('$controller_method cannot be empty');
-    }//if
-    if(!montage_core::isController($controller_class_name)){
-      throw new DomainException(
-        '$controller_class_name does not extend montage_controller or can\'t be declared (eg, is abstract).'
-      );
-    }//if
-    if(!method_exists($controller_class_name,$controller_method)){
-      throw new BadMethodCallException(
-        sprintf(
-          '%s::%s does not exist',
-          $controller_class_name,
-          $controller_method
-        )
-      );
-    }//if
-  
-    return array($controller_class_name,$controller_method);
-  
-  }//method
-  
-  /**
    *  get the controller::method that should be used for the given exception $e
    *  
    *  @param  Exception $e
@@ -221,7 +183,39 @@ class Forward {
   public function findException(Exception $e){
     
     $e_name = get_class($e);
+    $class_name = '';
+    $method_name = '';
+    
+    // find the controller...
+    foreach($this->class_exception_list as $class_name){
       
+      if($reflection->isChildClass($class_name,$this->class_interface)){
+        break;
+      }else{
+        $class_name = '';
+      }//if/else
+    
+    }//foreach
+    
+    if(empty($class_name)){
+    
+      throw new \UnexpectedValueException(
+        sprintf(
+          'A suitable Exception Controller class could not be found to handle the exception: %s',
+          $e
+        )
+      );
+      
+    }//if
+    
+    $method_name = $e_name;
+    
+    // @todo move finding the method into its own method so this and find can share
+    
+    if(method_exists($class_name,$method_name)){
+      $controller_method = $controller_method;
+    }//if
+    
     $controller_class_name = $this->getControllerClassName(self::CONTROLLER_ERROR_CLASS_NAME);
     $controller_method = self::CONTROLLER_METHOD;
     $controller_method_args = array($e);

@@ -25,9 +25,8 @@ namespace Montage\Test\PHPUnit {
       ///out::e($this->container);
     
       $reflection = new Reflection();
-      ///$reflection->addPath(__DIR__.'/../../Fixtures/Dependency');
       $reflection->addFile(__FILE__);
-      out::i($reflection);
+      ///out::i($reflection);
       
       $this->container = new Container($reflection);
       
@@ -71,6 +70,26 @@ namespace Montage\Test\PHPUnit {
       $this->assertNull($instance->three);
       
     }//method
+    
+    /**
+     *  setter injection should add dependencies if they are there
+     *
+     *  @since  6-15-11
+     */
+    public function testSetterInjection(){
+    
+      $instance = $this->container->findInstance('Montage\Test\Fixtures\Dependency\FooBar');
+      $this->assertTrue($instance instanceof \Montage\Test\Fixtures\Dependency\FooBar);
+      $this->assertNull($instance->che);
+      
+      // creat che...
+      $che = $this->container->findInstance('Che');
+      
+      // now che should be there if I get a new instance...
+      $instance = $this->container->getNewInstance('Montage\Test\Fixtures\Dependency\FooBar');
+      $this->assertTrue($instance->che instanceof \Che);
+      
+    }//method
   
   }//class
   
@@ -93,6 +112,14 @@ namespace Montage\Test\Fixtures\Dependency {
   class Foo {
 
     public function __construct($one,$two){}//method
+  
+  }//class
+  
+  class FooBar {
+  
+    public $che = null;
+  
+    public function setChe(\Che $che){ $this->che = $che; }//method
   
   }//class
 

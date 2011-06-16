@@ -8,135 +8,171 @@ use out;
 require_once('out_class.php');
   
 require_once(__DIR__.'/../Test.php');
-require_once(__DIR__.'/../../../Path.php');
+///require_once(__DIR__.'/../../../Path.php');
 
-require_once(__DIR__.'/../../../Dependency/Reflection.php');
+///require_once(__DIR__.'/../../../Dependency/Reflection.php');
 require_once(__DIR__.'/../../../Dependency/ReflectionFile.php');
 
-class ClassesTest extends Test {
+class ReflectionFileTest extends Test {
 
   public function testFindClasses(){
   
-    $c = new Classes();
-    
-    $c->findClasses(
-      '<'.'?php
-      
-      namespace foo {
+    $test_map_prototype = array(
+      'in' => '<'.'?php',
+      'out' => array(
+        0 => array(
+          'class' => '',
+          'extends' => array(),
+          'implements' => array()
+        )
+      )
+    );
+  
+    $test_list = array();
+    $test_list[] = array(
+      'in' => '<'.'?php
+        namespace {
+        
+          use StdObject;
+        
+          class happy extends StdObject {}
+        
+        }
+        ',
+      'out' => array(
+        0 => array(
+          'class' => '\happy',
+          'extends' => array('\StdObject'),
+          'implements' => array()
+        )
+      )
+    );
+    $test_list[] = array(
+      'in' => '<'.'?php
+        
+        namespace foo {
+        
+          class foo extends \bang\boom\pow,che\bar {}
+          
+        }
+        
+        namespace bar {
+        
+          use foo;
+        
+          class bar implements \Serializable,\Countable {}
+        
+        }
+        ',
+      'out' => array(
+        0 => array(
+          'class' => '\foo\foo',
+          'extends' => array('\bang\boom\pow','\foo\che\bar'),
+          'implements' => array()
+        ),
+        1 => array(
+          'class' => '\bar\bar',
+          'extends' => array(),
+          'implements' => array('\Serializable','\Countable')
+        )
+      )
+    );
+    $test_list[] = array(
+      'in' => '<'.'?php
+        use che;
       
         class foo extends \bang\boom\pow,che\bar {}
+        ',
+      'out' => array(
+        0 => array(
+          'class' => '\foo',
+          'extends' => array('\bang\boom\pow','\che\bar'),
+          'implements' => array()
+        )
+      )
+    );
+    $test_list[] = array(
+      'in' => '<'.'?php
+        use che;
+      
+        class foo extends \bang\boom\pow {}
+        ',
+      'out' => array(
+        0 => array(
+          'class' => '\foo',
+          'extends' => array('\bang\boom\pow'),
+          'implements' => array()
+        )
+      )
+    );
+    $test_list[] = array(
+      'in' => '<'.'?php
+        use che;
+      
+        class foo extends che\bar {}
+        ',
+      'out' => array(
+        0 => array(
+          'class' => '\foo',
+          'extends' => array('\che\bar'),
+          'implements' => array()
+        )
+      )
+    );
+    $test_list[] = array(
+      'in' => '<'.'?php
+        use che;
+      
+        class foo extends che\bar {}
+        ',
+      'out' => array(
+        0 => array(
+          'class' => '\foo',
+          'extends' => array('\che\bar'),
+          'implements' => array()
+        )
+      )
+    );
+    $test_list[] = array(
+      'in' => '<'.'?php
+        class foo extends bar {}
+        ',
+      'out' => array(
+        0 => array(
+          'class' => '\foo',
+          'extends' => array('\bar'),
+          'implements' => array()
+        )
+      )
+    );
+    $test_list[] = array(
+      'in' => '<'.'?php
+        namespace happy;
+      
+        use \Montage\Classes;
+        use out;
+        use \Montage\Path as Foo;
         
-      }
-      
-      namespace bar {
-      
-        use foo;
-      
-        class bar implements \Serializable,\Countable {}
-      
-      }
-      
-      ?'.'>'
+        class Bar extends Foo implements \Countable {}//class
+        ',
+      'out' => array(
+        0 => array(
+          'class' => '\happy\Bar',
+          'extends' => array('\Montage\Path'),
+          'implements' => array('\Countable')
+        )
+      )
     );
-    return;
-    
-    
-    $c->findClasses(
-      '<'.'?php
-      
-      use che;
-      
-      class foo extends \bang\boom\pow,che\bar {}
-      
-      ?'.'>'
-    );
-    return;
-    
-    $c->findClasses(
-      '<'.'?php
-      
-      use che;
-      
-      class foo extends \bang\boom\pow {}
-      
-      ?'.'>'
-    );
-    return;
-    
-    $c->findClasses(
-      '<'.'?php
-      
-      use che;
-      
-      class foo extends che\bar {}
-      
-      ?'.'>'
-    );
-    return;
-    
-    $c->findClasses(
-      '<'.'?php
-      
-      class foo extends bar {}
-      
-      ?'.'>'
-    );
-    return;
-    
-    $c->findClasses(
-      '<'.'?php
-      
-      use Montage\Classes as foo,foo\bar as baz;
-      
-      ?'.'>'
-    );
-    return;
-    
-    $c->findClasses(
-      '<'.'?php
-      
-      use Montage\Classes as foo;
-      
-      ?'.'>'
-    );
-    return;
-    
-    $c->findClasses(
-      '<'.'?php
-      
-      use Montage\Classes,foo\bar;
-      
-      ?'.'>'
-    );
-    
-    return;
-    
-    
-    $c->findClasses(
-      '<'.'?php
-      
-      use Montage\Classes;
-      
-      ?'.'>'
-    );
-    
-    return;
-    
-    $c->findClasses(
-      '<'.'?php
-      namespace happy;
-      
-      use \Montage\Classes;
-      use out;
-      use \Montage\Path as Foo;
-      
-      class Bar extends Foo implements \Countable {}//class
-      
-      ?'.'>'
-    );
-    
-    // use \foo as F,\Bar as B;
   
+    $temp_file = tempnam(sys_get_temp_dir(),__CLASS__);
+  
+    foreach($test_list as $i => $test_map){
+    
+      file_put_contents($temp_file,$test_map['in'],LOCK_EX);
+      $rfile = new ReflectionFile($temp_file);
+      $this->assertEquals($rfile->getClasses(),$test_map['out'],$i);
+    
+    }//foreach
   
   }//method
 

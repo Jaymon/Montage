@@ -73,7 +73,7 @@ class ReflectionFile implements Reflector {
    *  
    *  @return string
    */
-  public function __toString(){ return $this->contents; }//method
+  public function __toString(){ return $this->body; }//method
   
   /**
    *  get any php classes that are found in the file 
@@ -194,6 +194,13 @@ class ReflectionFile implements Reflector {
         }//if/else
       
       }//if/else
+      
+      if($ret_str[0] !== '\\'){
+    
+        // it's fully qualified, so don't try to discover the namespace...
+        $ret_str = sprintf('\\%s',$ret_str);
+        
+      }//if
     
     }//if/else
   
@@ -417,10 +424,15 @@ class ReflectionFile implements Reflector {
           
     // go until we hit the end of the line
     for($i = $i + 1; ($tokens[$i] !== ';') && $tokens[$i] !== '{' ;$i++){
-      $namespace .= is_string($tokens[$i]) ? $tokens[$i] : $tokens[$i][1];
+      if($tokens[$i][0] !== T_WHITESPACE){
+        $namespace .= is_string($tokens[$i]) ? $tokens[$i] : $tokens[$i][1];
+      }//if
     }//for
   
-    $namespace = sprintf('\\%s',trim($namespace));
+    if(!empty($namespace)){
+      $namespace = sprintf('\\%s',$namespace);
+    }//if
+    
     return array($i,$namespace);
   
   }//method

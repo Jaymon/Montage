@@ -23,7 +23,12 @@ require_once(__DIR__.'/Field.php');
 
 use Montage\Path;
 use Montage\Field;
+
 use Montage\Exceptions\NotFoundException;
+use Montage\Exceptions\InternalRedirectException;
+use Montage\Exceptions\RedirectException;
+use Montage\Exceptions\StopException;
+
 use out;
 
 use Montage\Dependency\Reflection;
@@ -49,10 +54,10 @@ class Handler extends Field implements Injector {
   
     // canary...
     if(empty($env)){
-      throw new InvalidArgumentException('$env was empty, please set $env to something like "dev" or "prod"');
+      throw new \InvalidArgumentException('$env was empty, please set $env to something like "dev" or "prod"');
     }//if
     if(empty($app_path)){
-      throw new InvalidArgumentException('$app_path was empty, please set it to the root path of your app');
+      throw new \InvalidArgumentException('$app_path was empty, please set it to the root path of your app');
     }//if
   
     ///out::e($namespace,$debug_level,$app_path);
@@ -79,42 +84,36 @@ class Handler extends Field implements Injector {
     $env = $this->getField('env');
     $container = $this->getContainer();
   
-    // start the Config classes...
-    $config_instance_map = array();
-    // findInstance() for getBestInstance()?
-    ///$config_instance_map[] = $this->classes->getInstance('Config\Config'); // global
-    ///$config_instance_map[] = $this->classes->getInstance(sprintf('Config\%s',$this->field_map['env'])); // environment
-    // $this->handleConfig();
-  
-    // get the request instance...
-    $request = $container->findInstance('Montage\Request\Requestable');
-  
-    // decide where the request should be forwarded to...
-    $forward = $container->findInstance('Montage\Controller\Forward');
-    list($controller_class,$controller_method,$controller_method_params) = $forward->find(
-      $request->getHost(),
-      $request->getPath()
-    );
+    try{
     
-    while(true){
+      // start the Config classes...
+      $config_instance_map = array();
+      // findInstance() for getBestInstance()?
+      ///$config_instance_map[] = $this->classes->getInstance('Config\Config'); // global
+      ///$config_instance_map[] = $this->classes->getInstance(sprintf('Config\%s',$this->field_map['env'])); // environment
+      // $this->handleConfig();
+    
+      // get the request instance...
+      $request = $container->findInstance('Montage\Request\Requestable');
+    
+      // decide where the request should be forwarded to...
+      $forward = $container->findInstance('Montage\Controller\Forward');
+      list($controller_class,$controller_method,$controller_method_params) = $forward->find(
+        $request->getHost(),
+        $request->getPath()
+      );
       
-      try{
-      
-        $this->handleController($controller_class,$controller_method,$controller_method_params);
-        
-      }catch(Exception $e){
-      
-        list($controller_class,$controller_method,$controller_method_params) = $forward->findException($e);
-      
-      }//try/catch
-  
-    }//while
+      $ret_handle = $this->handleController($controller_class,$controller_method,$controller_method_params);
+          
+    }catch(Exception $e){
+    
+      $ret_mixed = $this->handleException($e);
+    
+    }//try/catch
   
   }//method
 
   protected function handleController($class_name,$method,array $params = array()){
-  
-    out::e($class_name,$method,$params);
   
     $container = $this->getContainer();
     
@@ -141,6 +140,86 @@ class Handler extends Field implements Injector {
     $controller->postHandle();
     
     return $ret_mixed;
+  
+  }//method
+  
+  /**
+   *  handle a thrown exception
+   *  
+   *  @return boolean $use_template
+   */
+  protected function handleException(Exception $e){
+  
+    $this->handleRecursion();
+  
+    $ret_mixed = null;
+  
+    try{
+    
+      // needs: Request, Forward
+    
+      if($e instanceof InternalRedirectException){
+      
+        list($controller_class,$controller_method,$controller_method_params) = $forward->find(
+          $request->getHost(),
+          $e->getPath()
+        );
+      
+        $ret_mixed = $this->handleController($controller_class,$controller_method,$controller_method_params);
+      
+      }else if($e instanceof RedirectException){
+      
+      
+      }else if($e instanceof StopException){
+        
+        // don't do anything, we're done
+        
+      }else{
+        
+        list($controller_class,$controller_method,$controller_method_params) = $forward->findException($e);
+        
+        $ret_mixed = $this->handleController($controller_class,$controller_method,$controller_method_params);
+        
+      }//try/catch
+      
+    }catch(Exception $e){
+    
+      $ret_mixed = $this->handleException($e);
+    
+    }//try/catch
+  
+    return $ret_mixed;
+  
+  }//method
+  
+  /**
+   *  check for infinite recursion, throw an exception if found
+   *  
+   *  this is done by keeping an internal count of how many times this method has been called, 
+   *  if that count reaches the max count then an exception is thrown
+   *  
+   *  @return integer the current count
+   */
+  protected function handleRecursion(){
+  
+    $max_ir_count = $this->getField('Handler.recursion_max_count',10);
+    $ir_field = 'Handler.recursion_count'; 
+    $ir_count = $this->getField($ir_field,0);
+    if($ir_count > 10){
+      throw new \RuntimeException(
+        sprintf(
+          'The application has internally redirected more than %s times, something seems to '
+          .'be wrong and the app is bailing to avoid infinite recursion!',
+          $max_ir_count
+        )
+      );
+    }else{
+    
+      $ir_count = $this->bumpField($ir_field,1);
+      
+    }//if/else
+    
+    return $ir_count;
   
   }//method
 

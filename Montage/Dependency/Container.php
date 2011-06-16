@@ -48,6 +48,9 @@ class Container extends Field {
   
   public function setInstance($instance){
   
+    // canary...
+    if(!is_object($instance)){ throw new \InvalidArgumentException('$instance was empty'); }//if
+  
     $class_key = $this->getKey($instance);
     $this->instance_map[$class_key] = $instance;
   
@@ -361,7 +364,8 @@ class Container extends Field {
     
     }//foreach
   
-    return $ret_count;
+    ///return $ret_count;
+    return $instance;
   
   }//method
 
