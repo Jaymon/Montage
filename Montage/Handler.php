@@ -5,7 +5,8 @@
  *  other names: handler, sequence, assembler, dispatcher, scheduler
  *  http://en.wikipedia.org/wiki/Montage_%28filmmaking%29  
  *  
- *  the best name might be Server
+ *  the best name might be Server or Framework (I like Framework, it will most likely
+ *  be changed to Framework at some point)
  *   
  *  @version 0.6
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -64,18 +65,7 @@ class Handler extends Field implements Injector {
     
     $this->setField('env',$env);
     $this->setField('debug_level',$debug_level);
-    
     $this->app_path = $app_path;
-    $reflection = new Reflection();
-    $reflection->addPath($this->getFrameworkPath());
-    $reflection->addPath($app_path);
-    
-    $container_class_name = $reflection->findClassName('Montage\Dependency\Container');
-    $container = new $container_class_name($reflection);
-    // just in case, container should know about this instance for circular-dependency goodness...
-    $container->setInstance($this);
-    
-    $this->setContainer($container);
     
   }//method
   
@@ -227,7 +217,47 @@ class Handler extends Field implements Injector {
     $this->container = $container;
   }//method
   
-  public function getContainer(){ return $this->container; }//method
+  public function getContainer(){
+  
+    // canary...
+    if(!empty($this->container)){ return $this->container; }//if
+  
+    // since the container isn't built, let's build it...
+    $reflection = new Reflection();
+    
+    // collect all the paths we're going to use...
+    $framework_path = $this->getFrameworkPath();
+    $app_path = $this->getAppPath();
+    
+    // paths to add...
+    $path_list = array(
+      $framework_path,
+      new Path($app_path,'vendor'),
+      new Path($app_path,'plugins'),
+      new Path($app_path,'src'),
+      new Path($app_path,'config')
+    );
+    
+    foreach($path_list as $path){
+    
+      if($path->exists()){
+    
+        $reflection->addPath($path);
+        
+      }//if
+    
+    }//foreach
+    
+    $container_class_name = $reflection->findClassName('Montage\Dependency\Container');
+    $container = new $container_class_name($reflection);
+    // just in case, container should know about this instance for circular-dependency goodness...
+    $container->setInstance($this);
+    
+    $this->setContainer($container);
+    
+    return $this->container; 
+  
+  }//method
 
   public function getFrameworkPath(){
   

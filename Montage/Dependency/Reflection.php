@@ -213,13 +213,10 @@ class Reflection implements \Reflector {
   
     // canary...
     if(!($path instanceof Path)){
-      if(is_dir($path)){
-        $path = new Path($path);
-      }else{
-        throw new \InvalidArgumentException(
-          sprintf('$path (%s) was not a valid directory',$path)
-        );
-      }//if/else
+    
+      $path = new Path($path);
+      $path->assure();
+
     }//if
   
     $ret_count = 0;

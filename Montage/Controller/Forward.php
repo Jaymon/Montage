@@ -3,7 +3,7 @@
  *  handles deciding which controller::method to forward to
  *  
  *  this class should be renamed to something like Finder or Matcher, though
- *  Matcher::find() sounds strange   
+ *  Matcher::find() sounds strange, what about Resolve? 
  *  
  *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -17,74 +17,173 @@ use out;
 
 class Forward {
 
+  /**
+   *  this is appended to the class name
+   *  
+   *  so, class name "foo" would become "FooController"
+   *  
+   *  @see  normalizeClass
+   *  @var  string
+   */
   protected $class_postfix = 'Controller';
   
-  protected $class_interface = 'Montage\Controller\Controllable';
+  /**
+   *  this is the interface a class has to implement to be considered a controller
+   *  
+   *  @var  string
+   */
+  protected $class_interface = '\Montage\Controller\Controllable';
   
-  protected $class_namespace = 'Controller';
+  /**
+   *  this is the namespace that will be used for the class
+   *  
+   *  so, if you had class "foo" then it would be use namespace \Controller
+   *  and its full name would be: \Controller\FooController         
+   *
+   *  @var  string   
+   */
+  protected $class_namespace = '\Controller';
   
+  /**
+   *  if a suitable class can't be autodiscovered then fallback to a class in this FIFO
+   *  queue list
+   *  
+   *  @var  array a FIFO queue of default classes
+   */
   protected $class_default_list = array(
-    'Controller\IndexController',
-    'Montage\Controller\IndexController'
+    '\Controller\IndexController',
+    '\Montage\Controller\IndexController'
   );
   
   /**
    *  this prefix will be used to decide what a vanilla method name coming in will be
-   *  prefixed with when {@link getControllerMethodName()} is called
+   *  prefixed with
+   *  
+   *  so, if you have method "bar" it would become: "handleBar"
+   *  
+   *  @see  normalizeMethod()   
+   *  @var  string      
    */
   protected $method_prefix = 'handle';
   
+  /**
+   *  if no method can be found then fallback to this method
+   *
+   *  @var  string   
+   */
   protected $method_default = 'handleIndex';
   
   /**
-   *  in case of exception while handling a request, the class with this name will be called
+   *  in case of exception while handling a request, the first class that exists in
+   *  this list will be used   
    *  
-   *  class must extend montage_controller      
+   *  @var  array FIFO queue of exception handling classes      
    */
   protected $class_exception_list = array(
     'Controller\ExceptionController',
     'Montage\Controller\ExceptionController'
   );
   
+  /**
+   *  holds the information about what classes exist in the system
+   *
+   *  @var  Reflection   
+   */
   protected $reflection = null;
   
   /**
-   *            
+   *  create instance of this class
+   *  
+   *  @param  Reflection  $reflection needed to be able to find a suitable controller class            
    */
   function __construct(Reflection $reflection){
   
     $this->reflection = $reflection;
   
   }//method
-
-  public function findCLI($path,array $args = array()){
   
-    $namespace = 'cli';
-    
-    list($namespace,$path) = $this->findNamespace('cli',$path,$args);
-    out::e($path);
-    
-    $ret = $this->find($namespace,explode('/',$path));
-    out::e($ret);
-    
-    out::e($path,$args);
-  
-  
-  
-  }//method
-  
-  public function find($host,$path,array $args = array()){
+  /**
+   *  turns the info provided by the $host, $path and $params into a controller::method
+   *  
+   *  @param  string  $host the host that is making the request
+   *  @param  string  $path the path of the request
+   *  @param  array $params currently not used
+   *  @return array array($controller,$method,$method_params)
+   */
+  public function find($host,$path,array $params = array()){
   
     $path_list = array_filter(explode('/',$path)); // ignore empty values
     $class_name = '';
     $method_name = '';
     $method_params = array();
-    $reflection = $this->reflection;
   
     // we check in order:
     // 1 - \Controller\$path_list[0]
     // 2 - \Controller\IndexController
     // 3 - \Montage\Controller\IndexController
+    list($class_name,$path_list) = $this->findClass($path_list,$this->class_default_list);
+  
+    // check in order:
+    // 1 - $class_name/$path_list[0]
+    // 2 - $class_name/$this->method_default
+    list($method_name,$method_params) = $this->findMethod($class_name,$path_list);
+
+    return array($class_name,$method_name,$method_params);
+  
+  }//method
+  
+  /**
+   *  get the controller::method that should be used for the given exception $e
+   *  
+   *  @param  Exception $e
+   *  @return array array($controller,$method,$method_params)        
+   */
+  public function findException(Exception $e){
+    
+    $e_name = get_class($e);
+    $class_name = '';
+    $method_name = '';
+    
+    // find the controller...
+    try{
+    
+      list($class_name,$path_list) = $this->findClass(array(),$this->class_exception_list);
+      
+    }catch(Exception $e){
+    
+      throw new \UnexpectedValueException(
+        sprintf(
+          'A suitable Exception Controller class could not be found to handle the exception: %s',
+          $e
+        ),
+        $e->getCode(),
+        $e
+      );
+    
+    }//try/catch
+    
+    // check in order:
+    // 1 - $class_name/$e_name
+    // 2 - $class_name/$this->method_default
+    list($method_name,$method_params) = $this->findMethod($class_name,array($e_name));
+  
+    return array($class_name,$method_name,$method_params);
+  
+  }//method
+  
+  /**
+   *  find the controller class
+   *  
+   *  @since  6-16-11   
+   *  @param  array $path_list  the path broken up by /
+   *  @param  array $default_class_list if the class can't be found through the $path_list, use
+   *                the classes found in this list      
+   *  @return array array($class_name,$path_list)
+   */
+  protected function findClass(array $path_list,array $default_class_list = array()){
+  
+    $class_name = '';
+    $reflection = $this->reflection;
   
     // see if the controller was passed in from the request string...
     if(!empty($path_list[0])){
@@ -105,9 +204,7 @@ class Forward {
   
     if(empty($class_name)){
     
-      ///out::i($reflection);
-    
-      foreach($this->class_default_list as $class_name){
+      foreach($default_class_list as $class_name){
       
         if($reflection->isChildClass($class_name,$this->class_interface)){
           break;
@@ -120,14 +217,30 @@ class Forward {
       if(empty($class_name)){
         throw new \UnexpectedValueException(
           sprintf(
-            'A suitable Controller class could not be found to handle the request host: %s, path: %s',
-            $host,
-            $path
+            'A suitable Controller class could not be found to handle the request [%s]',
+            join('/',$path_list)
           )
         );
       }//if
     
     }//if
+  
+    return array($class_name,$path_list);
+  
+  }//method
+  
+  /**
+   *  find the matching method for $class_name using $path_list
+   *  
+   *  @since  6-16-11
+   *  @param  string  $class_name the controller class
+   *  @param  array $path_list
+   *  @return array($method,$method_params)
+   */
+  protected function findMethod($class_name,array $path_list){
+  
+    $method_name = '';
+    $method_params = array();
   
     // check in order:
     // 1 - $class_name/$path_list[0]
@@ -169,81 +282,8 @@ class Forward {
       }//if/else
     
     }//if
-
-    return array($class_name,$method_name,$method_params);
   
-  }//method
-  
-  /**
-   *  get the controller::method that should be used for the given exception $e
-   *  
-   *  @param  Exception $e
-   *  @return array array($controller_class_name,$controller_method,$controller_method_args)        
-   */
-  public function findException(Exception $e){
-    
-    $e_name = get_class($e);
-    $class_name = '';
-    $method_name = '';
-    
-    // find the controller...
-    foreach($this->class_exception_list as $class_name){
-      
-      if($reflection->isChildClass($class_name,$this->class_interface)){
-        break;
-      }else{
-        $class_name = '';
-      }//if/else
-    
-    }//foreach
-    
-    if(empty($class_name)){
-    
-      throw new \UnexpectedValueException(
-        sprintf(
-          'A suitable Exception Controller class could not be found to handle the exception: %s',
-          $e
-        )
-      );
-      
-    }//if
-    
-    $method_name = $e_name;
-    
-    // @todo move finding the method into its own method so this and find can share
-    
-    if(method_exists($class_name,$method_name)){
-      $controller_method = $controller_method;
-    }//if
-    
-    $controller_class_name = $this->getControllerClassName(self::CONTROLLER_ERROR_CLASS_NAME);
-    $controller_method = self::CONTROLLER_METHOD;
-    $controller_method_args = array($e);
-    
-    if(montage_core::isController($controller_class_name)){
-    
-      $maybe_controller_method = $this->getControllerMethodName($e_name);
-      
-      if(method_exists($controller_class_name,$maybe_controller_method)){
-        $controller_method = $controller_method;
-      }//if
-      
-    }else{
-        
-      throw new RuntimeException(
-        sprintf(
-          'No error controller "%s" found so the exception "%s" could not be resolved. '
-          .'To remedy this, create an error class that extends montage_controller. '
-          .'exception information: %s',
-          self::CONTROLLER_ERROR_CLASS_NAME,
-          $e_name,
-          $e ///$e->getTraceAsString()
-        )
-      );
-      
-    }//if/else
-  
-    return array($controller_class_name,$controller_method,$controller_method_args);
+    return array($method_name,$method_params);
   
   }//method
   

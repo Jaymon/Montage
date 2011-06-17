@@ -36,11 +36,57 @@ class Path {
   
     $path = func_get_args();
     $path = $this->build($path);
-    $this->path = $this->assure($path);
+    $this->path = $this->format($path);
   
   }//method
   
   public function __toString(){ return $this->path; }//method
+  
+  /**
+   *  true if path exists or was built succesfully
+   *  
+   *  @param  string  $path
+   *  @return string  the $path
+   */
+  public function assure(){
+  
+    // canary...
+    if($this->exists()){ return true; }//if
+  
+    $path = $this->path
+  
+    // make sure path isn't empty...
+    if(empty($path)){
+      throw new InvalidArgumentException('cannot verify that an empty $path exists');
+    }//if
+    
+    $orig_umask = umask(0000);
+    
+    // make sure path is directory, try to create it if it isn't...
+    
+    if(!mkdir($path,0777,true)){
+      throw new UnexpectedValueException(
+        sprintf(
+          '"%s" is not a valid directory and the attempt to create it failed. '
+          .'Check permissions for every directory on the path to make sure that path '
+          .'is writable.',
+          $path
+        )
+      );
+    }//if
+    
+    umask($orig_umask); // restore
+    
+    return true;
+  
+  }//method
+  
+  /**
+   *  true if a path exists
+   *  
+   *  @return boolean
+   */
+  public function exists(){ return file_exists($this->path); }//method
   
   public function canWrite(){ return is_writable($this->path); }//method
   public function canRead(){ return is_readable($this->path); }//method
@@ -131,62 +177,6 @@ class Path {
     return $ret_map;
   
   }//method
-  
-  /**
-   *  make sure a path exists and it doesn't end with a directory separator
-   *  
-   *  @param  string  $path
-   *  @return string  the $path
-   */
-  protected function assure($path){
-  
-    // make sure path isn't empty...
-    if(empty($path)){
-      throw new InvalidArgumentException('cannot verify that an empty $path exists');
-    }//if
-    
-    // make sure the path is a full valid path, none of this ../../ type stuff...
-    $path = realpath($path);
-    
-    // make sure path is directory, try to create it if it isn't...
-    if(!is_dir($path)){
-      if(!mkdir($path,0777,true)){
-        throw new UnexpectedValueException(
-          sprintf(
-            '"%s" is not a valid directory and the attempt to create it failed. '
-            .'Check permissions for every directory on the path to make sure that path '
-            .'is writable.',
-            $path
-          )
-        );
-      }//if
-    }//if
-    
-    return $this->format($path);
-  
-  }//method
-  
-  /**
-   *  format $path to a standard format so we can guarantee that all paths are formatted
-   *  the same
-   *  
-   *  @since  4-20-10   
-   *  @param  string  $path
-   *  @return string  the $path, formatted for consistency
-   */
-  protected function format($path){
-  
-    // canary...
-    if(empty($path)){ return ''; }//if
-  
-    // make sure path doesn't end with a slash...
-    if(mb_substr($path,-1) == DIRECTORY_SEPARATOR){
-      $path = mb_substr($path,0,-1);
-    }//if
-    
-    return $path;
-  
-  }//method
 
   /**
    *  given multiple path bits, build a custom path
@@ -211,7 +201,7 @@ class Path {
         
       }else{
         
-        $path_bit = trim($path_bit,'\\/');
+        $path_bit = trim((string)$path_bit,'\\/');
         if(!empty($path_bit) && !ctype_space($path_bit)){
           $ret_list[] = $path_bit;
         }//if
@@ -222,6 +212,31 @@ class Path {
     
     return join(DIRECTORY_SEPARATOR,$ret_list);
     
+  }//method
+  
+  /**
+   *  format $path to a standard format so we can guarantee that all paths are formatted
+   *  the same
+   *  
+   *  @since  4-20-10   
+   *  @param  string  $path
+   *  @return string  the $path, formatted for consistency
+   */
+  protected function format($path){
+  
+    // canary...
+    if(empty($path)){ return ''; }//if
+  
+    // make sure the path is a full valid path, none of this ../../ type stuff...
+    $path = realpath($path);
+  
+    // make sure path doesn't end with a slash...
+    if(mb_substr($path,-1) == DIRECTORY_SEPARATOR){
+      $path = mb_substr($path,0,-1);
+    }//if
+    
+    return $path;
+  
   }//method
 
   /**
@@ -238,7 +253,7 @@ class Path {
    *  @param  string  $path_2 the root path   
    *  @return array the remaining elements of $path_1 where it starts in relation to $path_2            
    */
-  public static function getIntersection($path_1,$path_2){
+  /* public static function getIntersection($path_1,$path_2){
   
     // canary...
     if(empty($path_1)){ return array(); }//if
@@ -270,7 +285,7 @@ class Path {
     
     return $ret_path;
   
-  }//method
+  }//method */
   
   /**
    *  completely remove the given path and any children
@@ -279,7 +294,7 @@ class Path {
    *  @param  string  $path the path to completely remove
    *  @return boolean
    */
-  public function kill(){
+  /* public function kill(){
   
     $ret_bool = $this->clear($this->path);
     
@@ -290,7 +305,7 @@ class Path {
   
     return $ret_bool;
   
-  }//method
+  }//method */
   
   /**
    *  recursively clear an entire directory, files, folders, everything
@@ -299,7 +314,7 @@ class Path {
    *  @param  string  $path the starting path, all sub things will be removed
    *  @param  string  $regex  if a PCRE regex is passed in then only files matching it will be removed 
    */
-  public function clear($path,$regex = ''){
+  /* public function clear($path,$regex = ''){
   
     // canary...
     if(!is_dir($this->path)){ return unlink($this->path); }//if
@@ -340,6 +355,6 @@ class Path {
     
     return $ret_bool;
     
-  }//method
+  }//method */
 
 }//class     
