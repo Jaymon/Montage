@@ -9,6 +9,7 @@ namespace Montage\Test\PHPUnit {
   
   require_once(__DIR__.'/../Test.php');
   require_once(__DIR__.'/../../../Path.php');
+  require_once(__DIR__.'/../../../Fieldable.php');
   require_once(__DIR__.'/../../../Field.php');
   
   require_once(__DIR__.'/../../../Dependency/Container.php');
@@ -90,6 +91,30 @@ namespace Montage\Test\PHPUnit {
       $this->assertTrue($instance->che instanceof \Che);
       
     }//method
+    
+    /**
+     *  make sure that trying to find an instance with divergent children fails
+     *
+     *  @since  6-17-11
+     */
+    public function testMultiChoice(){
+    
+      $this->setExpectedException('\LogicException');
+      $instance = $this->container->findInstance('Montage\Test\Fixtures\Dependency\A');
+    
+    }//method
+  
+    /**
+     *  make sure that trying to resolve a divergent dependency fails
+     *
+     *  @since  6-17-11
+     */
+    public function testMultiChoiceDependency(){
+    
+      $this->setExpectedException('\LogicException');
+      $instance = $this->container->findInstance('Montage\Test\Fixtures\Dependency\AA');
+    
+    }//method
   
   }//class
   
@@ -122,6 +147,14 @@ namespace Montage\Test\Fixtures\Dependency {
     public function setChe(\Che $che){ $this->che = $che; }//method
   
   }//class
+  
+  class A {}//method
+  class B extends A {}//method
+  class C extends A {}//method
+  
+  class AA {
+    public function __construct(\Montage\Test\Fixtures\Dependency\A $a){}//method
+  }//method
 
 }//namespace
 

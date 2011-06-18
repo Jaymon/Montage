@@ -151,7 +151,7 @@ class Container extends Field {
   
     // canary...
     if(empty($class_name)){
-      throw new InvalidArgumentException('empty $class_name');
+      throw new \InvalidArgumentException('empty $class_name');
     }//if
   
     $ret_instance = null;
@@ -166,7 +166,7 @@ class Container extends Field {
       
       if(!empty($params)){
         
-        throw new UnexpectedValueException(
+        throw new \UnexpectedValueException(
           sprintf(
             'Normalizing "%s" constructor params will fail because "%s" '
             .'has no __construct() method, so no constructor arguments can be used to instantiate it. '
@@ -243,7 +243,7 @@ class Container extends Field {
             
             }else{
             
-              throw new UnexpectedValueException(
+              throw new \UnexpectedValueException(
                 sprintf(
                   'no suitable value could be found for %s\'s __construct() param "%s"',
                   $rclass->getName(),
@@ -261,14 +261,33 @@ class Container extends Field {
             
               $ret_params[] = $this->findInstance($class_name);
               
-            }catch(Exception $e){
+            }catch(\Exception $e){
             
               if($rparam->isDefaultValueAvailable()){
               
                 $ret_params[] = $rparam->getDefaultValue();
               
               }else{
-                throw $e;
+              
+                $ret_params[] = $this->getInstance($class_name);
+              
+                /* $reflection = $this->getReflection();
+                $found_instance = false;
+              
+                foreach($this->instance_map as $class_key => $instance){
+                
+                  if($this->isRelatedClass($class_name,$class_key)){
+                
+                    $ret_params[] = $instance;
+                    $found_instance = true;
+                    break;
+                    
+                  }//if
+                
+                }//foreach */
+              
+                ///throw $e;
+                
               }//if/else
             
             }//try/catch
@@ -344,8 +363,9 @@ class Container extends Field {
           foreach($rparams as $rparam){
           
             $prclass = $rparam->getClass();
-            if($rclass !== null){
+            if($prclass !== null){
           
+              // @todo  this won't account for having a child instance, so might want to "find" the class
               $class_name = $prclass->getName();
               if($this->hasInstance($class_name)){
               

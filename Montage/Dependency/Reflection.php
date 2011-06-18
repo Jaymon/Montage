@@ -25,10 +25,12 @@
  ******************************************************************************/
 namespace Montage\Dependency;
 
-use \ReflectionClass;
+use ReflectionClass;
 use Montage\Dependency\ReflectionFile;
 use Montage\Path;
 use out;
+
+use Montage\Cache;
 
 class Reflection implements \Reflector {
 
@@ -51,9 +53,17 @@ class Reflection implements \Reflector {
    */
   protected $parent_class_map = array();
 
-  public function __construct(){
+  protected $path_list = array();
+  
+  protected $cache = null;
+
+  public function __construct(Cache $cache = null){
+  
+    $this->cache = $cache;
   
     spl_autoload_register(array($this,'loadClass'));
+    
+    $this->unpersist();
   
   }//method
   
@@ -148,13 +158,13 @@ class Reflection implements \Reflector {
           
           }else{
             
-            throw new LogicException(
+            throw new \LogicException(
               sprintf(
                 'the given $class_name (%s) has divergent children %s and %s (those 2 classes extend ' 
                 .'%s but are not related to each other) so a best class cannot be found.',
                 $class_name,
-                $found_key,
-                $child_key,
+                $this->class_map[$found_key]['class'],
+                $this->class_map[$child_key]['class'],
                 $key
               )
             );
@@ -193,6 +203,9 @@ class Reflection implements \Reflector {
    */
   public function addFile($file){
   
+    // canary...
+    if($this->hasPath($path)){ return 1; }//if
+  
     $ret_count = 0;
     $rfile = new ReflectionFile($file);
     
@@ -218,6 +231,7 @@ class Reflection implements \Reflector {
       $path->assure();
 
     }//if
+    if($this->hasPath($path)){ return 1; }//if
   
     $ret_count = 0;
   
@@ -228,6 +242,7 @@ class Reflection implements \Reflector {
     
     }//foreach
     
+    $this->persist($path);
     return $ret_count;
   
   }//method
@@ -248,6 +263,7 @@ class Reflection implements \Reflector {
       $extend_list[] = $rextend->getName();
     }//if
     
+    $this->persist($path);
     return $this->setClass($class_name,$rclass->getFileName(),$extend_list,$rclass->getInterfaceNames());
   
   }//method
@@ -294,6 +310,35 @@ class Reflection implements \Reflector {
       $class_key = $this->normalizeClassName($class_name);
       $ret_bool = isset($this->class_map[$class_key]);
       
+    }//if
+  
+    return $ret_bool;
+  
+  }//method
+  
+  /**
+   *  return true if the $child_class_name is a descendent or the same as $parent_class_name
+   *
+   *  @since  6-17-11
+   *  @param  string  $child_class_name
+   *  @param  string  $parent_class_name     
+   *  @return boolean   
+   */        
+  public function isRelatedClass($child_class_name,$parent_class_name){
+  
+    // canary...
+    if(empty($child_class_name)){ return false; }//if
+    if(empty($parent_class_name)){ return false; }//if
+    if(!$this->hasClass($child_class_name)){ return false; }//if
+  
+    $child_key = $this->normalizeClassName($child_class_name);
+    $parent_key = $this->normalizeClassName($parent_class_name);
+    $ret_bool = ($child_key === $parent_key);
+    
+    if($ret_bool === false){
+    
+      $ret_bool = $this->isChildClass($child_key,$parent_key);
+    
     }//if
   
     return $ret_bool;
@@ -383,6 +428,8 @@ class Reflection implements \Reflector {
     $key = $this->normalizeClassName($class_name);
     $class_map['class'] = $class_name;
     $class_map['last_modified'] = filemtime($class_file); // use MD5 instead?
+    ///$class_map['hash'] = md5_file($class_file);
+    
     $class_map['path'] = $class_file;
     $this->class_map[$key] = $class_map;
     
@@ -399,6 +446,42 @@ class Reflection implements \Reflector {
     
     return true;
   
+  }//method
+  
+  protected function persist($path){
+  
+    // canary, if no cache then don't try and persist...
+    if(empty($this->cache)){ return false; }//if
+    // canary, if $path already in list then no need to try and persist again...
+    ///if(in_array((string)$path,$this->path_list,true)){ return false; }//if
+  
+    $this->path_list[] = (string)$path;
+    
+    $cache_map = array(
+      'class_map' => $this->class_map,
+      'parent_class_map' => $this->parent_class_map,
+      'path_list' => $this->path_list
+    );
+    
+    $this->cache->set(__CLASS__,$cache_map);
+  
+  }//method
+  
+  protected function unpersist(){
+  
+    // canary, if no cache then don't try and persist...
+    if(empty($this->cache)){ return false; }//if
+    
+    $cache_map = $this->cache->get(__CLASS__);
+    
+    $this->class_map = $cache_map['class_map'];
+    $this->parent_class_map = $cache_map['parent_class_map'];
+    $this->path_list = $cache_map['path_list'];
+    
+  }//method
+  
+  protected function hasPath($path){
+    return in_array((string)$path,$this->path_list,true);
   }//method
 
 }//method

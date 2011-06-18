@@ -3,7 +3,8 @@
  *  handles deciding which controller::method to forward to
  *  
  *  this class should be renamed to something like Finder or Matcher, though
- *  Matcher::find() sounds strange, what about Resolve? 
+ *  Matcher::find() sounds strange, what about Resolve?  6-17-11 - I went with
+ *  Select 
  *  
  *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -15,7 +16,7 @@ namespace Montage\Controller;
 use Montage\Dependency\Reflection;
 use out;
 
-class Forward {
+class Select {
 
   /**
    *  this is appended to the class name
@@ -138,7 +139,7 @@ class Forward {
    *  @param  Exception $e
    *  @return array array($controller,$method,$method_params)        
    */
-  public function findException(Exception $e){
+  public function findException(\Exception $e){
     
     $e_name = get_class($e);
     $class_name = '';
@@ -283,7 +284,7 @@ class Forward {
     
     }//if
   
-    return array($method_name,$method_params);
+    return array($method_name,array_values($method_params));
   
   }//method
   

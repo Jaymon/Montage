@@ -53,7 +53,7 @@ class Path {
     // canary...
     if($this->exists()){ return true; }//if
   
-    $path = $this->path
+    $path = $this->path;
   
     // make sure path isn't empty...
     if(empty($path)){
@@ -228,7 +228,9 @@ class Path {
     if(empty($path)){ return ''; }//if
   
     // make sure the path is a full valid path, none of this ../../ type stuff...
-    $path = realpath($path);
+    if($realpath = realpath($path)){
+      $path = $realpath;
+    }//if
   
     // make sure path doesn't end with a slash...
     if(mb_substr($path,-1) == DIRECTORY_SEPARATOR){

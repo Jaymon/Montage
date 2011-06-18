@@ -30,5 +30,12 @@ class Request extends SymfonyRequest implements MontageRequest {
    *  @return string  just the request path without the root path
    */
   public function getPath(){ return $this->getPathInfo(); }//method
+  
+  /**
+   *  shortcut method for you to know if this is a command line request
+   *  
+   *  @return boolean
+   */
+  function isCli(){ return (strncasecmp(PHP_SAPI, 'cli', 3) === 0); }//method
 
 }//class

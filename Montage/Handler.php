@@ -18,10 +18,15 @@ namespace Montage;
 // these are the files needed to use this class, after this class is loaded, the
 // autoloader should handle everything else...
 require_once(__DIR__.'/Dependency/Injector.php');
+require_once(__DIR__.'/Dependency/ReflectionFile.php');
 require_once(__DIR__.'/Dependency/Reflection.php');
 require_once(__DIR__.'/Path.php');
+require_once(__DIR__.'/Cache.php');
+
+require_once(__DIR__.'/Fieldable.php');
 require_once(__DIR__.'/Field.php');
 
+use Montage\Cache;
 use Montage\Path;
 use Montage\Field;
 
@@ -29,6 +34,7 @@ use Montage\Exceptions\NotFoundException;
 use Montage\Exceptions\InternalRedirectException;
 use Montage\Exceptions\RedirectException;
 use Montage\Exceptions\StopException;
+use Exception;
 
 use out;
 
@@ -43,6 +49,12 @@ class Handler extends Field implements Injector {
   protected $framework_path = '';
 
   protected $field_map = array();
+  
+  protected $request = null;
+  
+  protected $controller_select = null;
+  
+  protected $config = null;
   
   /**
    *  holds the dependancy injection container instance
@@ -63,34 +75,42 @@ class Handler extends Field implements Injector {
   
     ///out::e($namespace,$debug_level,$app_path);
     
-    $this->setField('env',$env);
-    $this->setField('debug_level',$debug_level);
-    $this->app_path = $app_path;
+    // chicken meet egg, these paths are needed to get the container initialized...
+    $this->setField('app_path',$app_path);
+    $this->setField('framework_path',__DIR__);
+    
+    // set all the default configuration stuff...
+    $container = $this->getContainer();
+    $this->config = $container->findInstance('\Montage\Config');
+    $this->config->setField('env',$env);
+    $this->config->setField('debug_level',$debug_level);
+    $this->config->setField('app_path',$app_path);
+    $this->config->setField('framework_path',$this->getField('framework_path'));
+    
+    ///$this->setField('env',$env);
+    ///$this->setField('debug_level',$debug_level);
+    ///$this->app_path = $app_path;
     
   }//method
   
   public function handle(){
   
-    $env = $this->getField('env');
     $container = $this->getContainer();
   
     try{
     
-      // start the Config classes...
-      $config_instance_map = array();
-      // findInstance() for getBestInstance()?
-      ///$config_instance_map[] = $this->classes->getInstance('Config\Config'); // global
-      ///$config_instance_map[] = $this->classes->getInstance(sprintf('Config\%s',$this->field_map['env'])); // environment
-      // $this->handleConfig();
+      // start the START classes...
+      $this->handleStart();
     
       // get the request instance...
-      $request = $container->findInstance('Montage\Request\Requestable');
+      $this->request = $container->findInstance('Montage\Request\Requestable');
     
       // decide where the request should be forwarded to...
-      $forward = $container->findInstance('Montage\Controller\Forward');
-      list($controller_class,$controller_method,$controller_method_params) = $forward->find(
-        $request->getHost(),
-        $request->getPath()
+      $this->controller_select = $container->findInstance('Montage\Controller\Select');
+      
+      list($controller_class,$controller_method,$controller_method_params) = $this->controller_select->find(
+        $this->request->getHost(),
+        $this->request->getPath()
       );
       
       $ret_handle = $this->handleController($controller_class,$controller_method,$controller_method_params);
@@ -103,12 +123,57 @@ class Handler extends Field implements Injector {
   
   }//method
 
+  protected function handleStart(){
+  
+    $env = $this->config->getEnv();
+    $container = $this->getContainer();
+  
+    // start Montage
+    try{
+    
+      $framework_start = $container->findInstance('\Montage\Start\FrameworkStart');
+      $framework_start->handle();
+      
+    }catch(Exception $e){}//try/catch
+    
+    // start environment...
+    try{
+    
+      $env_start = $container->findInstance(sprintf('\Start\%sStart',$env));
+      $env_start->handle();
+      
+    }catch(Exception $e){}//try/catch
+    
+    // start all plugins...
+    /*try{
+    
+      $reflection = $container->getReflection();
+    
+      $env_start = $container->findInstance(sprintf('\Start\%sStart',$env));
+      $env_start->handle();
+      
+    }catch(Exception $e){}//try/catch */
+  
+  }//method
+
   protected function handleController($class_name,$method,array $params = array()){
   
     $container = $this->getContainer();
     
     $controller = $container->findInstance($class_name);
     $rmethod = new \ReflectionMethod($controller,$method);
+    
+    // if the first param is an array, then it will take all the passed in $params...
+    // quick/nice way to do a catch-all...
+    $rmethod_params = $rmethod->getParameters();
+    if(isset($rmethod_params[0])){
+    
+      if($rmethod_params[0]->isArray()){
+        $params = array($params);
+      }//if
+    
+    }//if
+    
     $rmethod_params = $container->normalizeParams($rmethod,$params);
     
     // make sure there are enough required params...
@@ -138,9 +203,9 @@ class Handler extends Field implements Injector {
    *  
    *  @return boolean $use_template
    */
-  protected function handleException(Exception $e){
+  protected function handleException(\Exception $e){
   
-    $this->handleRecursion();
+    $this->handleRecursion($e);
   
     $ret_mixed = null;
   
@@ -150,7 +215,7 @@ class Handler extends Field implements Injector {
     
       if($e instanceof InternalRedirectException){
       
-        list($controller_class,$controller_method,$controller_method_params) = $forward->find(
+        list($controller_class,$controller_method,$controller_method_params) = $this->controller_select->find(
           $request->getHost(),
           $e->getPath()
         );
@@ -166,13 +231,14 @@ class Handler extends Field implements Injector {
         
       }else{
         
-        list($controller_class,$controller_method,$controller_method_params) = $forward->findException($e);
+        out::e($e);
+        list($controller_class,$controller_method,$controller_method_params) = $this->controller_select->findException($e);
         
         $ret_mixed = $this->handleController($controller_class,$controller_method,$controller_method_params);
         
       }//try/catch
       
-    }catch(Exception $e){
+    }catch(\Exception $e){
     
       $ret_mixed = $this->handleException($e);
     
@@ -190,7 +256,7 @@ class Handler extends Field implements Injector {
    *  
    *  @return integer the current count
    */
-  protected function handleRecursion(){
+  protected function handleRecursion(\Exception $e){
   
     $max_ir_count = $this->getField('Handler.recursion_max_count',10);
     $ir_field = 'Handler.recursion_count'; 
@@ -201,7 +267,9 @@ class Handler extends Field implements Injector {
           'The application has internally redirected more than %s times, something seems to '
           .'be wrong and the app is bailing to avoid infinite recursion!',
           $max_ir_count
-        )
+        ),
+        $e->getCode(),
+        $e
       );
     }else{
     
@@ -222,12 +290,18 @@ class Handler extends Field implements Injector {
     // canary...
     if(!empty($this->container)){ return $this->container; }//if
   
+    // create the caching object that Reflection will use...
+    $cache_path = new Path($app_path,'cache');
+    $cache_path->assure();
+    $cache = new Cache();
+    $cache->setPath($cache_path);
+  
     // since the container isn't built, let's build it...
-    $reflection = new Reflection();
+    $reflection = new Reflection($cache);
     
     // collect all the paths we're going to use...
-    $framework_path = $this->getFrameworkPath();
-    $app_path = $this->getAppPath();
+    $framework_path = $this->getField('framework_path');
+    $app_path = $this->getField('app_path');
     
     // paths to add...
     $path_list = array(
@@ -240,7 +314,7 @@ class Handler extends Field implements Injector {
     
     foreach($path_list as $path){
     
-      if($path->exists()){
+      if(is_dir($path)){
     
         $reflection->addPath($path);
         
@@ -256,22 +330,6 @@ class Handler extends Field implements Injector {
     $this->setContainer($container);
     
     return $this->container; 
-  
-  }//method
-
-  public function getFrameworkPath(){
-  
-    if(empty($this->framework_path)){
-      $this->framework_path = __DIR__;
-    }//if
-  
-    return $this->framework_path;
-  
-  }//method
-  
-  public function getAppPath(){
-  
-    return $this->app_path;
   
   }//method
 

@@ -13,7 +13,9 @@
  ******************************************************************************/
 namespace Montage;
 
-class Field {
+use Montage\Fieldable;
+
+class Field implements Fieldable {
 
   /**
    *  holds the key/value mapping for different tags of the feed
@@ -98,7 +100,7 @@ class Field {
    *  @param  array $field_map      
    *  @return object  the class instance for fluid interface
    */
-  public function addFields($field_map){
+  public function addFields(array $field_map){
   
     if(!empty($field_map)){
       $this->field_map = array_merge($this->field_map,$field_map);
@@ -114,7 +116,7 @@ class Field {
    *  @param  array $field_map      
    *  @return object  the class instance for fluid interface
    */
-  public function setFields($field_map){
+  public function setFields(array $field_map){
   
     $this->field_map = $field_map;
     return $this;

@@ -19,7 +19,7 @@ namespace Montage\Test\PHPUnit {
   use Montage\Dependency\Container;
   use out;
   
-  class ForwardTest extends Test {
+  class SelectTest extends Test {
   
     protected $container = null;
   
