@@ -24,7 +24,19 @@ class Cache {
    */
   protected $path = null;
   
-  protected $namespace_map = array();
+  protected $prefix = 'montage_';
+  
+  protected $namespace = array();
+  
+  public function setPrefix($prefix){
+    $this->prefix = $prefix;
+    return $this;
+  }//method
+
+  public function setNamespace($namespace){
+    $this->namespace = (array)$namespace;
+    return $this;
+  }//method
 
   /**
    *  set the cache path, make sure it's valid
@@ -76,7 +88,7 @@ class Cache {
   public function get($key){
   
     $path = $this->getPath($key);
-    return unserialize(file_get_contents($path));
+    return $path->exists() ? unserialize(file_get_contents($path)) : null;
   
   }//method
   
@@ -128,8 +140,15 @@ class Cache {
     
     if(is_array($key)){
       
-      // everything except the last element is the namespace...
+      // everything except the last element is the namespace, merge it with the global namespace...
       $namespace = array_slice($key,0,-1);
+      if(!empty($namespace)){
+      
+        $namespace = array_merge($this->namespace,$namespace);
+        
+      }//if
+      
+      // if the merged namespace exists, then append it onto the path...
       if(!empty($namespace)){
       
         $base_path = new Path($this->path,$namespace);
@@ -144,6 +163,7 @@ class Cache {
     $key = $this->getKey($key);
     
     return new Path($base_path,$key);
+    
   }//method
   
   /**

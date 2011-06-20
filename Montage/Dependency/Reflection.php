@@ -474,9 +474,9 @@ class Reflection implements \Reflector {
     
     $cache_map = $this->cache->get(__CLASS__);
     
-    $this->class_map = $cache_map['class_map'];
-    $this->parent_class_map = $cache_map['parent_class_map'];
-    $this->path_list = $cache_map['path_list'];
+    if(isset($cache_map['class_map'])){ $this->class_map = $cache_map['class_map']; }//if
+    if(isset($cache_map['parent_class_map'])){ $this->parent_class_map = $cache_map['parent_class_map']; }//if
+    if(isset($cache_map['path_list'])){ $this->path_list = $cache_map['path_list']; }//if
     
   }//method
   

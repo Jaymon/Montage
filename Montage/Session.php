@@ -11,11 +11,11 @@ namespace Montage;
 
 use Montage\Fieldable;
 use Symfony\Component\HttpFoundation\Session as SymfonySession;
-use Symfony\Component\HttpFoundation\SessionStorage\NativeSessionStorage;
+use Symfony\Component\HttpFoundation\SessionStorage\SessionStorageInterface;
 
 class Session extends SymfonySession implements Fieldable {
 
-  public function __construct(NativeSessionStorage $storage, $defaultLocale = 'en'){
+  public function __construct(SessionStorageInterface $storage, $defaultLocale = 'en'){
   
     parent::__construct($storage,$defaultLocale);
     

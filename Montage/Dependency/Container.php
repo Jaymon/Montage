@@ -28,6 +28,8 @@ class Container extends Field {
   protected $reflection = null;
 
   protected $instance_map = array();
+  
+  protected $preferred_map = array();
 
   /**
    *  final so as not to interfere with the creation of this class automatically
@@ -38,6 +40,23 @@ class Container extends Field {
     $this->setInstance($reflection);
     $this->setInstance($this); // we want to be able to inject this also
     
+  }//method
+  
+  /**
+   *  when "finding" a class, sometimes that class will have multiple children, this
+   *  lets you set which child class you would want returned
+   *  
+   *  @since  6-18-11
+   *  @param  string  $class_name the class that might be passed into {@link findInstance()}
+   *  @param  string  $preferred_class_name the class that will be searched for instead of $class_name
+   */
+  public function setPreferred($class_name,$preferred_class_name){
+  
+    $class_key = $this->getKey($class_name);
+    $preferred_class_key = $this->getKey($preferred_class_name);
+  
+    $this->preferred_map[$class_key] = $preferred_class_key;
+  
   }//method
   
   public function getReflection(){ return $this->reflection; }//method
@@ -104,7 +123,17 @@ class Container extends Field {
     
       try{
     
-        $instance_class_name = $reflection->findClassName($cn);
+        $cn_key = $this->getKey($cn);
+        
+        // check to see if there has been a preferred class set...
+        if(isset($this->preferred_map[$cn_key])){
+      
+          $cn_key = $this->preferred_map[$cn_key];
+        
+        }//if
+    
+        $instance_class_name = $reflection->findClassName($cn_key);
+        
         break;
         
       }catch(Exception $e){}//try/catch

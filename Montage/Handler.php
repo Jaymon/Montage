@@ -43,12 +43,6 @@ use Montage\Dependency\Container;
 use Montage\Dependency\Injector;
 
 class Handler extends Field implements Injector {
-
-  protected $app_path = '';
-  
-  protected $framework_path = '';
-
-  protected $field_map = array();
   
   protected $request = null;
   
@@ -72,24 +66,59 @@ class Handler extends Field implements Injector {
     if(empty($app_path)){
       throw new \InvalidArgumentException('$app_path was empty, please set it to the root path of your app');
     }//if
+    
+    // collect all the paths we're going to use...
+    $framework_path = __DIR__;
+    
+    // we shouldn't have "new" here, but sometimes you just have to break the rules
+    // to make things easier, I didn't want to have to create a Cache and Reflection
+    // instance to pass in here to resolve all the dependencies...
+    // see: http://misko.hevery.com/2008/07/08/how-to-think-about-the-new-operator/ for how
+    // I'm wrong about this, but convenience trumps rightness in this instance
+    
+    // create the caching object that Reflection will use...
+    $cache_path = new Path($app_path,'cache');
+    $cache_path->assure();
+    $cache = new Cache();
+    $cache->setPath($cache_path);
+    $cache->setNamespace($env);
   
-    ///out::e($namespace,$debug_level,$app_path);
+    // since the container isn't built, let's build it...
+    $reflection = new Reflection($cache);
     
-    // chicken meet egg, these paths are needed to get the container initialized...
-    $this->setField('app_path',$app_path);
-    $this->setField('framework_path',__DIR__);
+    // paths to add...
+    $path_list = array(
+      $framework_path,
+      new Path($app_path,'vendor'),
+      new Path($app_path,'plugins'),
+      new Path($app_path,'src'),
+      new Path($app_path,'config')
+    );
     
+    foreach($path_list as $path){
+    
+      if(is_dir($path)){
+    
+        $reflection->addPath($path);
+        
+      }//if
+    
+    }//foreach
+    
+    $container_class_name = $reflection->findClassName('Montage\Dependency\Container');
+    $container = new $container_class_name($reflection);
+    // just in case, container should know about this instance for circular-dependency goodness...
+    $container->setInstance($this);
+    $container->setInstance($cache);
+    
+    $this->setContainer($container);
+
     // set all the default configuration stuff...
-    $container = $this->getContainer();
     $this->config = $container->findInstance('\Montage\Config');
     $this->config->setField('env',$env);
     $this->config->setField('debug_level',$debug_level);
     $this->config->setField('app_path',$app_path);
     $this->config->setField('framework_path',$this->getField('framework_path'));
-    
-    ///$this->setField('env',$env);
-    ///$this->setField('debug_level',$debug_level);
-    ///$this->app_path = $app_path;
     
   }//method
   
@@ -98,7 +127,7 @@ class Handler extends Field implements Injector {
     $container = $this->getContainer();
   
     try{
-    
+
       // start the START classes...
       $this->handleStart();
     
@@ -106,9 +135,7 @@ class Handler extends Field implements Injector {
       $this->request = $container->findInstance('Montage\Request\Requestable');
     
       // decide where the request should be forwarded to...
-      $this->controller_select = $container->findInstance('Montage\Controller\Select');
-      
-      list($controller_class,$controller_method,$controller_method_params) = $this->controller_select->find(
+      list($controller_class,$controller_method,$controller_method_params) = $this->getControllerSelect()->find(
         $this->request->getHost(),
         $this->request->getPath()
       );
@@ -136,13 +163,19 @@ class Handler extends Field implements Injector {
       
     }catch(Exception $e){}//try/catch
     
+    trigger_error('no \Montage\Start\FrameworkStart instance found',E_USER_NOTICE);
+    
     // start environment...
     try{
     
       $env_start = $container->findInstance(sprintf('\Start\%sStart',$env));
       $env_start->handle();
       
-    }catch(Exception $e){}//try/catch
+    }catch(Exception $e){
+    
+      // @todo  check \start\start here
+    
+    }//try/catch
     
     // start all plugins...
     /*try{
@@ -215,7 +248,7 @@ class Handler extends Field implements Injector {
     
       if($e instanceof InternalRedirectException){
       
-        list($controller_class,$controller_method,$controller_method_params) = $this->controller_select->find(
+        list($controller_class,$controller_method,$controller_method_params) = $this->getControllerSelect()->find(
           $request->getHost(),
           $e->getPath()
         );
@@ -231,8 +264,7 @@ class Handler extends Field implements Injector {
         
       }else{
         
-        out::e($e);
-        list($controller_class,$controller_method,$controller_method_params) = $this->controller_select->findException($e);
+        list($controller_class,$controller_method,$controller_method_params) = $this->getControllerSelect()->findException($e);
         
         $ret_mixed = $this->handleController($controller_class,$controller_method,$controller_method_params);
         
@@ -285,51 +317,16 @@ class Handler extends Field implements Injector {
     $this->container = $container;
   }//method
   
-  public function getContainer(){
+  public function getContainer(){ return $this->container; }//method
+
+  public function getControllerSelect(){
   
     // canary...
-    if(!empty($this->container)){ return $this->container; }//if
-  
-    // create the caching object that Reflection will use...
-    $cache_path = new Path($app_path,'cache');
-    $cache_path->assure();
-    $cache = new Cache();
-    $cache->setPath($cache_path);
-  
-    // since the container isn't built, let's build it...
-    $reflection = new Reflection($cache);
+    if(!empty($this->controller_select)){ return $this->controller_select; }//if
     
-    // collect all the paths we're going to use...
-    $framework_path = $this->getField('framework_path');
-    $app_path = $this->getField('app_path');
-    
-    // paths to add...
-    $path_list = array(
-      $framework_path,
-      new Path($app_path,'vendor'),
-      new Path($app_path,'plugins'),
-      new Path($app_path,'src'),
-      new Path($app_path,'config')
-    );
-    
-    foreach($path_list as $path){
-    
-      if(is_dir($path)){
-    
-        $reflection->addPath($path);
-        
-      }//if
-    
-    }//foreach
-    
-    $container_class_name = $reflection->findClassName('Montage\Dependency\Container');
-    $container = new $container_class_name($reflection);
-    // just in case, container should know about this instance for circular-dependency goodness...
-    $container->setInstance($this);
-    
-    $this->setContainer($container);
-    
-    return $this->container; 
+    $container = $this->getContainer();
+    $this->controller_select = $container->findInstance('Montage\Controller\Select');
+    return $this->controller_select;
   
   }//method
 

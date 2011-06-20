@@ -121,7 +121,8 @@ class Select {
     // we check in order:
     // 1 - \Controller\$path_list[0]
     // 2 - \Controller\IndexController
-    // 3 - \Montage\Controller\IndexController
+    // 3 - \Montage\Controller\$path_list[0]
+    // 4 - \Montage\Controller\IndexController
     list($class_name,$path_list) = $this->findClass($path_list,$this->class_default_list);
   
     // check in order:
@@ -167,6 +168,9 @@ class Select {
     // 1 - $class_name/$e_name
     // 2 - $class_name/$this->method_default
     list($method_name,$method_params) = $this->findMethod($class_name,array($e_name));
+  
+    // override params to just be the exception...
+    $method_params = array($e);
   
     return array($class_name,$method_name,$method_params);
   

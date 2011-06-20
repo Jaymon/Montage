@@ -6,9 +6,9 @@ use Montage\Controller\Controller;
 
 class ExceptionController extends Controller {
 
-  public function handleIndex(){
+  public function handleIndex(\Exception $e){
   
-    echo 'Goodbye World';
+    echo $e;
   
   }//method
 
