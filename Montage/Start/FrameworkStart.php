@@ -35,7 +35,10 @@ class FrameworkStart extends Start {
     $container->setPreferred(
       'Symfony\Component\HttpFoundation\SessionStorage\SessionStorageInterface',
       'Symfony\Component\HttpFoundation\SessionStorage\NativeSessionStorage'
-     ); 
+     );
+     
+    // start the error handler if it hasn't been started...
+    $container->findInstance('Montage\Error');
   
   }//method
 

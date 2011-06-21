@@ -164,9 +164,7 @@ class Framework extends Field implements Injector {
       $started_list[] = get_class($framework_start);
       
     }catch(Exception $e){}//try/catch
-    
-    ///trigger_error('no \Montage\Start\FrameworkStart instance found',E_USER_NOTICE);
-    
+
     // start environment...
     try{
     

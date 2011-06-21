@@ -29,32 +29,36 @@ class Select {
   protected $class_postfix = 'Controller';
   
   /**
+   *  a list of all the namespaces to try
+   *
+   *  @var  array   
+   */
+  protected $class_namespace_list = array(
+    '\Controller',
+    '\Montage\Controller'
+  );
+  
+  /**
+   *  if no controller can be found using passed in params, use this controller name
+   *
+   *  @var  string   
+   */        
+  protected $class_default = 'IndexController';
+  
+  /**
+   *  when an exception is encountered, use this class to handle it
+   *
+   *  @var  string   
+   */
+  protected $class_exception = 'ExceptionController';
+  
+  /**
    *  this is the interface a class has to implement to be considered a controller
    *  
    *  @var  string
    */
   protected $class_interface = '\Montage\Controller\Controllable';
   
-  /**
-   *  this is the namespace that will be used for the class
-   *  
-   *  so, if you had class "foo" then it would be use namespace \Controller
-   *  and its full name would be: \Controller\FooController         
-   *
-   *  @var  string   
-   */
-  protected $class_namespace = '\Controller';
-  
-  /**
-   *  if a suitable class can't be autodiscovered then fallback to a class in this FIFO
-   *  queue list
-   *  
-   *  @var  array a FIFO queue of default classes
-   */
-  protected $class_default_list = array(
-    '\Controller\IndexController',
-    '\Montage\Controller\IndexController'
-  );
   
   /**
    *  this prefix will be used to decide what a vanilla method name coming in will be
@@ -73,17 +77,6 @@ class Select {
    *  @var  string   
    */
   protected $method_default = 'handleIndex';
-  
-  /**
-   *  in case of exception while handling a request, the first class that exists in
-   *  this list will be used   
-   *  
-   *  @var  array FIFO queue of exception handling classes      
-   */
-  protected $class_exception_list = array(
-    'Controller\ExceptionController',
-    'Montage\Controller\ExceptionController'
-  );
   
   /**
    *  holds the information about what classes exist in the system
@@ -113,17 +106,17 @@ class Select {
    */
   public function find($host,$path,array $params = array()){
   
-    $path_list = array_filter(explode('/',$path)); // ignore empty values
+    $path_list = array_values(array_filter(explode('/',$path))); // ignore empty values
     $class_name = '';
     $method_name = '';
     $method_params = array();
   
-    // we check in order:
+    // we check in this order:
     // 1 - \Controller\$path_list[0]
-    // 2 - \Controller\IndexController
-    // 3 - \Montage\Controller\$path_list[0]
+    // 2 - \Montage\Controller\$path_list[0]
+    // 3 - \Controller\IndexController
     // 4 - \Montage\Controller\IndexController
-    list($class_name,$path_list) = $this->findClass($path_list,$this->class_default_list);
+    list($class_name,$path_list) = $this->findClass($path_list,$this->class_default);
   
     // check in order:
     // 1 - $class_name/$path_list[0]
@@ -149,7 +142,7 @@ class Select {
     // find the controller...
     try{
     
-      list($class_name,$path_list) = $this->findClass(array(),$this->class_exception_list);
+      list($class_name,$path_list) = $this->findClass(array(),$this->class_exception);
       
     }catch(Exception $e){
     
@@ -185,52 +178,73 @@ class Select {
    *                the classes found in this list      
    *  @return array array($class_name,$path_list)
    */
-  protected function findClass(array $path_list,array $default_class_list = array()){
-  
+  protected function findClass(array $path_list,$default_class_name = ''){
+
     $class_name = '';
     $reflection = $this->reflection;
-  
+    $path_bit = reset($path_list);
+
     // see if the controller was passed in from the request string...
-    if(!empty($path_list[0])){
-    
-      $class_name = $this->normalizeClass($this->class_namespace,$path_list[0]);
-    
-      if($reflection->hasClass($class_name,$this->class_interface)){
+    if(!empty($path_bit)){
       
-        $path_list = array_slice($path_list,1);
+      // first check all the namespaces against the passed in request string...
+      foreach($this->class_namespace_list as $class_namespace){
+
+        if($class_name = $this->getClass($class_namespace,$path_bit)){
+        
+          $path_list = array_slice($path_list,1);
+          break;
+        
+        }//if
       
-      }else{
+      }//foreach
+  
+    }//if
+  
+    // check the default class name in all the namespaces...
+    if(empty($class_name)){
       
-        $class_name = '';
+      foreach($this->class_namespace_list as $class_namespace){
       
-      }//if
-    
+        // check for the default class in this namespace...
+        if($class_name = $this->getClass($class_namespace,$default_class_name)){
+          break;
+        }//if
+        
+      }//foreach
+      
     }//if
   
     if(empty($class_name)){
-    
-      foreach($default_class_list as $class_name){
-      
-        if($reflection->isChildClass($class_name,$this->class_interface)){
-          break;
-        }else{
-          $class_name = '';
-        }//if/else
-      
-      }//foreach
-      
-      if(empty($class_name)){
-        throw new \UnexpectedValueException(
-          sprintf(
-            'A suitable Controller class could not be found to handle the request [%s]',
-            join('/',$path_list)
-          )
-        );
-      }//if
-    
+      throw new \UnexpectedValueException(
+        sprintf(
+          'A suitable Controller class could not be found to handle the request [%s]',
+          join('/',$path_list)
+        )
+      );
     }//if
-  
+    
     return array($class_name,$path_list);
+    
+  }//method
+  
+  /**
+   *  returns a full class name if it is a child of {@link $class_interface}
+   *  
+   *  @since  6-20-11
+   *  @return string
+   */
+  protected function getClass($namespace,$class_name){
+  
+    $ret_str = '';
+    $reflection = $this->reflection;
+    $full_class_name = $this->normalizeClass($namespace,$class_name);
+    
+    if($reflection->isChildClass($full_class_name,$this->class_interface)){
+      $ret_str = $full_class_name;
+    }//if
+    
+    return $ret_str;
   
   }//method
   
@@ -246,15 +260,16 @@ class Select {
   
     $method_name = '';
     $method_params = array();
-  
+    $path_bit = reset($path_list);
+    
     // check in order:
     // 1 - $class_name/$path_list[0]
     // 2 - $class_name/$this->method_default
   
     // find the method...
-    if(!empty($path_list[0])){
+    if(!empty($path_bit)){
     
-      $method_name = $this->normalizeMethod($path_list[0]);
+      $method_name = $this->normalizeMethod($path_bit);
         
       // if the controller method does not exist then use the default...
       if(method_exists($class_name,$method_name)){ // confirmed controller/method
