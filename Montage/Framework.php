@@ -42,7 +42,7 @@ use Montage\Dependency\Reflection;
 use Montage\Dependency\Container;
 use Montage\Dependency\Injector;
 
-class Handler extends Field implements Injector {
+class Framework extends Field implements Injector {
   
   protected $request = null;
   
@@ -154,38 +154,52 @@ class Handler extends Field implements Injector {
   
     $env = $this->config->getEnv();
     $container = $this->getContainer();
+    $started_list = array();
   
     // start Montage
     try{
     
       $framework_start = $container->findInstance('\Montage\Start\FrameworkStart');
       $framework_start->handle();
+      $started_list[] = get_class($framework_start);
       
     }catch(Exception $e){}//try/catch
     
-    trigger_error('no \Montage\Start\FrameworkStart instance found',E_USER_NOTICE);
+    ///trigger_error('no \Montage\Start\FrameworkStart instance found',E_USER_NOTICE);
     
     // start environment...
     try{
     
       $env_start = $container->findInstance(sprintf('\Start\%sStart',$env));
       $env_start->handle();
+      $started_list[] = get_class($env_start);
       
     }catch(Exception $e){
     
-      // @todo  check \start\start here
+      // since there is no environment start, try for a generic start class...
+      try{
+    
+        $global_start = $container->findInstance('\Start\Start');
+        $global_start->handle();
+        $started_list[] = get_class($global_start);
+        
+      }catch(Exception $e){}//try/catch
     
     }//try/catch
     
-    // start all plugins...
-    /*try{
+    // start all other known start classes (stuff like plugins)...
+    try{
     
       $reflection = $container->getReflection();
-    
-      $env_start = $container->findInstance(sprintf('\Start\%sStart',$env));
-      $env_start->handle();
+      $start_class_name_list = $reflection->findClassNames('\Montage\Startable',$started_list);
+      foreach($start_class_name_list as $start_class_name){
       
-    }catch(Exception $e){}//try/catch */
+        $other_start = $container->findInstance($start_class_name);
+        $other_start->handle();
+      
+      }//foreach
+      
+    }catch(Exception $e){}//try/catch
   
   }//method
 

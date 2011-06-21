@@ -16,7 +16,12 @@
  *  this class can be mostly left alone unless you want to set more class paths 
  *  (use {@link addPath()}) than what are used by default
  *  
- *  @todo this can be renamed ReflectionRelationship    
+ *  @todo this can be renamed ReflectionRelationship
+ *  
+ *  @note the cache reloading will fail when a new class is added and nothing else is
+ *  touched (eg, Request is extended so findClassName() will return the now parent class
+ *  as the Request, I'm not sure how to get around this and still be quick, the only thing
+ *  I can think of is to count all the files and reload if there are more than expected     
  *
  *  @version 0.6
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -53,9 +58,11 @@ class Reflection implements \Reflector {
    */
   protected $parent_class_map = array();
 
-  protected $path_list = array();
-  
   protected $cache = null;
+  
+  protected $path_map = array('files' => array(),'folders' => array());
+  
+  protected $reloaded = false;
 
   public function __construct(Cache $cache = null){
   
@@ -63,8 +70,8 @@ class Reflection implements \Reflector {
   
     spl_autoload_register(array($this,'loadClass'));
     
-    $this->unpersist();
-  
+    $this->pullCache();
+
   }//method
   
   public function __destruct(){
@@ -93,6 +100,12 @@ class Reflection implements \Reflector {
 
     $key = $this->normalizeClassName($class_name);
     if(isset($this->class_map[$key])){
+    
+      if($this->isOutdatedClass($key)){
+      
+        $this->reload();
+      
+      }//if
     
       require($this->class_map[$key]['path']);
       $ret_bool = true;
@@ -131,6 +144,71 @@ class Reflection implements \Reflector {
   
     return mb_strtoupper($class_name);
     
+  }//method
+  
+  /**
+   *  get all the absolute child classes of $class_name
+   *  
+   *  @since  6-20-11
+   *  @param  string  $class_name the class whose children you want
+   *  @param  array $ignore_list  put the child classes you don't want returned here
+   *  @return array a list of classes that match
+   */
+  public function findClassNames($class_name,array $ignore_list = array()){
+  
+    $ret_list = array();
+    
+    // normalize the ignore list...
+    foreach($ignore_list as $i => $icn){
+    
+      $icn_key = $this->normalizeClassName($icn);
+      if(isset($this->class_map[$icn_key])){
+        $ignore_list[$i] = $this->class_map[$icn_key]['class'];
+      }else{
+        unset($ignore_list[$i]);
+      }//if/else
+    
+    }//foreach
+    
+  
+    $key = $this->normalizeClassName($class_name);
+  
+    if(isset($this->parent_class_map[$key])){
+    
+      foreach($this->parent_class_map[$key] as $child_class_name){
+      
+        $list = $this->findClassNames($child_class_name,$ignore_list);
+        
+        if(empty($ignore_list)){
+        
+          $ret_list = array_merge($ret_list,$list);
+        
+        }else{
+        
+          foreach($list as $cn){
+          
+            if(!in_array($cn,$ignore_list,true)){ $ret_list[] = $cn; }//if
+          
+          }//foreach
+          
+        }//if
+      
+      }//foreach
+    
+    }else{
+    
+      // this class is not a parent of anything (ie, an absolute descendent)...
+      if(isset($this->class_map[$key])){
+      
+        $cn = $this->class_map[$key]['class'];
+        if(!in_array($cn,$ignore_list,true)){ $ret_list[] = $cn; }//if
+      
+      }//if
+    
+    }//if/else
+  
+    return $ret_list;
+  
   }//method
   
   /**
@@ -183,13 +261,24 @@ class Reflection implements \Reflector {
         
       }else{
       
-        throw new \UnexpectedValueException(sprintf('no class %s was found',$class_name));
+        if($this->reload() > 0){
+        
+          $ret_class_name = $this->findClassName($class_name);
+        
+        }else{
+      
+          throw new \UnexpectedValueException(sprintf('no class %s was found',$class_name));
+          
+        }//if/else
       
       }//if/else
       
     }//if/else
     
-    $ret_class_name = empty($found_key) ? '' : $this->class_map[$found_key]['class'];
+    if(empty($ret_class_name)){
+      $ret_class_name = empty($found_key) ? '' : $this->class_map[$found_key]['class'];
+    }//if
+    
     return $ret_class_name;
     
   }//method
@@ -204,25 +293,20 @@ class Reflection implements \Reflector {
   public function addFile($file){
   
     // canary...
-    if($this->hasPath($path)){ return 1; }//if
+    if($this->hasPath(new Path($file))){ return 1; }//if
   
-    $ret_count = 0;
-    $rfile = new ReflectionFile($file);
-    
-    $class_list = $rfile->getClasses();
-    foreach($class_list as $class_map){
-    
-      if($this->setClass($class_map['class'],$file,$class_map['extends'],$class_map['implements'])){
-        $ret_count++;
-      }//if
-    
-    }//foreach
+    $ret_count = $this->setFile($file);
   
+    $this->path_map['files'][$file] = 1;
+    $this->pushCache();
+      
     return $ret_count;
   
   }//method
   
   public function addPath($path){
+  
+    $regex = '#(?:php(?:\d+)?|inc|phtml)$#i';
   
     // canary...
     if(!($path instanceof Path)){
@@ -231,18 +315,30 @@ class Reflection implements \Reflector {
       $path->assure();
 
     }//if
-    if($this->hasPath($path)){ return 1; }//if
+    if($this->hasPath($path)){
+      
+      $ret_count = 0;
+      $subpath_count = $path->countSubPaths($regex);
+      if($subpath_count !== $this->path_map['folders'][(string)$path]){
+        $ret_count = $this->reload();
+      }//if
+      
+      return $ret_count;
+      
+    }//if
   
     $ret_count = 0;
+    $subpath_count = $path->countSubPaths($regex);
   
-    $descendant_list = $path->getDescendants('#(?:php(?:\d+)?|inc|phtml)$#i');
-    foreach($descendant_list['files'] as $file){
+    $subpath_list = $path->getSubPaths($regex);
+    foreach($subpath_list['files'] as $file){
     
-      $ret_count += $this->addFile($file);
+      $ret_count += $this->setFile($file);
     
     }//foreach
-    
-    $this->persist($path);
+
+    $this->path_map['folders'][(string)$path] = $subpath_count;
+    $this->pushCache();
     return $ret_count;
   
   }//method
@@ -263,34 +359,7 @@ class Reflection implements \Reflector {
       $extend_list[] = $rextend->getName();
     }//if
     
-    $this->persist($path);
-    return $this->setClass($class_name,$rclass->getFileName(),$extend_list,$rclass->getInterfaceNames());
-  
-  }//method
-  
-  /**
-   *  removes a class from the mappings
-   *  
-   *  @since  6-13-11
-   *  @param  string  $class_name
-   *  @return boolean
-   */
-  public function killClass($class_name){
-  
-    // canary...
-    if(empty($class_name)){ throw new \InvalidArgumentException('$class_name was empty'); }//if
-    
-    $class_key = $this->normalizeClassName($class_name);
-  
-    if(isset($this->class_map[$class_key])){
-      unset($this->class_map[$class_key]);
-    }//if
-  
-    if(isset($this->parent_class_map[$class_key])){
-      unset($this->parent_class_map[$class_key]);
-    }//if
-  
-    return true;
+    return $this->setClass($class_name,$path,$extend_list,$rclass->getInterfaceNames());
   
   }//method
   
@@ -382,41 +451,29 @@ class Reflection implements \Reflector {
   }//method
   
   /**
-   *  true if the passed in $parent_class_name is a parent to any class
-   * 
-   *  this could pull in get_declared_classes() and pull out all parents of those
-   *  also, I just can't decide if reflection should know about stuff that hasn't
-   *  been explicitely set using addPath() or addClass()       
-   *      
-   *  @since  6-10-11    
-   *  @param  string  $parent_class_name
-   *  @param  string  $child_class_name if not-empty, then the parent must be a parent of this class
-   *  @return boolean
+   *  add a file and all the classes contained in that file
+   *  
+   *  @since  6-20-11
+   *  @param  string  $file
+   *  @return count how many classes from the file were added
    */
-  /* public function isParentClass($parent_class_name,$child_class_name = ''){
+  protected function setFile($file){
   
-    // canary...
-    if(empty($parent_class_name)){ return false; }//if
-  
-    $ret_bool = false;
+    $ret_count = 0;
+    $rfile = new ReflectionFile($file);
     
-    $parent_key = $this->normalizeClassName($parent_class_name);
-    if(!empty($this->parent_class_map[$parent_key])){
+    $class_list = $rfile->getClasses();
+    foreach($class_list as $class_map){
     
-      $ret_bool = true;
-    
-      if(!empty($child_class_name)){
-      
-        $child_key = $this->normalizeClassName($child_class_name);
-        $ret_bool = in_array($child_key,$this->parent_class_map[$parent_key],true);
-      
+      if($this->setClass($class_map['class'],$file,$class_map['extends'],$class_map['implements'])){
+        $ret_count++;
       }//if
-      
-    }//if
     
-    return $ret_bool;
+    }//foreach
+      
+    return $ret_count;
   
-  }//method */
+  }//method
   
   /**
    *
@@ -427,8 +484,8 @@ class Reflection implements \Reflector {
     $class_map = array();
     $key = $this->normalizeClassName($class_name);
     $class_map['class'] = $class_name;
-    $class_map['last_modified'] = filemtime($class_file); // use MD5 instead?
-    ///$class_map['hash'] = md5_file($class_file);
+    ///$class_map['last_modified'] = filemtime($class_file); // use MD5 instead?
+    $class_map['hash'] = md5_file($class_file);
     
     $class_map['path'] = $class_file;
     $this->class_map[$key] = $class_map;
@@ -448,26 +505,24 @@ class Reflection implements \Reflector {
   
   }//method
   
-  protected function persist($path){
+  protected function pushCache(){
   
     // canary, if no cache then don't try and persist...
     if(empty($this->cache)){ return false; }//if
     // canary, if $path already in list then no need to try and persist again...
     ///if(in_array((string)$path,$this->path_list,true)){ return false; }//if
-  
-    $this->path_list[] = (string)$path;
     
     $cache_map = array(
       'class_map' => $this->class_map,
       'parent_class_map' => $this->parent_class_map,
-      'path_list' => $this->path_list
+      'path_map' => $this->path_map
     );
     
-    $this->cache->set(__CLASS__,$cache_map);
+    $this->cache->set(get_class($this),$cache_map);
   
   }//method
   
-  protected function unpersist(){
+  protected function pullCache(){
   
     // canary, if no cache then don't try and persist...
     if(empty($this->cache)){ return false; }//if
@@ -476,12 +531,74 @@ class Reflection implements \Reflector {
     
     if(isset($cache_map['class_map'])){ $this->class_map = $cache_map['class_map']; }//if
     if(isset($cache_map['parent_class_map'])){ $this->parent_class_map = $cache_map['parent_class_map']; }//if
-    if(isset($cache_map['path_list'])){ $this->path_list = $cache_map['path_list']; }//if
+    if(isset($cache_map['path_map'])){ $this->path_map = $cache_map['path_map']; }//if
     
   }//method
   
-  protected function hasPath($path){
-    return in_array((string)$path,$this->path_list,true);
+  protected function hasPath(Path $path){
+    
+    $ret_bool = true;
+    $path_list = array_keys(
+      array_merge(
+        isset($this->path_map['folders']) ? $this->path_map['folders'] : array(),
+        isset($this->path_map['files']) ? $this->path_map['files'] : array()
+      )
+    );
+    
+    if(!in_array((string)$path,$path_list,true)){
+    
+      $ret_bool = $path->isSubPath($path_list);
+    
+    }//if
+    
+    return $ret_bool;
+    
+  }//method
+  
+  protected function isOutdatedClass($class_key){
+  
+    $old = $this->class_map[$class_key]['hash'];
+    $new = md5_file($this->class_map[$class_key]['path']);
+
+    return ((string)$old !== (string)$new);
+  
+  }//method
+  
+  /**
+   *  reload all known paths
+   *  
+   *  @since  6-20-11
+   *  @return integer how many classes were reloaded
+   */
+  protected function reload(){
+  
+    // canary...
+    if($this->reloaded){ return 0; }//if
+
+    $ret_count = 0;
+  
+    $folder_list = isset($this->path_map['folders']) ? array_keys($this->path_map['folders']) : array();
+    $file_list = isset($this->path_map['files']) ? array_keys($this->path_map['files']) : array();
+  
+    $this->class_map = array();
+    $this->parent_class_map = array();
+    $this->path_map = array('files' => array(),'folders' => array());
+    
+    foreach($folder_list as $folder){
+    
+      $ret_count += $this->addPath($folder);
+    
+    }//foreach
+    
+    foreach($file_list as $file){
+    
+      $ret_count += $this->addFile($file);
+    
+    }//foreach
+  
+    $this->reloaded = true;
+    return $ret_count;
+    
   }//method
 
 }//method

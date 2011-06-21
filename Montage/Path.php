@@ -15,8 +15,9 @@ use RecursiveDirectoryIterator;
 use RegexIterator;
 use InvalidArgumentException;
 use UnexpectedValueException;
+use Countable;
  
-class Path {
+class Path implements Countable {
 
   /**
    *  this will hold the actual path this object represents 
@@ -92,6 +93,76 @@ class Path {
   public function canRead(){ return is_readable($this->path); }//method
   
   /**
+   *  count all the descendants of the path
+   *  
+   *  @since  6-20-11
+   *  @return integer
+   */
+  public function count(){ return $this->countSubPaths(); }//method
+  
+  /**
+   *  count all the descendants of the path that match $regex
+   *  
+   *  @since  6-20-11
+   *  @param  string  $regex  a regex to match paths with   
+   *  @return integer
+   */
+  public function countSubPaths($regex = ''){
+  
+    /// \out::p(sprintf('count sub paths %s with regex %s',$this,$regex));
+  
+    $ret_count = 0;
+    $map = $this->getSubPaths($regex);
+    foreach($map as $list){ $ret_count += count($list); }//foreach
+    
+    /// \out::p();
+    
+    return $ret_count;
+  
+  }//method
+  
+  /**
+   *  true if the internal path is a descendant/child of any of the passed in paths
+   *  
+   *  @example
+   *    internal path: /foo/bar/che
+   *    $this->isDescendant('foo/bar'); // true            
+   *
+   *  @since  6-20-11   
+   *  @param  string  $path,... one or more passed in paths to check the internal path against
+   *  @return boolean
+   */
+  ///public function isDescendant($path){
+  public function isSubPath($path){
+  
+    $ret_bool = false;
+  
+    $path_list = func_get_args();
+    foreach($path_list as $path){
+    
+      if(!empty($path)){
+      
+        if(is_array($path)){
+        
+          $ret_bool = call_user_func_array(array($this,__FUNCTION__),$path);
+        
+        }else{
+        
+          $ret_bool = (mb_stripos($this->path,(string)$path) !== false);
+        
+        }//if/else
+      
+        if($ret_bool){ break; }//if
+        
+      }//if
+    
+    }//foreach
+  
+    return $ret_bool;
+  
+  }//method
+  
+  /**
    *  get immediate children in the given path
    *  
    *  children are defined as all the contents in the given path 1 level deep (ie, the contents
@@ -143,7 +214,8 @@ class Path {
    *                          but be careful because regex matches on the full path   
    *  @return array array with files and folders keys set to found/matching contents      
    */
-  public function getDescendants($regex = ''){
+  ///public function getDescendants($regex = ''){
+  public function getSubPaths($regex = ''){
   
     $ret_map = array('files' => array(),'folders' => array());
   

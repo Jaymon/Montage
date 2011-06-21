@@ -132,9 +132,12 @@ class Container extends Field {
         
         }//if
     
-        $instance_class_name = $reflection->findClassName($cn_key);
-        
-        break;
+        if($reflection->hasClass($cn_key)){
+    
+          $instance_class_name = $reflection->findClassName($cn_key);
+          break;
+          
+        }//if
         
       }catch(Exception $e){}//try/catch
       

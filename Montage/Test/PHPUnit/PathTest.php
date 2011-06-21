@@ -1,11 +1,12 @@
 <?php
 namespace Montage\Test\PHPUnit;
+
+require_once('out_class.php');
+require_once(__DIR__.'/Test.php');
+require_once(__DIR__.'/../../Path.php');
+
 use ReflectionClass;
 use Montage\Path;
-
-require_once(join(DIRECTORY_SEPARATOR,array(dirname(__FILE__),'Test_class.php')));
-require_once('E:\Projects\sandbox\montage\_active\Montage\Path_class.php');
-require_once('out_class.php');
 
 class PathTest extends Test {
 
@@ -107,7 +108,7 @@ class PathTest extends Test {
   /**
    *  tests the {@link Montage\Path::getDescendants()} method
    */
-  public function testGetDescendants(){
+  public function testGetSubPaths(){
   
     $base = $this->getFixture('Path');
     $instance = new Path($base);
@@ -161,8 +162,37 @@ class PathTest extends Test {
     
     foreach($test_list as $test_map){
     
-      $actual = call_user_func(array($instance,'getDescendants'),$test_map['in']);      
+      $actual = call_user_func(array($instance,'getSubPaths'),$test_map['in']);      
       $this->assertEquals($test_map['out'],$actual,$test_map['in']);
+    
+    }//foreach
+  
+  }//method
+  
+  /**
+   *  make sure the sub path method works as expected
+   *
+   *  @since  6-20-11
+   */
+  public function testIsSubPath(){
+  
+    $base = $this->getFixture('Path');
+    $instance = new Path($base);
+    
+    $test_list = array();
+    $test_list[] = array(
+      'init' => array('foo','bar'),
+      'in' => new Path('foo'),
+      'out' => true
+    );
+    
+    foreach($test_list as $i => $test_map){
+    
+      $rpath = new ReflectionClass('Montage\Path');
+      $instance = $rpath->newInstanceArgs($test_map['init']);
+    
+      $actual = call_user_func(array($instance,'isSubPath'),$test_map['in']);      
+      $this->assertEquals($test_map['out'],$actual,$i);
     
     }//foreach
   
