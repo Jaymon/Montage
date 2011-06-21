@@ -44,10 +44,19 @@ use Montage\Dependency\Injector;
 
 class Framework extends Field implements Injector {
   
+  /**
+   *  @var  Montage\Request\Requestable
+   */
   protected $request = null;
   
+  /**
+   *  @var  Montage\Controller\Select
+   */
   protected $controller_select = null;
   
+  /**
+   *  #var  Montage\Config
+   */
   protected $config = null;
   
   /**
@@ -57,6 +66,13 @@ class Framework extends Field implements Injector {
    */
   protected $container = null;
 
+  /**
+   *  create this object
+   *  
+   *  @param  string  $env  the environment, usually something like "dev" or "prod"
+   *  @param  integer $debug_level  what level of debug you want
+   *  @param  string  $app_path the root path for your application
+   */
   public function __construct($env,$debug_level,$app_path){
   
     // canary...
@@ -122,6 +138,11 @@ class Framework extends Field implements Injector {
     
   }//method
   
+  /**
+   *  call this method to actually handle the request
+   *  
+   *  once this method is called, everything is taken care of for you
+   */
   public function handle(){
   
     $container = $this->getContainer();
@@ -150,6 +171,11 @@ class Framework extends Field implements Injector {
   
   }//method
 
+  /**
+   *  start all the \Montage\Start classes
+   *  
+   *  a Start class is a class that will do configuration stuff
+   */
   protected function handleStart(){
   
     $env = $this->config->getEnv();
@@ -201,6 +227,13 @@ class Framework extends Field implements Injector {
   
   }//method
 
+  /**
+   *  create a controller instance and call that instance's $method to handle the request
+   *  
+   *  @param  string  $class_name the controller class name
+   *  @param  string  $method the method that will be called
+   *  @param  array $params the arguments that will be passed to the $class_name->$method() call
+   */
   protected function handleController($class_name,$method,array $params = array()){
   
     $container = $this->getContainer();
