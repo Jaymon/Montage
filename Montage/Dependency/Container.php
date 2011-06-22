@@ -118,6 +118,7 @@ class Container extends Field {
     $params = (array)$params;
     $reflection = $this->getReflection();
     $instance_class_name = '';
+    $has_multi = false;
     
     foreach($class_name as $cn){
     
@@ -139,15 +140,33 @@ class Container extends Field {
           
         }//if
         
+      }catch(\LogicException $e){
+    
+        $has_multi = true;  
+      
       }catch(Exception $e){}//try/catch
       
     }//foreach
   
     if(empty($instance_class_name)){
     
-      throw new \UnexpectedValueException(
-        sprintf('Unable to find suitable class using [%s]',join(',',$class_name))
-      );
+      if($has_multi){
+      
+        throw new \UnexpectedValueException(
+          sprintf(
+            'there were multiple classes that inherited from [%s], use setPreferred() to set the '
+            .'preferred class that should be used',
+            join(',',$class_name)
+          )
+        );
+      
+      }else{
+      
+        throw new \UnexpectedValueException(
+          sprintf('Unable to find suitable class using [%s]',join(',',$class_name))
+        );
+        
+      }//if/else
     
     }else{
       

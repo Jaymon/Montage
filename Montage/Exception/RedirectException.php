@@ -8,7 +8,7 @@
  *  @package montage
  *  @subpackage exceptions  
  ******************************************************************************/      
-namespace Montage\Exceptions;
+namespace Montage\Exception;
 
 use Exception;
 

@@ -2,7 +2,7 @@
 /**
  *  handles all path related issues
  *  
- *  @version 0.1
+ *  @version 0.3
  *  @author Jay Marcyes
  *  @since 12-6-10
  *  @package montage
@@ -25,6 +25,8 @@ class Path implements Countable {
    *  @var  string   
    */        
   protected $path = '';
+  
+  protected $children_map = array();
 
   /**
    *  create this class using one or more path bits
@@ -98,21 +100,25 @@ class Path implements Countable {
    *  @since  6-20-11
    *  @return integer
    */
-  public function count(){ return $this->countSubPaths(); }//method
+  public function count(){ return $this->countChildren(); }//method
   
   /**
    *  count all the descendants of the path that match $regex
    *  
    *  @since  6-20-11
-   *  @param  string  $regex  a regex to match paths with   
+   *  @param  string  $regex  a regex to match paths with
+   *  @param  integer $depth  use 1 to get just immediate children, defaults to all depths      
    *  @return integer
    */
-  public function countSubPaths($regex = ''){
+  public function countChildren($regex = '',$depth = -1){
   
     /// \out::p(sprintf('count sub paths %s with regex %s',$this,$regex));
   
+    // I could think about doing something like: ls -R -l |wc -l on the command line...
+    // http://linuxcommando.blogspot.com/2008/07/how-to-count-number-of-files-in.html
+  
     $ret_count = 0;
-    $map = $this->getSubPaths($regex);
+    $map = $this->getChildren($regex,$depth);
     foreach($map as $list){ $ret_count += count($list); }//foreach
     
     /// \out::p();
@@ -122,110 +128,221 @@ class Path implements Countable {
   }//method
   
   /**
+   *  true if the internal path is an ancestor of all of the passed in paths
+   *  
+   *  @example
+   *    internal path: /foo/
+   *    $this->isParent('foo/bar'); // true
+   *    $this->isParent('foo/bar','foo/bar/che/baz'); // true
+   *    $this->isParent('foo/bar','che/baz'); // false   
+   *
+   *  @since  6-22-11
+   *  @param  string  $path,... one or more passed in paths to check the internal path against
+   *  @return boolean
+   */
+  public function isParent($path){
+  
+    $path_list = func_get_args();
+    $callback = function($instance_path,$path){
+    
+      return (mb_stripos((string)$path,$instance_path) !== false);
+    
+    };
+    
+    return $this->compare($path_list,$callback,false);
+    
+  }//method
+  
+  /**
+   *  true if the internal path is a descendant of all of the passed in paths
+   *  
+   *  @example
+   *    internal path: /foo/bar/baz
+   *    $this->isChild('foo/bar'); // true
+   *    $this->isChild('foo/','foo/bar/'); // true
+   *    $this->isChild('foo/bar','che/baz'); // false   
+   *
+   *  @since  6-22-11
+   *  @param  string  $path,... one or more passed in paths to check the internal path against
+   *  @return boolean
+   */
+  public function isChild($path){
+  
+    $path_list = func_get_args();
+    $callback = function($instance_path,$path){
+    
+      /// string haystack, string needle
+      return (mb_stripos($instance_path,(string)$path) !== false);
+    
+    };
+    
+    return $this->compare($path_list,$callback,false);
+    
+  }//method
+  
+  /**
    *  true if the internal path is a descendant/child of any of the passed in paths
    *  
    *  @example
    *    internal path: /foo/bar/che
-   *    $this->isDescendant('foo/bar'); // true            
+   *    $this->inParents('foo/bar'); // true
+   *    $this->inParents('foo/bar/che/baz'); // false
    *
    *  @since  6-20-11   
-   *  @param  string  $path,... one or more passed in paths to check the internal path against
+   *  @param  string  $path,... one or more passed in paths to check the internal path against, only one
+   *                            needs to match to return true   
    *  @return boolean
    */
-  ///public function isDescendant($path){
-  public function isSubPath($path){
-  
-    $ret_bool = false;
+  public function inParents($path){
   
     $path_list = func_get_args();
+    $callback = function($instance_path,$path){
+    
+      return (mb_stripos($instance_path,(string)$path) !== false);
+    
+    };
+    
+    return $this->compare($path_list,$callback);
+    
+  }//method
+  
+  /**
+   *  true if the internal path is a ancestor/parent of any of the passed in paths
+   *  
+   *  @example
+   *    internal path: /foo/bar
+   *    $this->inChildren('foo/bar/che'); // true
+   *    $this->inChildren('foo/bar/che','foo'); // true   
+   *    $this->inChildren('foo/'); // false
+   *
+   *  @since  6-21-11   
+   *  @param  string  $path,... one or more passed in paths to check the internal path against, only one
+   *                            needs to match to return true
+   *  @return boolean
+   */
+  public function inChildren($path){
+  
+    $path_list = func_get_args();
+    $callback = function($instance_path,$path){
+    
+      return (mb_stripos((string)$path,$instance_path) !== false);
+    
+    };
+    
+    return $this->compare($path_list,$callback);
+  
+  }//method
+  
+  /**
+   *  true if the internal path is a ancestor/parent of any of the passed in paths
+   *  
+   *  @example
+   *    internal path: /foo/bar
+   *    $this->inParents('foo/bar/che'); // true
+   *    $this->inParents('foo/bar/che','foo'); // true   
+   *    $this->inParents('foo/'); // false
+   *
+   *  @since  6-22-11   
+   *  @param  string  $path,... one or more passed in paths to check the internal path against, only one
+   *                            needs to match to return true
+   *  @return boolean
+   */
+  public function inFamily($path){
+  
+    $path_list = func_get_args();
+    $callback = function($instance_path,$path){
+    
+      return (mb_stripos((string)$path,$instance_path) !== false)
+        || (mb_stripos($instance_path,(string)$path) !== false);
+    
+    };
+    
+    return $this->compare($path_list,$callback);
+  
+  }//method
+  
+  /**
+   *  compare every path in $path_list with the internal path using $callback
+   *  
+   *  @since  6-22-11
+   *  @param  array $path_list  an array of paths to compare against the internal path
+   *  @param  callback  $callback a callback that takes ($this->path,$path)
+   *  @param  mixed $break_on the return value of $callback will be compared with this to
+   *                          decide if comparing is done                  
+   *  @return mixed whatever $callback returns
+   */
+  protected function compare(array $path_list,$callback,$break_on = true){
+  
+    $ret_mixed = false;
+    $self = get_class($this);
+  
     foreach($path_list as $path){
     
       if(!empty($path)){
       
         if(is_array($path)){
         
-          $ret_bool = call_user_func_array(array($this,__FUNCTION__),$path);
+          $ret_mixed = call_user_func(array($this,__FUNCTION__),$path,$callback);
         
         }else{
         
-          $ret_bool = (mb_stripos($this->path,(string)$path) !== false);
+          if(!($path instanceof $self)){ $path = new $self($path); }//if
+          $ret_mixed = $callback($this->path,$path);
         
         }//if/else
       
-        if($ret_bool){ break; }//if
+        if($ret_mixed === $break_on){ break; }//if
         
       }//if
     
     }//foreach
   
-    return $ret_bool;
+    return $ret_mixed;
   
   }//method
   
   /**
-   *  get immediate children in the given path
+   *  get children in the given path
    *  
-   *  children are defined as all the contents in the given path 1 level deep (ie, the contents
-   *  of folders inside the path won't be returned, just the folder names)         
+   *  children are all contents of the path N levels deep         
    *
    *  @since  1-17-11
    *  @param  string  $regex  if you only want certain files/folders to be returned, you can match on the regex
+   *  @param  integer $depth  use 1 to get just immediate children, defaults to all depths   
    *  @return array array with files and folders keys set to found/matching contents      
    */
-  public function getChildren($regex = ''){
+  public function getChildren($regex = '',$depth = -1){
+  
+    // canary...
+    if(isset($this->children_map[$regex][$depth])){
+      return $this->children_map[$regex][$depth];
+    }//if
   
     $ret_map = array('files' => array(),'folders' => array());
+    $depth = (int)$depth;
+    $iterator = null;
   
-    $iterator = new FilesystemIterator(
-      $this->path,
-      FilesystemIterator::CURRENT_AS_FILEINFO | FilesystemIterator::KEY_AS_PATHNAME | FilesystemIterator::SKIP_DOTS
-    );
-    if(!empty($regex)){
+    if(($depth < 0) || ($depth > 1)){
     
-      $iterator = new RegexIterator($iterator,$regex,RegexIterator::MATCH);
+      $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator(
+          $this->path,
+          FilesystemIterator::CURRENT_AS_FILEINFO | FilesystemIterator::KEY_AS_PATHNAME | FilesystemIterator::SKIP_DOTS
+        ),
+        RecursiveIteratorIterator::SELF_FIRST
+      );
+      
+      $iterator->setMaxDepth($depth);
     
-    }//if/else
-  
-    foreach($iterator as $key => $val){
+    }else{
     
-      if($val->isFile()){
-      
-        $ret_map['files'][] = $key;
-      
-      }else{
-      
-        $ret_map['folders'][] = $key;
-      
-      }//if/else
-    
-    }//foreach
-  
-    return $ret_map;
-  
-  }//method
-  
-  /**
-   *  get all contents inside the given path
-   *  
-   *  descendants are the contents of all folders and files found under the path recursively         
-   *
-   *  @since  1-17-11
-   *  @param  string  $regex  if you only want certain files/folders to be returned, you can match on the regex
-   *                          but be careful because regex matches on the full path   
-   *  @return array array with files and folders keys set to found/matching contents      
-   */
-  ///public function getDescendants($regex = ''){
-  public function getSubPaths($regex = ''){
-  
-    $ret_map = array('files' => array(),'folders' => array());
-  
-    $iterator = new RecursiveIteratorIterator(
-      new RecursiveDirectoryIterator(
+      $iterator = new FilesystemIterator(
         $this->path,
         FilesystemIterator::CURRENT_AS_FILEINFO | FilesystemIterator::KEY_AS_PATHNAME | FilesystemIterator::SKIP_DOTS
-      ),
-      RecursiveIteratorIterator::SELF_FIRST
-    );
+      );
+      
+    }//if/else
+      
     if(!empty($regex)){
     
       $iterator = new RegexIterator($iterator,$regex,RegexIterator::MATCH);
@@ -233,7 +350,7 @@ class Path implements Countable {
     }//if/else
   
     foreach($iterator as $key => $val){
-
+    
       if($val->isFile()){
       
         $ret_map['files'][] = $key;
@@ -245,7 +362,11 @@ class Path implements Countable {
       }//if/else
     
     }//foreach
-    
+  
+    // cache the result in memory...
+    $this->children_map[$regex] = array();
+    $this->children_map[$regex][$depth] = $ret_map;
+  
     return $ret_map;
   
   }//method
@@ -273,10 +394,17 @@ class Path implements Countable {
         
       }else{
         
-        $path_bit = trim((string)$path_bit,'\\/');
-        if(!empty($path_bit) && !ctype_space($path_bit)){
-          $ret_list[] = $path_bit;
+        $path_bit = preg_split('#[\\\\/]#',$path_bit); // split on dir separators
+        $path_bit = array_map('trim',$path_bit); // trim all the individual bits
+        $path_bit = array_filter($path_bit); // get rid of any empty values
+        if(!empty($path_bit)){
+          $ret_list = array_merge($ret_list,$path_bit); // merge the bits into the final list
         }//if
+        
+        ///$path_bit = trim((string)$path_bit,'\\/');
+        ///if(!empty($path_bit) && !ctype_space($path_bit)){
+        ///  $ret_list[] = $path_bit;
+        ///}//if
         
       }//if/else
       

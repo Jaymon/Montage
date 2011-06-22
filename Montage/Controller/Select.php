@@ -97,6 +97,62 @@ class Select {
   }//method
   
   /**
+   *  get the full default class name
+   *
+   *  @since  6-21-11
+   *  @return string  a full namespaced class name      
+   */
+  public function getDefaultClassName(){
+  
+    return $this->getClassName($this->class_default);
+  
+  }//method
+  
+  /**
+   *  get the full exception class name
+   *
+   *  @since  6-21-11
+   *  @return string  a full namespaced class name      
+   */
+  public function getExceptionClassName(){
+  
+    return $this->getClassName($this->class_exception);
+  
+  }//method
+  
+  /**
+   *  returns a full class name if it is a child of {@link $class_interface}
+   *  
+   *  @since  6-20-11
+   *  @param  string  $class_name a partial blass name that will be turned into a full class name   
+   *  @return string
+   */
+  public function getClassName($class_name){
+  
+    // canary...
+    if(empty($class_name)){
+      throw new \InvalidArgumentException('$class_name was empty');
+    }//if
+  
+    $ret_str = '';
+    $reflection = $this->reflection;
+  
+    foreach($this->class_namespace_list as $class_namespace){
+      
+      $full_class_name = $this->normalizeClass($class_namespace,$class_name);
+      
+      if($reflection->isChildClass($full_class_name,$this->class_interface)){
+        $ret_str = $full_class_name;
+        break;
+      }//if
+      
+    }//foreach
+  
+    return $ret_str;
+  
+  }//method
+  
+  /**
    *  turns the info provided by the $host, $path and $params into a controller::method
    *  
    *  @param  string  $host the host that is making the request
@@ -174,11 +230,11 @@ class Select {
    *  
    *  @since  6-16-11   
    *  @param  array $path_list  the path broken up by /
-   *  @param  array $default_class_list if the class can't be found through the $path_list, use
-   *                the classes found in this list      
+   *  @param  string  $fallback_class_name  if the class can't be found through the $path_list, use
+   *                                        this class
    *  @return array array($class_name,$path_list)
    */
-  protected function findClass(array $path_list,$default_class_name = ''){
+  protected function findClass(array $path_list,$fallback_class_name = ''){
 
     $class_name = '';
     $reflection = $this->reflection;
@@ -187,31 +243,14 @@ class Select {
     // see if the controller was passed in from the request string...
     if(!empty($path_bit)){
       
-      // first check all the namespaces against the passed in request string...
-      foreach($this->class_namespace_list as $class_namespace){
-
-        if($class_name = $this->getClass($class_namespace,$path_bit)){
-        
-          $path_list = array_slice($path_list,1);
-          break;
-        
-        }//if
-      
-      }//foreach
+      $class_name = $this->getClassName($path_bit);
   
     }//if
   
-    // check the default class name in all the namespaces...
+    // check for the default class name...
     if(empty($class_name)){
       
-      foreach($this->class_namespace_list as $class_namespace){
-      
-        // check for the default class in this namespace...
-        if($class_name = $this->getClass($class_namespace,$default_class_name)){
-          break;
-        }//if
-        
-      }//foreach
+      $class_name = $this->getClassName($fallback_class_name);
       
     }//if
   
@@ -226,26 +265,6 @@ class Select {
     
     return array($class_name,$path_list);
     
-  }//method
-  
-  /**
-   *  returns a full class name if it is a child of {@link $class_interface}
-   *  
-   *  @since  6-20-11
-   *  @return string
-   */
-  protected function getClass($namespace,$class_name){
-  
-    $ret_str = '';
-    $reflection = $this->reflection;
-    $full_class_name = $this->normalizeClass($namespace,$class_name);
-    
-    if($reflection->isChildClass($full_class_name,$this->class_interface)){
-      $ret_str = $full_class_name;
-    }//if
-    
-    return $ret_str;
-  
   }//method
   
   /**

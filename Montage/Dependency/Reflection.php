@@ -318,7 +318,7 @@ class Reflection implements \Reflector {
     if($this->hasPath($path)){
       
       $ret_count = 0;
-      $subpath_count = $path->countSubPaths($regex);
+      $subpath_count = $path->countChildren($regex);
       if($subpath_count !== $this->path_map['folders'][(string)$path]){
         $ret_count = $this->reload();
       }//if
@@ -328,9 +328,9 @@ class Reflection implements \Reflector {
     }//if
   
     $ret_count = 0;
-    $subpath_count = $path->countSubPaths($regex);
+    $subpath_count = $path->countChildren($regex);
   
-    $subpath_list = $path->getSubPaths($regex);
+    $subpath_list = $path->getChildren($regex);
     foreach($subpath_list['files'] as $file){
     
       $ret_count += $this->setFile($file);
@@ -459,6 +459,9 @@ class Reflection implements \Reflector {
    */
   protected function setFile($file){
   
+    // canary...
+    if($this->hasPath(new Path($file))){ return true; }//if
+  
     $ret_count = 0;
     $rfile = new ReflectionFile($file);
     
@@ -535,6 +538,12 @@ class Reflection implements \Reflector {
     
   }//method
   
+  /**
+   *  return whether the $path has been looked at before
+   *  
+   *  @param  Path  $path the path to check against the internal paths
+   *  @return boolean
+   */
   protected function hasPath(Path $path){
     
     $ret_bool = true;
@@ -545,9 +554,15 @@ class Reflection implements \Reflector {
       )
     );
     
+    // @todo  this is only one way, checking if the path is a Subpath of all the other
+    // paths, but what if a child path has already been included (eg, foo/bar was 
+    // added and then foo was added)? I solved this by putthing a check in setFile(),
+    // though that will slow the addPath() method quite a bit as every file needs to
+    // be checked if it has a parent in the path list
+    
     if(!in_array((string)$path,$path_list,true)){
     
-      $ret_bool = $path->isSubPath($path_list);
+      $ret_bool = $path->inParents($path_list);
     
     }//if
     

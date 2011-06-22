@@ -26,7 +26,7 @@ abstract class Start extends Field implements Startable, Injector {
 
   protected $container = null;
 
-  public function __construct(Config $config,Container $container){
+  public function __construct(FrameworkConfig $config){
   
     $this->config = $config;
     $this->setContainer($container);

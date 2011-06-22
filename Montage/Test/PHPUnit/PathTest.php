@@ -68,7 +68,7 @@ class PathTest extends Test {
     
     $test_list = array();
     $test_list[] = array(
-      'in' => '',
+      'in' => array('',1),
       'out' => array(
         'files' => array(
           join(DIRECTORY_SEPARATOR,array($instance->__toString(),'che.txt'))
@@ -80,7 +80,7 @@ class PathTest extends Test {
       )
     );
     $test_list[] = array(
-      'in' => '#che#',
+      'in' => array('#che#',1),
       'out' => array(
         'files' => array(
           join(DIRECTORY_SEPARATOR,array($instance->__toString(),'che.txt'))
@@ -89,33 +89,14 @@ class PathTest extends Test {
       )
     );
     $test_list[] = array(
-      'in' => '#something-not-matching#',
+      'in' => array('#something-not-matching#',1),
       'out' => array(
         'files' => array(),
         'folders' => array()
       )
     );
-    
-    foreach($test_list as $test_map){
-    
-      $actual = call_user_func(array($instance,'getChildren'),$test_map['in']);
-      $this->assertEquals($test_map['out'],$actual);
-    
-    }//foreach
-  
-  }//method
-  
-  /**
-   *  tests the {@link Montage\Path::getDescendants()} method
-   */
-  public function testGetSubPaths(){
-  
-    $base = $this->getFixture('Path');
-    $instance = new Path($base);
-    
-    $test_list = array();
     $test_list[] = array(
-      'in' => '',
+      'in' => array('',-1),
       'out' => array(
         'files' => array(
           join(DIRECTORY_SEPARATOR,array($instance->__toString(),'bar','2','1.txt')),
@@ -134,7 +115,7 @@ class PathTest extends Test {
       )
     );
     $test_list[] = array(
-      'in' => '#che#',
+      'in' => array('#che#',-1),
       'out' => array(
         'files' => array(
           join(DIRECTORY_SEPARATOR,array($instance->__toString(),'che.txt'))
@@ -143,7 +124,7 @@ class PathTest extends Test {
       )
     );
     $test_list[] = array(
-      'in' => '#1$#',
+      'in' => array('#1$#',-1),
       'out' => array(
         'files' => array(),
         'folders' => array(
@@ -153,7 +134,7 @@ class PathTest extends Test {
       )
     );
     $test_list[] = array(
-      'in' => '#nothing-matching#',
+      'in' => array('#nothing-matching#',-1),
       'out' => array(
         'files' => array(),
         'folders' => array()
@@ -162,8 +143,8 @@ class PathTest extends Test {
     
     foreach($test_list as $test_map){
     
-      $actual = call_user_func(array($instance,'getSubPaths'),$test_map['in']);      
-      $this->assertEquals($test_map['out'],$actual,$test_map['in']);
+      $actual = call_user_func_array(array($instance,'getChildren'),$test_map['in']);
+      $this->assertEquals($test_map['out'],$actual);
     
     }//foreach
   
@@ -174,16 +155,86 @@ class PathTest extends Test {
    *
    *  @since  6-20-11
    */
-  public function testIsSubPath(){
-  
-    $base = $this->getFixture('Path');
-    $instance = new Path($base);
+  public function testInAndIsMethods(){
     
     $test_list = array();
     $test_list[] = array(
+      'method' => 'inParents',
       'init' => array('foo','bar'),
-      'in' => new Path('foo'),
+      'in' => array(new Path('foo')),
       'out' => true
+    );
+    $test_list[] = array(
+      'method' => 'inParents',
+      'init' => array('foo'),
+      'in' => array(new Path('foo','bar')),
+      'out' => false
+    );
+    $test_list[] = array(
+      'method' => 'inChildren',
+      'init' => array('foo'),
+      'in' => array(new Path('foo','bar')),
+      'out' => true
+    );
+    $test_list[] = array(
+      'method' => 'inChildren',
+      'init' => array('foo','bar'),
+      'in' => array(new Path('foo')),
+      'out' => false
+    );
+    $test_list[] = array(
+      'method' => 'inFamily',
+      'init' => array('foo'),
+      'in' => array(new Path('foo','bar')),
+      'out' => true
+    );
+    $test_list[] = array(
+      'method' => 'inFamily',
+      'init' => array('foo','bar'),
+      'in' => array(new Path('foo')),
+      'out' => true
+    );
+    $test_list[] = array(
+      'method' => 'inFamily',
+      'init' => array('baz','bar'),
+      'in' => array(new Path('foo')),
+      'out' => false
+    );
+    $test_list[] = array(
+      'method' => 'isChild',
+      'init' => array('foo','bar','baz'),
+      'in' => array(new Path('foo','bar')),
+      'out' => true
+    );
+    $test_list[] = array(
+      'method' => 'isChild',
+      'init' => array('foo','bar','baz'),
+      'in' => array('foo',new Path('foo','bar')),
+      'out' => true
+    );
+    $test_list[] = array(
+      'method' => 'isChild',
+      'init' => array('foo','bar','baz'),
+      'in' => array(new Path('foo','bar'),new Path('che','baz')),
+      'out' => false
+    );
+    $test_list[] = array(
+      'method' => 'isParent',
+      'init' => array('foo'),
+      'in' => array(new Path('foo','bar')),
+      'out' => true
+    );
+    $test_list[] = array(
+      'method' => 'isParent',
+      'init' => array('foo'),
+      'in' => array(new Path('foo','bar'),new Path('foo','bar','che','baz')),
+      'out' => true
+    );
+    $test_list[] = array(
+      'method' => 'isParent',
+      'init' => array('foo'),
+      'in' => array(new Path('foo','bar'),new Path('che','baz')),
+      'out' => false
     );
     
     foreach($test_list as $i => $test_map){
@@ -191,7 +242,7 @@ class PathTest extends Test {
       $rpath = new ReflectionClass('Montage\Path');
       $instance = $rpath->newInstanceArgs($test_map['init']);
     
-      $actual = call_user_func(array($instance,'isSubPath'),$test_map['in']);      
+      $actual = call_user_func_array(array($instance,$test_map['method']),$test_map['in']);      
       $this->assertEquals($test_map['out'],$actual,$i);
     
     }//foreach

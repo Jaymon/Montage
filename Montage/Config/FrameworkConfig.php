@@ -5,13 +5,14 @@
  *  @version 0.1
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 6-17-11
- *  @package montage  
+ *  @package montage
+ *  @subpackage Config 
  ******************************************************************************/     
-namespace Montage;
+namespace Montage\Config;
 
-use Montage\Field;
+use Montage\Config\Config;
 
-class Config extends Field {
+class FrameworkConfig extends Config {
 
   public function getEnv(){ return $this->getField('env',''); }//method
   
