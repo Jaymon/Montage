@@ -33,11 +33,12 @@ namespace Montage\Dependency;
 use ReflectionClass;
 use Montage\Dependency\ReflectionFile;
 use Montage\Path;
+use Montage\Cache\ObjectCache;
 use out;
 
 use Montage\Cache;
 
-class Reflection implements \Reflector {
+class Reflection extends ObjectCache implements \Reflector {
 
   /**
    *  hold all the classes that could possibly be loadable
@@ -57,20 +58,14 @@ class Reflection implements \Reflector {
    *  @var  array
    */
   protected $parent_class_map = array();
-
-  protected $cache = null;
   
   protected $path_map = array('files' => array(),'folders' => array());
   
   protected $reloaded = false;
 
-  public function __construct(Cache $cache = null){
-  
-    $this->cache = $cache;
+  public function __construct(){
   
     spl_autoload_register(array($this,'loadClass'));
-    
-    $this->pullCache();
 
   }//method
   
@@ -298,7 +293,7 @@ class Reflection implements \Reflector {
     $ret_count = $this->setFile($file);
   
     $this->path_map['files'][$file] = 1;
-    $this->pushCache();
+    $this->exportCache();
       
     return $ret_count;
   
@@ -312,7 +307,7 @@ class Reflection implements \Reflector {
     if(!($path instanceof Path)){
     
       $path = new Path($path);
-      $path->assure();
+      if(!$path->exists()){ return 0; }//if
 
     }//if
     if($this->hasPath($path)){
@@ -338,7 +333,7 @@ class Reflection implements \Reflector {
     }//foreach
 
     $this->path_map['folders'][(string)$path] = $subpath_count;
-    $this->pushCache();
+    $this->exportCache();
     return $ret_count;
   
   }//method
@@ -508,34 +503,13 @@ class Reflection implements \Reflector {
   
   }//method
   
-  protected function pushCache(){
-  
-    // canary, if no cache then don't try and persist...
-    if(empty($this->cache)){ return false; }//if
-    // canary, if $path already in list then no need to try and persist again...
-    ///if(in_array((string)$path,$this->path_list,true)){ return false; }//if
-    
-    $cache_map = array(
-      'class_map' => $this->class_map,
-      'parent_class_map' => $this->parent_class_map,
-      'path_map' => $this->path_map
-    );
-    
-    $this->cache->set(get_class($this),$cache_map);
-  
-  }//method
-  
-  protected function pullCache(){
-  
-    // canary, if no cache then don't try and persist...
-    if(empty($this->cache)){ return false; }//if
-    
-    $cache_map = $this->cache->get(__CLASS__);
-    
-    if(isset($cache_map['class_map'])){ $this->class_map = $cache_map['class_map']; }//if
-    if(isset($cache_map['parent_class_map'])){ $this->parent_class_map = $cache_map['parent_class_map']; }//if
-    if(isset($cache_map['path_map'])){ $this->path_map = $cache_map['path_map']; }//if
-    
+  /**
+   *  get the name of the params that should be cached
+   *
+   *  @return array an array of the param names that should be cached    
+   */
+  public function cacheParams(){
+    return array('class_map','parent_class_map','path_map');
   }//method
   
   /**

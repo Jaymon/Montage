@@ -11,7 +11,7 @@
  *  @since 2-19-10
  *  @package montage 
  ******************************************************************************/
-namespace Montage;
+namespace Montage\Field;
 
 interface Fieldable {
 

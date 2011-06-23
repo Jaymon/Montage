@@ -14,7 +14,7 @@
 namespace Montage\Dependency;
 
 use ReflectionObject, ReflectionClass, ReflectionMethod;
-use Montage\Field;
+use Montage\Field\Field;
 use out;
 
 class Container extends Field {

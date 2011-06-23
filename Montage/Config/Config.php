@@ -10,7 +10,7 @@
  ******************************************************************************/     
 namespace Montage\Config;
 
-use Montage\Field;
+use Montage\Field\Field;
 use Montage\Config\Configurable;
 
 abstract class Config extends Field implements Configurable {

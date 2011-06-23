@@ -8,7 +8,7 @@
  *  @since 2-22-10
  *  @package montage 
  ******************************************************************************/
-namespace Montage;
+namespace Montage\Cache;
 
 use Montage\Path;
 

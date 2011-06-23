@@ -18,7 +18,7 @@
  ******************************************************************************/
 namespace Montage\Dependency;
 
-interface Injector {
+interface Dependable {
 
   public function setContainer(\Montage\Dependency\Container $container);
   

@@ -17,18 +17,21 @@ namespace Montage;
 
 // these are the files needed to use this class, after this class is loaded, the
 // autoloader should handle everything else...
-require_once(__DIR__.'/Dependency/Injector.php');
+require_once(__DIR__.'/Cache/Cacheable.php');
+require_once(__DIR__.'/Cache/Cache.php');
+require_once(__DIR__.'/Cache/ObjectCache.php');
+
+require_once(__DIR__.'/Dependency/Dependable.php');
 require_once(__DIR__.'/Dependency/ReflectionFile.php');
 require_once(__DIR__.'/Dependency/Reflection.php');
 require_once(__DIR__.'/Path.php');
-require_once(__DIR__.'/Cache.php');
 
-require_once(__DIR__.'/Fieldable.php');
-require_once(__DIR__.'/Field.php');
+require_once(__DIR__.'/Field/Fieldable.php');
+require_once(__DIR__.'/Field/Field.php');
 
-use Montage\Cache;
+use Montage\Cache\Cache;
 use Montage\Path;
-use Montage\Field;
+use Montage\Field\Field;
 
 use Montage\Exception\NotFoundException;
 use Montage\Exception\InternalRedirectException;
@@ -40,9 +43,9 @@ use out;
 
 use Montage\Dependency\Reflection;
 use Montage\Dependency\Container;
-use Montage\Dependency\Injector;
+use Montage\Dependency\Dependable;
 
-class Framework extends Field implements Injector {
+class Framework extends Field implements Dependable {
   
   /**
    *  @var  Montage\Request\Requestable
@@ -55,9 +58,9 @@ class Framework extends Field implements Injector {
   protected $controller_select = null;
   
   /**
-   *  #var  Montage\Config
+   *  #var  Montage\Config\FrameworkConfig
    */
-  protected $config = null;
+  protected $framework_config = null;
   
   /**
    *  holds the dependancy injection container instance
@@ -91,6 +94,9 @@ class Framework extends Field implements Injector {
     // instance to pass in here to resolve all the dependencies...
     // see: http://misko.hevery.com/2008/07/08/how-to-think-about-the-new-operator/ for how
     // I'm wrong about this, but convenience trumps rightness in this instance
+  
+    // since the container isn't built, let's build it...
+    $reflection = new Reflection();
     
     // create the caching object that Reflection will use...
     $cache_path = new Path($app_path,'cache');
@@ -98,9 +104,10 @@ class Framework extends Field implements Injector {
     $cache = new Cache();
     $cache->setPath($cache_path);
     $cache->setNamespace($env);
-  
-    // since the container isn't built, let's build it...
-    $reflection = new Reflection($cache);
+    
+    // load the cache...
+    $reflection->setCache($cache);
+    $reflection->importCache();
     
     // paths to add...
     $path_list = array(
@@ -130,11 +137,11 @@ class Framework extends Field implements Injector {
     $this->setContainer($container);
 
     // set all the default configuration stuff...
-    $this->config = $container->findInstance('\Montage\Config');
-    $this->config->setField('env',$env);
-    $this->config->setField('debug_level',$debug_level);
-    $this->config->setField('app_path',$app_path);
-    $this->config->setField('framework_path',$this->getField('framework_path'));
+    $this->framework_config = $container->findInstance('\Montage\Config\FrameworkConfig');
+    $this->framework_config->setField('env',$env);
+    $this->framework_config->setField('debug_level',$debug_level);
+    $this->framework_config->setField('app_path',$app_path);
+    $this->framework_config->setField('framework_path',$this->getField('framework_path'));
     
   }//method
   
@@ -178,55 +185,57 @@ class Framework extends Field implements Injector {
    */
   protected function handleStart(){
   
-    $env = $this->config->getEnv();
+    $env = $this->framework_config->getEnv();
     $container = $this->getContainer();
+    $reflection = $container->getReflection();
+    $start_interface = '\Montage\Start\Startable';
     $started_list = array();
   
     // @todo  should we use Reflection here make sure all these implement the Startable interface
+    // @todo  these shouldn't be wrapped in try/catch as that keeps start classes from bubbling exceptions
   
     // start Montage
-    try{
+    $class_name = '\Montage\Start\FrameworkStart';
+    if($reflection->isChildClass($class_name,$start_interface)){
     
-      $framework_start = $container->findInstance('\Montage\Start\FrameworkStart');
-      $framework_start->handle();
-      $started_list[] = get_class($framework_start);
-      
-    }catch(Exception $e){}//try/catch
-
-    // start environment...
-    try{
+      $start = $container->findInstance('\Montage\Start\FrameworkStart');
+      $start->handle();
+      $started_list[] = get_class($start);
     
-      $env_start = $container->findInstance(sprintf('\Start\%sStart',$env));
-      $env_start->handle();
-      $started_list[] = get_class($env_start);
-      
-    }catch(Exception $e){
+    }//if
     
-      // since there is no environment start, try for a generic start class...
-      try{
+    // start application...
+    $class_name = sprintf('\Start\%sStart',$env);
+    if(!$reflection->isChildClass($class_name,$start_interface)){
     
-        $global_start = $container->findInstance('\Start\Start');
-        $global_start->handle();
-        $started_list[] = get_class($global_start);
-        
-      }catch(Exception $e){}//try/catch
+      $class_name = '\Start\Start';
+      if(!$reflection->isChildClass($class_name,$start_interface)){
+        $class_name = '';
+      }//if
     
-    }//try/catch
+    }//if
+    
+    if(!empty($class_name)){
+    
+      $start = $container->findInstance($class_name);
+      $start->handle();
+      $started_list[] = get_class($start);
+    
+    }//if
+    
     
     // start all other known start classes (stuff like plugins)...
-    try{
     
-      $reflection = $container->getReflection();
-      $start_class_name_list = $reflection->findClassNames('\Montage\Startable',$started_list);
-      foreach($start_class_name_list as $start_class_name){
-      
-        $other_start = $container->findInstance($start_class_name);
-        $other_start->handle();
-      
-      }//foreach
-      
-    }catch(Exception $e){}//try/catch
-  
+    $reflection = $container->getReflection();
+    $start_class_name_list = $reflection->findClassNames('\Montage\Start\Startable',$started_list);
+    
+    foreach($start_class_name_list as $start_class_name){
+    
+      $other_start = $container->findInstance($start_class_name);
+      $other_start->handle();
+    
+    }//foreach
+     
   }//method
 
   /**

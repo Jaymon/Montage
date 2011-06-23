@@ -13,23 +13,22 @@
  ******************************************************************************/     
 namespace Montage\Start;
 
-use Montage\Config;
+use Montage\Config\FrameworkConfig;
 
 use Montage\Dependency\Container;
-use Montage\Dependency\Injector;
+use Montage\Dependency\Dependable;
 
-use Montage\Field;
+use Montage\Field\Field;
 
-abstract class Start extends Field implements Startable, Injector {
+abstract class Start extends Field implements Startable, Dependable {
 
-  protected $config = null;
+  protected $framework_config = null;
 
   protected $container = null;
 
-  public function __construct(FrameworkConfig $config){
+  public function __construct(FrameworkConfig $framework_config = null){
   
-    $this->config = $config;
-    $this->setContainer($container);
+    $this->framework_config = $framework_config;
   
   }//method
   

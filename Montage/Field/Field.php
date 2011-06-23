@@ -11,9 +11,9 @@
  *  @since 2-19-10
  *  @package montage 
  ******************************************************************************/
-namespace Montage;
+namespace Montage\Field;
 
-use Montage\Fieldable;
+use Montage\Field\Fieldable;
 
 class Field implements Fieldable {
 

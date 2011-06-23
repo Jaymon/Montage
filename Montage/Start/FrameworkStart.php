@@ -20,13 +20,13 @@ class FrameworkStart extends Start {
 
   public function handle(){
 
-    error_reporting($this->config->getErrorLevel());
+    error_reporting($this->framework_config->getErrorLevel());
     ///error_reporting(E_ALL ^ E_USER_NOTICE);
-    mb_internal_encoding($this->config->getCharset());
-    date_default_timezone_set($this->config->getTimezone());
+    mb_internal_encoding($this->framework_config->getCharset());
+    date_default_timezone_set($this->framework_config->getTimezone());
 
     // since debug isn't on let's not display the errors to the user and rely on logging...
-    ini_set('display_errors',$this->config->showErrors() ? 'on' : 'off'); 
+    ini_set('display_errors',$this->framework_config->showErrors() ? 'on' : 'off'); 
     
     $container = $this->getContainer();
     

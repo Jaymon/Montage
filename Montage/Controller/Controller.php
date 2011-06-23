@@ -10,7 +10,7 @@
  ******************************************************************************/      
 namespace Montage\Controller;
 
-use Montage\Field;
+use Montage\Field\Field;
 use Montage\Controller\Controllable;
 use Montage\Request\Request;
 
