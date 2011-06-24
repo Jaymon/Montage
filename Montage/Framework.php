@@ -121,7 +121,7 @@ class Framework extends Field implements Dependable {
     foreach($path_list as $path){
     
       if(is_dir($path)){
-    
+
         $reflection->addPath($path);
         
       }//if
@@ -179,61 +179,25 @@ class Framework extends Field implements Dependable {
   }//method
 
   /**
-   *  start all the \Montage\Start classes
+   *  start all the known \Montage\Start\Startable classes
    *  
    *  a Start class is a class that will do configuration stuff
    */
   protected function handleStart(){
   
+    $instance_list = array();
     $env = $this->framework_config->getEnv();
     $container = $this->getContainer();
-    $reflection = $container->getReflection();
-    $start_interface = '\Montage\Start\Startable';
-    $started_list = array();
-  
-    // @todo  should we use Reflection here make sure all these implement the Startable interface
-    // @todo  these shouldn't be wrapped in try/catch as that keeps start classes from bubbling exceptions
-  
-    // start Montage
-    $class_name = '\Montage\Start\FrameworkStart';
-    if($reflection->isChildClass($class_name,$start_interface)){
+    $select = $container->findInstance('\Montage\Start\Select');
     
-      $start = $container->findInstance('\Montage\Start\FrameworkStart');
-      $start->handle();
-      $started_list[] = get_class($start);
+    $start_class_list = $select->find($env);
+    $method_name = $select->getMethod();
     
-    }//if
+    foreach($start_class_list as $i => $class_name){
     
-    // start application...
-    $class_name = sprintf('\Start\%sStart',$env);
-    if(!$reflection->isChildClass($class_name,$start_interface)){
-    
-      $class_name = '\Start\Start';
-      if(!$reflection->isChildClass($class_name,$start_interface)){
-        $class_name = '';
-      }//if
-    
-    }//if
-    
-    if(!empty($class_name)){
-    
-      $start = $container->findInstance($class_name);
-      $start->handle();
-      $started_list[] = get_class($start);
-    
-    }//if
-    
-    
-    // start all other known start classes (stuff like plugins)...
-    
-    $reflection = $container->getReflection();
-    $start_class_name_list = $reflection->findClassNames('\Montage\Start\Startable',$started_list);
-    
-    foreach($start_class_name_list as $start_class_name){
-    
-      $other_start = $container->findInstance($start_class_name);
-      $other_start->handle();
-    
+      $instance_list[$i] = $container->getInstance($class_name);
+      $container->callMethod($instance_list[$i],$method_name);
+      
     }//foreach
      
   }//method

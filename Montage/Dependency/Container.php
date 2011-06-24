@@ -253,7 +253,42 @@ class Container extends Field {
   
   }//method
   
-  public function normalizeParams(ReflectionMethod $rmethod,array $params){
+  /**
+   *  call the $method of the object $instance using $params normalized with {@link normalizeParams()}
+   *  
+   *  basically, this will magically satisfy any object params if they exist handling the 
+   *  dependencies of the method call         
+   *
+   *  @since  6-23-11   
+   *  @param  object  $instance the object that will call the method
+   *  @param  string  $method the method name
+   *  @param  array $params see {@link normalizeParams()} for how these are resolved
+   *  @return mixed whatever the method returns
+   */
+  public function callMethod($instance,$method,array $params = array()){
+  
+    $rmethod = new ReflectionMethod($instance,$method);
+    $method_params = $this->normalizeParams($rmethod,$params);
+    return $rmethod->invokeArgs($instance,$method_params);
+  
+  }//method
+  
+  /**
+   *  normalize the params of the $rmethod to allow a valid call
+   *
+   *  @example
+   *    // method signature: foo($bar = '',$baz = '',SomeClass $che);
+   *    $rmethod = new ReflectionMethod($instance,'foo');
+   *    $this->normalizeParams($rmethod,array('che','cha') // retuns array('che','cha',automatically created SomeClass Instance)
+   *    $this->normalizeParams($rmethod,array('che') // retuns array('che','',automatically created SomeClass Instance)
+   *    $this->normalizeParams($rmethod,array('che' => new SomeClass(),'bar' => '') // retuns array('','',passed in SomeClass Instance)       
+   *        
+   *  @param  ReflectionMethod  $rmethod  the reflection of the method
+   *  @param  array $params any params you want to pass to override any magically
+   *                        discovered params
+   *  @return array the params ready to be passed to the method using something like call_user_func_array
+   */
+  public function normalizeParams(ReflectionMethod $rmethod,array $params = array()){
   
     // canary...
     if($rmethod->getNumberOfParameters() <= 0){ return $params; }//if

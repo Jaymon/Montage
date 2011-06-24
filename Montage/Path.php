@@ -15,9 +15,10 @@ use RecursiveDirectoryIterator;
 use RegexIterator;
 use InvalidArgumentException;
 use UnexpectedValueException;
-use Countable;
+use Countable,IteratorAggregate;
+use SplFileInfo;
  
-class Path implements Countable {
+class Path extends SplFileInfo implements Countable,IteratorAggregate {
 
   /**
    *  this will hold the actual path this object represents 
@@ -40,11 +41,11 @@ class Path implements Countable {
     $path = func_get_args();
     $path = $this->build($path);
     $this->path = $this->format($path);
+    
+    parent::__construct($this->path);
   
   }//method
-  
-  public function __toString(){ return $this->path; }//method
-  
+
   /**
    *  true if path exists or was built succesfully
    *  
@@ -91,9 +92,6 @@ class Path implements Countable {
    */
   public function exists(){ return file_exists($this->path); }//method
   
-  public function canWrite(){ return is_writable($this->path); }//method
-  public function canRead(){ return is_readable($this->path); }//method
-  
   /**
    *  count all the descendants of the path
    *  
@@ -117,9 +115,12 @@ class Path implements Countable {
     // I could think about doing something like: ls -R -l |wc -l on the command line...
     // http://linuxcommando.blogspot.com/2008/07/how-to-count-number-of-files-in.html
   
-    $ret_count = 0;
-    $map = $this->getChildren($regex,$depth);
-    foreach($map as $list){ $ret_count += count($list); }//foreach
+    $children = $this->getChildren($regex,$depth);
+    $ret_count = $this->children_map[$regex][$depth]['count'];
+    
+    ///$ret_count = 0;
+    ///$iterator = $this->createIterator($regex,$depth);
+    ///foreach($iterator as $path => $file){ $ret_count++; }//foreach
     
     /// \out::p();
     
@@ -315,10 +316,171 @@ class Path implements Countable {
   
     // canary...
     if(isset($this->children_map[$regex][$depth])){
-      return $this->children_map[$regex][$depth];
+      return $this->children_map[$regex][$depth]['children'];
     }//if
   
+    $count = 0;
     $ret_map = array('files' => array(),'folders' => array());
+    $iterator = $this->createIterator($regex,$depth);
+  
+    foreach($iterator as $key => $val){
+    
+      if($val->isFile()){
+      
+        $ret_map['files'][] = $key;
+      
+      }else{
+      
+        $ret_map['folders'][] = $key;
+      
+      }//if/else
+      
+      $count++;
+    
+    }//foreach
+  
+    // cache the result in memory...
+    $this->children_map[$regex] = array();
+    $this->children_map[$regex][$depth] = array(
+      'children' => $ret_map,
+      'count' => $count
+    );
+  
+    return $ret_map;
+  
+  }//method
+
+  /**
+   *  recursively clear an entire directory, files, folders, everything
+   *  
+   *  @since  8-25-10   
+   *  @param  string  $regex  if a PCRE regex is passed in then only files matching it will be removed
+   *  @return integer how many files/folders were cleared    
+   */
+  public function clear($regex = ''){
+  
+    // canary, just empty the file contents if it is a file...
+    if($this->isFile()){
+      $file_instance = $this->openFile('r+');
+      $file_instance->ftruncate(0);
+      return 1;
+    }//if
+    
+    $ret_count = 0;
+    $last_path = '';
+    $iterator = $this->createIterator($regex);
+    foreach($iterator as $path => $file){
+    
+      if($file->isFile()){
+      
+        if(unlink($path)){
+          $ret_count++;
+        }//if
+      
+      }else{
+      
+        if(!empty($last_path)){
+        
+          // the directory should be empty now...
+          if(rmdir($last_path)){
+            $ret_count++;
+          }//if
+        
+        }//if
+        
+        $last_path = $path;
+      
+      }//if/else
+    
+    }//foreach
+    
+    if(!empty($last_path) && rmdir($last_path)){ $ret_count++; }//if
+    
+    return $ret_count;
+    
+  }//method
+  
+  /**
+   *  completely remove the given path and any children
+   *  
+   *  @since  8-25-10   
+   *  @param  string  $path the path to completely remove
+   *  @return boolean
+   */
+  public function kill(){
+  
+    $ret_count = $this->clear();
+    if(rmdir($this->path)){ $ret_count++; }//if
+    
+    return $ret_count;
+  
+  }//method
+
+  /**
+   *  takes $path_1 and finds out where it starts in relation to $path_2, it then returns
+   *  the rest of $path_1 that doesn't intersect with $path_2
+   *  
+   *  @example
+   *    $path_1 = '/root/bar/baz';
+   *    $path_2 = /root/che/foo/'
+   *    $this->getIntersection($path_1,$path_2); // array('bar','baz');               
+   *  
+   *  @since  8-8-10      
+   *  @param  string  $path_1
+   *  @param  string  $path_2 the root path   
+   *  @return array the remaining elements of $path_1 where it starts in relation to $path_2            
+   */
+  /* public function getIntersection($path_2){
+  
+    // canary...
+    if(empty($path_1)){ return array(); }//if
+    if(empty($path_2)){ return $path_1; }//if
+    
+    // canary, split 'em if we have to...
+    if(!is_array($path_1)){ $path_1 = preg_split('#\\/#u',$path_1); }//if
+    if(!is_array($path_2)){ $path_2 = preg_split('#\\/#u',$path_2); }//if
+  
+    // canary, we don't want '' values throwing us off, and we want to reset the keys (just in case)...
+    $path_1 = array_values(array_filter($path_1));
+    $path_2 = array_values(array_filter($path_2));
+    
+    $ret_path = array();
+  
+    // find where the last directory of path 2 is the first directory of path 1...
+    $key = array_search($path_2[(count($path_2) - 1)],$path_1);
+    
+    if($key !== false){
+    
+      $ret_path = array_slice($path_1,$key + 1);
+    
+    }else{
+    
+      // since there was no dir in common with root, set path from the root...
+      $ret_path = $path_1;
+      
+    }//if/else
+    
+    return $ret_path;
+  
+  }//method */
+
+  /**
+   *  required for the IteratorAggregate interface
+   *
+   *  @return \Traversable
+   */
+  public function getIterator(){ return $this->createIterator(); }//method
+
+  /**
+   *  create an iterator to iterate through the children
+   *  
+   *  @since  6-23-11   
+   *  @param  string  $regex
+   *  @param  integer $depth
+   *  @return \Traversable
+   */
+  protected function createIterator($regex = '',$depth = -1){
+  
     $depth = (int)$depth;
     $iterator = null;
   
@@ -349,25 +511,9 @@ class Path implements Countable {
     
     }//if/else
   
-    foreach($iterator as $key => $val){
-    
-      if($val->isFile()){
-      
-        $ret_map['files'][] = $key;
-      
-      }else{
-      
-        $ret_map['folders'][] = $key;
-      
-      }//if/else
-    
-    }//foreach
+    ///$iterator->setInfoClass(get_class($this)); // doing this doubles execution time from 70ms to ~170ms
   
-    // cache the result in memory...
-    $this->children_map[$regex] = array();
-    $this->children_map[$regex][$depth] = $ret_map;
-  
-    return $ret_map;
+    return $iterator;
   
   }//method
 
@@ -440,123 +586,5 @@ class Path implements Countable {
     return $path;
   
   }//method
-
-  /**
-   *  takes $path_1 and finds out where it starts in relation to $path_2, it then returns
-   *  the rest of $path_1 that doesn't intersect with $path_2
-   *  
-   *  @example
-   *    $path_1 = '/root/bar/baz';
-   *    $path_2 = /root/che/foo/'
-   *    $this->getIntersection($path_1,$path_2); // array('bar','baz');               
-   *  
-   *  @since  8-8-10      
-   *  @param  string  $path_1
-   *  @param  string  $path_2 the root path   
-   *  @return array the remaining elements of $path_1 where it starts in relation to $path_2            
-   */
-  /* public static function getIntersection($path_1,$path_2){
-  
-    // canary...
-    if(empty($path_1)){ return array(); }//if
-    if(empty($path_2)){ return $path_1; }//if
-    
-    // canary, split 'em if we have to...
-    if(!is_array($path_1)){ $path_1 = preg_split('#\\/#u',$path_1); }//if
-    if(!is_array($path_2)){ $path_2 = preg_split('#\\/#u',$path_2); }//if
-  
-    // canary, we don't want '' values throwing us off, and we want to reset the keys (just in case)...
-    $path_1 = array_values(array_filter($path_1));
-    $path_2 = array_values(array_filter($path_2));
-    
-    $ret_path = array();
-  
-    // find where the last directory of path 2 is the first directory of path 1...
-    $key = array_search($path_2[(count($path_2) - 1)],$path_1);
-    
-    if($key !== false){
-    
-      $ret_path = array_slice($path_1,$key + 1);
-    
-    }else{
-    
-      // since there was no dir in common with root, set path from the root...
-      $ret_path = $path_1;
-      
-    }//if/else
-    
-    return $ret_path;
-  
-  }//method */
-  
-  /**
-   *  completely remove the given path and any children
-   *  
-   *  @since  8-25-10   
-   *  @param  string  $path the path to completely remove
-   *  @return boolean
-   */
-  /* public function kill(){
-  
-    $ret_bool = $this->clear($this->path);
-    
-    // if we cleared all the contents then get rid of the base folder also...
-    if($ret_bool){
-      $ret_bool = rmdir($path);
-    }//if
-  
-    return $ret_bool;
-  
-  }//method */
-  
-  /**
-   *  recursively clear an entire directory, files, folders, everything
-   *  
-   *  @since  8-25-10   
-   *  @param  string  $path the starting path, all sub things will be removed
-   *  @param  string  $regex  if a PCRE regex is passed in then only files matching it will be removed 
-   */
-  /* public function clear($path,$regex = ''){
-  
-    // canary...
-    if(!is_dir($this->path)){ return unlink($this->path); }//if
-    
-    $ret_bool = true;
-    $path_iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($this->path));
-    foreach($path_iterator as $file){
-      
-      $file_path = $file->getRealPath();
-      
-      if($file->isDir()){
-        
-        $ret_bool = $this->_clear($file_path,$regex);
-        if($ret_bool){
-          rmdir($file_path);
-        }//if
-      
-      }else{
-    
-        if(!empty($regex)){
-        
-          $ret_bool = false;
-        
-          // make sure we only kill files that match regex...
-          if(preg_match($regex,$file->getFilename())){
-            $ret_bool = unlink($file_path);
-          }//if
-        
-        }else{
-        
-          $ret_bool = unlink($file_path);
-          
-        }//if/else
-      
-      }//if/else
-
-    }//foreach
-    
-    return $ret_bool;
-    
-  }//method */
 
 }//class     

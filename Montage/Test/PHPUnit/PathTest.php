@@ -249,6 +249,83 @@ class PathTest extends Test {
   
   }//method
   
+  /**
+   *  @since  6-23-11
+   */
+  public function testClear(){
+  
+    $path_list = array();
+    $class_name_bits = explode('\\',get_class($this));
+    $path_list[0] = new Path(sys_get_temp_dir(),end($class_name_bits));
+    $path_list[0]->assure();
+    $total_count = 0;
+    
+    for($i = 1,$max = rand(0,5); $i < $max ;$i++){
+    
+      $path_list[$i] = new Path($path_list[0],md5(microtime(true)));
+      $path_list[$i]->assure();
+      usleep(1);
+      $total_count++;
+    
+    }//for
+    
+    foreach($path_list as $key => $path){
+    
+      for($i = 0,$max = rand(0,10); $i < $max ;$i++){
+      
+        tempnam($path,$i);
+        $total_count++;
+      
+      }//for
+    
+    }//foreach
+    
+    ///$file_count = count($path_list[0]);
+    
+    $ret_count = $path_list[0]->clear();
+    $this->assertEquals($total_count,$ret_count);
+  
+  }//method
+  
+  /**
+   *  @since  6-23-11
+   */
+  public function testKill(){
+  
+    $path_list = array();
+    $class_name_bits = explode('\\',get_class($this));
+    $path_list[0] = new Path(sys_get_temp_dir(),end($class_name_bits));
+    $path_list[0]->assure();
+    $total_count = 0;
+    
+    for($i = 1,$max = rand(0,5); $i < $max ;$i++){
+    
+      $path_list[$i] = new Path($path_list[0],md5(microtime(true)));
+      $path_list[$i]->assure();
+      usleep(1);
+      $total_count++;
+    
+    }//for
+    
+    foreach($path_list as $key => $path){
+    
+      for($i = 0,$max = rand(0,10); $i < $max ;$i++){
+      
+        tempnam($path,$i);
+        $total_count++;
+      
+      }//for
+    
+    }//foreach
+    
+    ///$file_count = count($path_list[0]);
+    
+    $ret_count = $path_list[0]->kill();
+    $this->assertEquals(($total_count + 1),$ret_count);
+    $this->assertFalse($path_list[0]->exists());
+  
+  }//method
+  
   public function xtestCreateAndClear(){
   
     $base = $this->getClassFixtureBase();
