@@ -25,7 +25,7 @@ class ObjectCache implements Cacheable {
    *  
    *  @param  Montage\Cache $cache  the Cache instance
    */
-  public function setCache(\Montage\Cache\Cache $cache){ $this->cache = $cache; }//method
+  public function setCache(\Montage\Cache\Cache $cache = null){ $this->cache = $cache; }//method
   
   /**
    *  get the caching object
@@ -34,6 +34,13 @@ class ObjectCache implements Cacheable {
    */
   public function getCache(){ return $this->cache; }//method
 
+  /**
+   *  get the name of the cache
+   *
+   *  @return string    
+   */
+  public function cacheName(){ return get_class($this); }//method
+  
   /**
    *  get the name of the params that should be cached
    *
@@ -72,7 +79,7 @@ class ObjectCache implements Cacheable {
     
     }//foreach
     
-    return ($cache->set(get_class($this),$cache_map) > 0) ? true : false;
+    return ($cache->set($this->cacheName(),$cache_map) > 0) ? true : false;
     
   }//method
   
@@ -89,7 +96,7 @@ class ObjectCache implements Cacheable {
     // canary, if no cache then don't try and persist...
     if(empty($cache)){ return false; }//if
   
-    $param_list = $cache->get(get_class($this));
+    $param_list = $cache->get($this->cacheName());
     if(!empty($param_list)){
       
       foreach($param_list as $param_name => $param_val){
@@ -101,6 +108,20 @@ class ObjectCache implements Cacheable {
     }//if
   
     return true;
+  
+  }//method
+  
+  /**
+   *  delete the stored cache
+   *  
+   *  @return boolean      
+   */
+  public function killCache(){
+  
+    $cache = $this->getCache();
+    if(empty($cache)){ return false; }//if
+  
+    return $cache->kill($this->cacheName());
   
   }//method
   

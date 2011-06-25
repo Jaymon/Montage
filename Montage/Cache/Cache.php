@@ -167,84 +167,16 @@ class Cache {
   }//method
   
   /**
-   *  recursively clear an entire directory, files, folders, everything
-   *  
-   *  based off of: http://www.php.net/manual/en/function.unlink.php#94766      
-   *
-   *  @param  string  $path the starting path, all sub things will be removed
-   */
-  protected function clear($path){
-  
-    throw new \Exception('tbi');
-  
-    // canary...
-    if(!is_dir($path)){ return false; }//if
-    
-    $ret_bool = true;
-    $path_iterator = new RecursiveDirectoryIterator($path);
-    foreach($path_iterator as $file){
-      
-      $file_path = $file->getRealPath();
-      
-      if($file->isDir()){
-        
-        $ret_bool = self::clear($file_path);
-        if($ret_bool){
-          rmdir($file_path);
-        }//if
-      
-      }else{
-    
-        // make sure we only kill files that are montage cache files since we don't
-        // want to accidently nuke an app's personal cache...
-        if(preg_match(sprintf('#^%s#u',self::PREFIX),$file->getFilename())){
-      
-          unlink($file_path);
-          
-        }else{
-          $ret_bool = false;
-        }//if/else
-      
-      }//if/else
-
-    }//foreach
-    
-    return $ret_bool;
-    
-  }//method
-  
-  /**
-   *  delete the given url from the cache
+   *  delete the given key from the cache
    *  
    *  @since  9-04-08
-   *      
-   *  @param  string  $url  the url to delete
-   *  @return boolean         
-   */        
-  public function kill($key = ''){
+   *  @param  string  $key
+   *  @return boolean    
+   */
+  public function kill($key){
   
-    throw new \Exception('tbi');
-  
-    $ret_bool = false;
-  
-    if(empty($key)){
-    
-      if(self::hasPath()){
-      
-        $ret_bool = self::clear(self::$path);
-      
-      }//method
-    
-    }else{
-    
-      $path = self::getPath($key);
-      if(self::exists($path)){
-        $ret_bool = unlink($path);
-      }//if
-    
-    }//if/else
-  
-    return $ret_bool;
+    $path = $this->getPath($key);
+    return $path->kill();
   
   }//method
 

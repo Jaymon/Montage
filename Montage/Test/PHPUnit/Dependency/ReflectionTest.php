@@ -9,6 +9,8 @@ namespace Montage\Test\PHPUnit {
   require_once(__DIR__.'/../Test.php');
   require_once(__DIR__.'/../../../Path.php');
   
+  require_once(__DIR__.'/../../../Cache/Cacheable.php');
+  require_once(__DIR__.'/../../../Cache/ObjectCache.php');
   require_once(__DIR__.'/../../../Dependency/Reflection.php');
   require_once(__DIR__.'/../../../Dependency/ReflectionFile.php');
   
@@ -46,12 +48,23 @@ namespace Montage\Test\PHPUnit {
         )
       );
     
-      foreach($test_list as $i => $test_map){
-      
-        $ret = call_user_func_array(array($this->instance,'findClassNames'),$test_map['in']);
-        $this->assertEquals($ret,$test_map['out'],$i);
-      
-      }//foreach
+      $this->assertCalls($this->instance,'findClassNames',$test_list);
+    
+    }//method
+  
+    public function testFindClassName(){
+
+      $test_list = array();
+      $test_list[] = array(
+        'in' => array('b'),
+        'out' => '\cc'
+      );
+      $test_list[] = array(
+        'in' => array('a'),
+        'out' => '\LogicException'
+      );
+    
+      $this->assertCalls($this->instance,'findClassName',$test_list);
     
     }//method
   
@@ -65,6 +78,9 @@ namespace {
   class aa extends a {}//class
   class ab extends a {}//class
   class ac extends ab {}//class
-
+  
+  class b {}//class
+  class bb extends b {}//class
+  class cc extends bb {}//class
 
 }//namespace

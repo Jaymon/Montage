@@ -16,7 +16,7 @@ interface Cacheable {
    *  
    *  @param  Montage\Cache\Cache $cache  the Cache instance
    */
-  public function setCache(\Montage\Cache\Cache $cache);
+  public function setCache(\Montage\Cache\Cache $cache = null);
   
   /**
    *  get the caching object
@@ -24,6 +24,13 @@ interface Cacheable {
    *  @return Montage\Cache
    */
   public function getCache();
+
+  /**
+   *  get the name of the cache
+   *
+   *  @return string    
+   */
+  public function cacheName();
 
   /**
    *  get the name of the params that should be cached
@@ -47,5 +54,12 @@ interface Cacheable {
    *  @return boolean      
    */
   public function importCache();
+  
+  /**
+   *  delete the stored cache
+   *  
+   *  @return boolean      
+   */
+  public function killCache();
   
 }//interface

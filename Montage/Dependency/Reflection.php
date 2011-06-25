@@ -151,57 +151,62 @@ class Reflection extends ObjectCache implements \Reflector {
    */
   public function findClassNames($class_name,array $ignore_list = array()){
   
-    $ret_list = array();
-    
-    // normalize the ignore list...
-    foreach($ignore_list as $i => $icn){
-    
-      $icn_key = $this->normalizeClassName($icn);
-      if(isset($this->class_map[$icn_key])){
-        $ignore_list[$i] = $this->class_map[$icn_key]['class'];
-      }else{
-        unset($ignore_list[$i]);
-      }//if/else
-    
-    }//foreach
-    
-  
     $key = $this->normalizeClassName($class_name);
+    $ret_list = array();
   
-    if(isset($this->parent_class_map[$key])){
-    
-      foreach($this->parent_class_map[$key] as $child_class_name){
+    // canary, return cached if available...
+    if(isset($this->class_map[$key][__function__])){
       
-        $list = $this->findClassNames($child_class_name,$ignore_list);
-        
-        if(empty($ignore_list)){
-        
-          $ret_list = array_merge($ret_list,$list);
-        
-        }else{
-        
-          foreach($list as $cn){
-          
-            if(!in_array($cn,$ignore_list,true)){ $ret_list[] = $cn; }//if
-          
-          }//foreach
-          
-        }//if
-      
-      }//foreach
+      $ret_list = $this->class_map[$key][__function__];
     
     }else{
     
-      // this class is not a parent of anything (ie, an absolute descendent)...
-      if(isset($this->class_map[$key])){
+      if(isset($this->parent_class_map[$key])){
       
-        $cn = $this->class_map[$key]['class'];
-        if(!in_array($cn,$ignore_list,true)){ $ret_list[] = $cn; }//if
-      
-      }//if
-    
-    }//if/else
+        foreach($this->parent_class_map[$key] as $child_class_name){
   
+          $list = $this->findClassNames($child_class_name);
+          $ret_list = array_merge($ret_list,$list);
+           
+        }//foreach
+      
+      }else{
+      
+        // this class is not a parent of anything (ie, an absolute descendent)...
+        if(isset($this->class_map[$key])){
+        
+          $cn = $this->class_map[$key]['class'];
+          if(!in_array($cn,$ignore_list,true)){ $ret_list[] = $cn; }//if
+        
+        }//if
+      
+      }//if/else
+      
+      // cache result, this slows down the first request but converts other requests
+      // from around ~7ms to .1ms
+      $this->class_map[$key][__function__] = $ret_list;
+      $this->exportCache();
+      
+    }//if/else
+    
+    // normalize the ignore list...  
+    if(!empty($ignore_list)){
+
+      foreach($ignore_list as $i => $icn){
+      
+        $icn_key = $this->normalizeClassName($icn);
+        if(isset($this->class_map[$icn_key])){
+          $ignore_list[$i] = $this->class_map[$icn_key]['class'];
+        }else{
+          unset($ignore_list[$i]);
+        }//if/else
+      
+      }//foreach
+      
+      $ret_list = array_diff($ret_list,$ignore_list);
+      
+    }//if
+    
     return $ret_list;
   
   }//method
@@ -214,67 +219,56 @@ class Reflection extends ObjectCache implements \Reflector {
    */
   public function findClassName($class_name){
 
-    $found_key = '';
     $key = $this->normalizeClassName($class_name);
+    $ret_str = '';
   
     if(isset($this->parent_class_map[$key])){
     
-      $child_class_list = $this->parent_class_map[$key];
-      foreach($child_class_list as $child_key){
+      $child_count = count($this->parent_class_map[$key]);
+      if($child_count > 1){
       
-        // we're looking for the descendant most class...
-        if(!isset($this->parent_class_map[$child_key])){
-        
-          if(empty($found_key)){
-          
-            $found_key = $child_key;
-          
-          }else{
-            
-            throw new \LogicException(
-              sprintf(
-                'the given $class_name (%s) has divergent children %s and %s (those 2 classes extend ' 
-                .'%s but are not related to each other) so a best class cannot be found.',
-                $class_name,
-                $this->class_map[$found_key]['class'],
-                $this->class_map[$child_key]['class'],
-                $key
-              )
-            );
-            
-          }//if/else
-        
-        }//if
+        throw new \LogicException(
+          sprintf(
+            'the given $class_name (%s) has %s children who extend "%s" but are' 
+            .' not related to each other) so a best class cannot be found.',
+            $class_name,
+            $child_count,
+            $class_name
+          )
+        );
       
-      }//foreach
+      }else{
+      
+        $child_class_name = reset($this->parent_class_map[$key]); // get first row
+        $ret_str = $this->findClassName($child_class_name); // recurse through the list
+      
+      }//if/else
+    
 
     }else{
     
       if(isset($this->class_map[$key])){
     
-        $found_key = $key;
+        $ret_str = $this->class_map[$key]['class'];
         
       }else{
       
         if($this->reload() > 0){
         
-          $ret_class_name = $this->findClassName($class_name);
+          $ret_str = $this->findClassName($class_name);
         
-        }else{
-      
-          throw new \UnexpectedValueException(sprintf('no class %s was found',$class_name));
-          
-        }//if/else
+        }//if
       
       }//if/else
       
     }//if/else
     
-    if(empty($ret_class_name)){
-      $ret_class_name = empty($found_key) ? '' : $this->class_map[$found_key]['class'];
+    if(empty($ret_str)){
+      throw new \UnexpectedValueException(sprintf('no class %s was found',$class_name));
     }//if
-    
-    return $ret_class_name;
+
+    // thought about caching this also, but didn't really save the average 
+    return $ret_str;
     
   }//method
   
