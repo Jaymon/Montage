@@ -94,40 +94,23 @@ class Framework extends Field implements Dependable {
     // instance to pass in here to resolve all the dependencies...
     // see: http://misko.hevery.com/2008/07/08/how-to-think-about-the-new-operator/ for how
     // I'm wrong about this, but convenience trumps rightness in this instance
-  
-    // since the container isn't built, let's build it...
+
+    // since the dependency injection container isn't built, let's build it...
     $reflection = new Reflection();
-    
+  
     // create the caching object that Reflection will use...
     $cache_path = new Path($app_path,'cache');
     $cache_path->assure();
     $cache = new Cache();
     $cache->setPath($cache_path);
     $cache->setNamespace($env);
-    
+  
     // load the cache...
     $reflection->setCache($cache);
     $reflection->importCache();
     
-    // paths to add...
-    $path_list = array(
-      $framework_path,
-      new Path($app_path,'vendor'),
-      new Path($app_path,'plugins'),
-      new Path($app_path,'src'),
-      new Path($app_path,'config')
-    );
-    
-    foreach($path_list as $path){
-    
-      if(is_dir($path)){
+    $this->addReflectionPaths($reflection,$framework_path,$app_path);
 
-        $reflection->addPath($path);
-        
-      }//if
-    
-    }//foreach
-    
     $container_class_name = $reflection->findClassName('Montage\Dependency\Container');
     $container = new $container_class_name($reflection);
     // just in case, container should know about this instance for circular-dependency goodness...
@@ -158,16 +141,16 @@ class Framework extends Field implements Dependable {
 
       // start the START classes...
       $this->handleStart();
-    
+  
       // get the request instance...
       $this->request = $container->findInstance('Montage\Request\Requestable');
-    
+  
       // decide where the request should be forwarded to...
       list($controller_class,$controller_method,$controller_method_params) = $this->getControllerSelect()->find(
         $this->request->getHost(),
         $this->request->getPath()
       );
-      
+
       $ret_handle = $this->handleController($controller_class,$controller_method,$controller_method_params);
           
     }catch(Exception $e){
@@ -347,6 +330,40 @@ class Framework extends Field implements Dependable {
     $container = $this->getContainer();
     $this->controller_select = $container->findInstance('Montage\Controller\Select');
     return $this->controller_select;
+  
+  }//method
+  
+  protected function addReflectionPaths(Reflection $reflection,$framework_path,$app_path){
+  
+    $path_list = array();
+  
+    // framework paths to add...
+    $reflection->addPath($framework_path);
+    $reflection->addPath(new Path($app_path,'src'));
+    $reflection->addPath(new Path($app_path,'config'));
+    
+    // add the plugin paths...
+    $plugin_base_path = new Path($app_path,'plugins');
+    foreach($plugin_base_path->createIterator('',1) as $plugin_path => $file){
+    
+      if($file->isDir()){
+      
+        $plugin_path = new Path($plugin_path);
+      
+        $reflection->addPath(new Path($plugin_path,'config'));
+        $reflection->addPath(new Path($plugin_path,'src')); 
+      
+      }//if
+    
+    }//foreach
+    
+    ///out::i($reflection);
+
+    out::p('add plancast');
+    $reflection->addPath('E:\Projects\Plancast\_active\lib');
+    $reflection->addPath('E:\Projects\Plancast\_active\plugins');
+    out::p();
+  
   
   }//method
 

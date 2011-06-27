@@ -479,7 +479,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
    *  @param  integer $depth
    *  @return \Traversable
    */
-  protected function createIterator($regex = '',$depth = -1){
+  public function createIterator($regex = '',$depth = -1){
   
     $depth = (int)$depth;
     $iterator = null;

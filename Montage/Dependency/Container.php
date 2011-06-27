@@ -144,7 +144,7 @@ class Container extends Field {
     
         $has_multi = true;  
       
-      }catch(Exception $e){}//try/catch
+      }catch(\Exception $e){}//try/catch
       
     }//foreach
   
@@ -162,13 +162,28 @@ class Container extends Field {
       
       }else{
       
-        throw new \UnexpectedValueException(
-          sprintf('Unable to find suitable class using [%s]',join(',',$class_name))
-        );
+        // since reflection failed check all the classes in memory...
+        foreach($class_name as $cn){
+        
+          if(class_exists($cn)){
+            $instance_class_name = $cn;
+          }//if
+            
+        }//foreach
+      
+        if(empty($instance_class_name)){
+        
+          throw new \UnexpectedValueException(
+            sprintf('Unable to find suitable class using [%s]',join(',',$class_name))
+          );
+          
+        }//if
         
       }//if/else
     
-    }else{
+    }//if
+    
+    if(!empty($instance_class_name)){
       
       $class_key = $this->getKey($instance_class_name);
   

@@ -68,7 +68,7 @@ class Cache {
   public function set($key,$val){
     
     $path = $this->getPath($key);
-    
+
     $bytes = file_put_contents(
       $path,
       serialize($val),
@@ -89,7 +89,7 @@ class Cache {
   
     $path = $this->getPath($key);
     return $path->exists() ? unserialize(file_get_contents($path)) : null;
-  
+    
   }//method
   
   /**
