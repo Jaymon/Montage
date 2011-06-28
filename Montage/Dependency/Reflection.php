@@ -62,61 +62,9 @@ class Reflection extends ObjectCache implements \Reflector {
   protected $path_map = array('files' => array(),'folders' => array());
   
   protected $reloaded = false;
-
-  public function __construct(){
-  
-    spl_autoload_register(array($this,'loadClass'));
-
-  }//method
-  
-  public function __destruct(){
-  
-    spl_autoload_unregister(array($this,'loadClass'));
-  
-  }//method
   
   public static function export(){ return ''; }//method
   public function __toString(){ return spl_object_hash($this); }//method
-  
-  /**
-   *  load a class
-   *  
-   *  this should never be called by the user, the only reason it is public is so
-   *  {@link appendClassLoader()} will work right   
-   *      
-   *  @return boolean true if the class was found, false if not (so other autoloaders can have a chance)
-   */
-  public function loadClass($class_name){
-  
-    // if you just get blank pages: http://www.php.net/manual/en/function.error-reporting.php#28181
-    //  http://www.php.net/manual/en/function.include-once.php#53239
-
-    $ret_bool = false;
-
-    $key = $this->normalizeClassName($class_name);
-    if(isset($this->class_map[$key])){
-    
-      if($this->isOutdatedClass($key)){
-      
-        $this->reload();
-      
-      }//if
-    
-      require($this->class_map[$key]['path']);
-      $ret_bool = true;
-    
-    }else{
-    
-      // we used to throw an exception here, but that didn't account for user appended
-      // autoloaders (ie, if this autoloader failed, then it failed even if the user
-      // had appended another autoloader...
-      $ret_bool = false;
-      
-    }//if/else
-
-    return $ret_bool;
-  
-  }//method
 
   /**
    *  format the class key
@@ -293,6 +241,21 @@ class Reflection extends ObjectCache implements \Reflector {
   
   }//method
   
+  /**
+   *
+   *  @since  6-27-11
+   */
+  public function addPaths(array $path_list){
+  
+    $ret_count = 0;
+    foreach($path_list as $path){
+      $ret_count += $this->addPath($path);
+    }//foreach
+  
+    return $ret_count;
+  
+  }//method
+  
   public function addPath($path){
   
     $regex = '#(?:php(?:\d+)?|inc|phtml)$#i';
@@ -375,6 +338,29 @@ class Reflection extends ObjectCache implements \Reflector {
   }//method
   
   /**
+   *  get the class info
+   *
+   *  @since  6-27-11
+   *  @param  string  $class_name
+   *  @return array         
+   */
+  public function getClass($class_name){
+  
+    $class_key = $this->normalizeClassName($class_name);
+    // canary...
+    if(!isset($this->class_map[$class_key])){
+      throw new \InvalidArgumentException(sprintf('$class_name (%s) is not known',$class_name));
+    }//if
+    if($this->isChangedClass($class_key)){
+      $this->reload();
+      return $this->getClass($class_name);
+    }//if
+    
+    return $this->class_map[$class_key];
+  
+  }//method
+  
+  /**
    *  return true if the $child_class_name is a descendent or the same as $parent_class_name
    *
    *  @since  6-17-11
@@ -436,6 +422,58 @@ class Reflection extends ObjectCache implements \Reflector {
     }//foreach
   
     return $ret_bool;
+  
+  }//method
+  
+  /**
+   *  reload all known paths
+   *  
+   *  @since  6-20-11
+   *  @return integer how many classes were reloaded
+   */
+  protected function reload(){
+  
+    // canary...
+    if($this->reloaded){ return 0; }//if
+
+    $ret_count = 0;
+  
+    $folder_list = isset($this->path_map['folders']) ? array_keys($this->path_map['folders']) : array();
+    $file_list = isset($this->path_map['files']) ? array_keys($this->path_map['files']) : array();
+  
+    $this->class_map = array();
+    $this->parent_class_map = array();
+    $this->path_map = array('files' => array(),'folders' => array());
+    
+    foreach($folder_list as $folder){
+    
+      $ret_count += $this->addPath($folder);
+    
+    }//foreach
+    
+    foreach($file_list as $file){
+    
+      $ret_count += $this->addFile($file);
+    
+    }//foreach
+  
+    $this->reloaded = true;
+    return $ret_count;
+    
+  }//method
+  
+  /**
+   *  return true if this class has changed
+   *
+   *  @param  string  $class_name
+   *  @return boolean true if the class has changed   
+   */
+  protected function isChangedClass($class_key){
+  
+    $old = $this->class_map[$class_key]['hash'];
+    $new = md5_file($this->class_map[$class_key]['path']);
+
+    return ((string)$old !== (string)$new);
   
   }//method
   
@@ -535,52 +573,6 @@ class Reflection extends ObjectCache implements \Reflector {
     }//if
     
     return $ret_bool;
-    
-  }//method
-  
-  protected function isOutdatedClass($class_key){
-  
-    $old = $this->class_map[$class_key]['hash'];
-    $new = md5_file($this->class_map[$class_key]['path']);
-
-    return ((string)$old !== (string)$new);
-  
-  }//method
-  
-  /**
-   *  reload all known paths
-   *  
-   *  @since  6-20-11
-   *  @return integer how many classes were reloaded
-   */
-  protected function reload(){
-  
-    // canary...
-    if($this->reloaded){ return 0; }//if
-
-    $ret_count = 0;
-  
-    $folder_list = isset($this->path_map['folders']) ? array_keys($this->path_map['folders']) : array();
-    $file_list = isset($this->path_map['files']) ? array_keys($this->path_map['files']) : array();
-  
-    $this->class_map = array();
-    $this->parent_class_map = array();
-    $this->path_map = array('files' => array(),'folders' => array());
-    
-    foreach($folder_list as $folder){
-    
-      $ret_count += $this->addPath($folder);
-    
-    }//foreach
-    
-    foreach($file_list as $file){
-    
-      $ret_count += $this->addFile($file);
-    
-    }//foreach
-  
-    $this->reloaded = true;
-    return $ret_count;
     
   }//method
 

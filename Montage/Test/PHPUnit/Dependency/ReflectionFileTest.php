@@ -17,6 +17,7 @@ class ReflectionFileTest extends Test {
 
   public function testFindClasses(){
   
+    /* 
     $test_map_prototype = array(
       'in' => '<'.'?php',
       'out' => array(
@@ -27,8 +28,27 @@ class ReflectionFileTest extends Test {
         )
       )
     );
+    */
   
     $test_list = array();
+    $test_list[] = array(
+      'in' => '<'.'?php
+        namespace Mingo;
+
+        use Montage\AutoLoad\AutoLoadable;
+        use MingoAutoload;
+
+        class AutoLoader extends MingoAutoload implements AutoLoadable {}
+        ',
+      'out' => array(
+        0 => array(
+          'class' => '\Mingo\AutoLoader',
+          'extends' => array('\MingoAutoload'),
+          'implements' => array('\Montage\AutoLoad\AutoLoadable')
+        )
+      )
+    );
+    
     $test_list[] = array(
       'in' => '<'.'?php
         namespace {
@@ -170,7 +190,7 @@ class ReflectionFileTest extends Test {
     
       file_put_contents($temp_file,$test_map['in'],LOCK_EX);
       $rfile = new ReflectionFile($temp_file);
-      $this->assertEquals($rfile->getClasses(),$test_map['out'],$i);
+      $this->assertEquals($test_map['out'],$rfile->getClasses(),$i);
     
     }//foreach
   

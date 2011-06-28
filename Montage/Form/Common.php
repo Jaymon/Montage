@@ -16,10 +16,12 @@ abstract class Common {
   /**
    *  this should never be touched unless absolutely necessary
    *  
-   *  @see  setCharset()      
+   *  defaults to {@link mb_internal_encoding()}      
+   *  
+   *  @see  setCharset()
    *  @var  string
-   */        
-  protected $charset = 'UTF-8';
+   */
+  protected $charset = '';
 
   /**
    *  holds attribute info 
@@ -47,6 +49,14 @@ abstract class Common {
    *  @return string
    */
   public function __toString(){ return $this->out(); }//method
+
+  /**#@+
+   *  access methods for the name of the form field/element       
+   */
+  public function setName($val){ $this->setAttr('name',$val); }//method
+  public function hasName(){ return $this->hasAttr('name'); }//method
+  public function getName(){ return $this->getAttr('name'); }//method
+  /**#@-*/
 
   /**#@+
    *  access methods for the id of the form field/element       
@@ -92,7 +102,7 @@ abstract class Common {
     
     if(empty($args)){
     
-      throw new montage_form_exception(
+      throw new \InvalidArgumentException(
         'invalid args, use ->setAttr($name,$val) or ->setAttr(array($name => $val))'
       );
     
@@ -128,7 +138,7 @@ abstract class Common {
         
         }else{
         
-          throw new montage_form_exception(
+          throw new \InvalidArgumentException(
             sprintf(
               'you need ($attr_name,$attr_val), you passed in: (%s)',
               join(',',$args)
@@ -195,7 +205,15 @@ abstract class Common {
     if(!empty($val)){ $this->charset = $val; }//if
   }//method
   public function hasCharset(){ return !empty($this->charset); }//method
-  public function getCharset(){ return $this->charset; }//method
+  public function getCharset(){
+    
+    if(empty($this->charset)){
+      $this->charset = mb_internal_encoding();
+    }//if
+    
+    return $this->charset;
+    
+  }//method
   /**#@-*/
 
   /**

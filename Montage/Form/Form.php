@@ -13,6 +13,8 @@
 namespace Montage\Form;
 
 use Montage\Form\Common;
+use Montage\Form\Field\Field;
+use Montage\Form\Field\Input;
 
 abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggregate {
 
@@ -34,7 +36,7 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
    *  the name of this form
    *  @var  string
    */
-  protected $form_name = '';
+  ///protected $form_name = '';
   
   /**
    *  the form fields this form contains
@@ -50,22 +52,30 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
    *                            pass them (key/val) here, otherwise, you can call {@link set()} at any time             
    */
   public function __construct($field_map = array()){
-  
-    $this->form_name = get_class($this);
-    $this->setId($this->form_name);
+
+    $this->setId($this->getName());
     
     if(!empty($field_map)){
       $this->set($field_map);
     }//if
   
   }//method
-  
+
   /**
    *  get the form's name, this is basically the namespace the form is using
    *  
    *  @return string
    */
-  public function getName(){ return $this->form_name; }//method
+  public function getName(){
+  
+    if(!$this->hasName()){
+      $rthis = new ReflectionObject($this);
+      $this->setName($rthis->getShortName());
+    }//if
+  
+    return parent::getName();
+    
+  }//method
   
   /**#@+
    *  access methods for the action url that this form will post to
@@ -210,7 +220,7 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
     
     if(!empty($args)){
     
-      if($args[0] instanceof montage_form_field){
+      if($args[0] instanceof Field){
       
         $field = $args[0];
       
@@ -219,8 +229,8 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
         $field->setName($name_info_map['form_name']);
         
         // if the field is a file, update the encoding...
-        if($field instanceof input_field){
-          if($field->isType(input_field::TYPE_FILE)){
+        if($field instanceof Input){
+          if($field->isType(Input::TYPE_FILE)){
             $this->setEncoding(self::ENCODING_FILE);
           }//if
         }//if
@@ -251,7 +261,7 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
       
         if(isset($args[1])){
         
-          if($args[1] instanceof montage_form_field){
+          if($args[1] instanceof Field){
           
             $args[1]->setName($args[0]);
             $this->setField($args[1]);
@@ -289,7 +299,7 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
               
               }else{
               
-                throw new InvalidArgumentException(
+                throw new \InvalidArgumentException(
                   sprintf(
                     'you tried to update $name %s with a new $val %s, but %s isn\'t a defined form element',
                     $args[0],
@@ -306,7 +316,7 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
         
         }else{
         
-          throw new DomainException(
+          throw new \InvalidArgumentException(
             sprintf(
               'you need ($name,$val), you passed in $name, but no $val: (%s)',
               join(',',$args)
@@ -514,7 +524,7 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
       
     }//if
 
-    $ret_map['form_name'] = sprintf('%s[%s]%s',$this->form_name,$ret_map['namespace'],$postfix);
+    $ret_map['form_name'] = sprintf('%s[%s]%s',$this->getName(),$ret_map['namespace'],$postfix);
 
     return $ret_map;
     

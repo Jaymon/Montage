@@ -29,6 +29,10 @@ require_once(__DIR__.'/Path.php');
 require_once(__DIR__.'/Field/Fieldable.php');
 require_once(__DIR__.'/Field/Field.php');
 
+require_once(__DIR__.'/Autoload/AutoLoadable.php');
+require_once(__DIR__.'/Autoload/AutoLoader.php');
+require_once(__DIR__.'/Autoload/ReflectionAutoloader.php');
+
 use Montage\Cache\Cache;
 use Montage\Path;
 use Montage\Field\Field;
@@ -44,6 +48,8 @@ use out;
 use Montage\Dependency\Reflection;
 use Montage\Dependency\Container;
 use Montage\Dependency\Dependable;
+
+use Montage\AutoLoad\ReflectionAutoloader;
 
 class Framework extends Field implements Dependable {
   
@@ -87,7 +93,7 @@ class Framework extends Field implements Dependable {
     }//if
     
     // collect all the paths we're going to use...
-    $framework_path = __DIR__;
+    $this->compilePaths($app_path);
     
     // we shouldn't have "new" here, but sometimes you just have to break the rules
     // to make things easier, I didn't want to have to create a Cache and Reflection
@@ -95,21 +101,21 @@ class Framework extends Field implements Dependable {
     // see: http://misko.hevery.com/2008/07/08/how-to-think-about-the-new-operator/ for how
     // I'm wrong about this, but convenience trumps rightness in this instance
 
-    // since the dependency injection container isn't built, let's build it...
-    $reflection = new Reflection();
-  
     // create the caching object that Reflection will use...
-    $cache_path = new Path($app_path,'cache');
-    $cache_path->assure();
     $cache = new Cache();
-    $cache->setPath($cache_path);
+    $cache->setPath($this->getField('cache_path'));
     $cache->setNamespace($env);
   
-    // load the cache...
+    // create reflection, load the cache...
+    $reflection = new Reflection();
     $reflection->setCache($cache);
     $reflection->importCache();
+    $reflection->addPaths($this->getField('reflection_paths'));
     
-    $this->addReflectionPaths($reflection,$framework_path,$app_path);
+    // create the reflection autoloader...
+    $autoloader_class_name = $reflection->findClassName('Montage\AutoLoad\ReflectionAutoloader');
+    $autoloader = new $autoloader_class_name($reflection);
+    $autoloader->register();
 
     $container_class_name = $reflection->findClassName('Montage\Dependency\Container');
     $container = new $container_class_name($reflection);
@@ -118,7 +124,7 @@ class Framework extends Field implements Dependable {
     $container->setInstance($cache);
     
     $this->setContainer($container);
-
+    
     // set all the default configuration stuff...
     $this->framework_config = $container->findInstance('\Montage\Config\FrameworkConfig');
     $this->framework_config->setField('env',$env);
@@ -138,6 +144,9 @@ class Framework extends Field implements Dependable {
     $container = $this->getContainer();
   
     try{
+
+      // start the autoloaders...
+      $this->handleAutoload();
 
       // start the START classes...
       $this->handleStart();
@@ -159,6 +168,33 @@ class Framework extends Field implements Dependable {
     
     }//try/catch
   
+  }//method
+
+  /**
+   *  start all the known \Montage\Start\Startable classes
+   *  
+   *  a Start class is a class that will do configuration stuff
+   */
+  protected function handleAutoload(){
+  
+    $instance_list = array();
+    $container = $this->getContainer();
+    
+    // create the standard autoloader...
+    $standard_autoloader = $container->findInstance('\Montage\Autoload\StandardAutoloader');
+    $standard_autoloader->addPaths($this->getField('vendor_paths'));
+    $standard_autoloader->register();
+    
+    // create any other autoloader classes...
+    $select = $container->findInstance('\Montage\Autoload\Select');
+    $class_list = $select->find();
+    foreach($class_list as $i => $class_name){
+    
+      $instance_list[$i] = $container->getInstance($class_name);
+      $instance_list[$i]->register();
+      
+    }//foreach
+     
   }//method
 
   /**
@@ -333,37 +369,59 @@ class Framework extends Field implements Dependable {
   
   }//method
   
-  protected function addReflectionPaths(Reflection $reflection,$framework_path,$app_path){
+  /**
+   *
+   *  @since  6-27-11
+   */
+  protected function compilePaths($app_path){
   
-    $path_list = array();
-  
-    // framework paths to add...
-    $reflection->addPath($framework_path);
-    $reflection->addPath(new Path($app_path,'src'));
-    $reflection->addPath(new Path($app_path,'config'));
+    $this->setField('app_path',$app_path);
+    
+    $framework_path = __DIR__;
+    $this->setField('framework_path',$framework_path);
+    
+    $path = new Path($app_path,'cache');
+    $path->assure();
+    $this->setField('cache_path',$path);
+    
+    $reflection_path_list = array();
+    $reflection_path_list[] = $framework_path;
+    $reflection_path_list[] = new Path($app_path,'src');
+    $reflection_path_list[] = new Path($app_path,'config');
+    
+    $view_path_list = array();
+    $path = new Path($app_path,'view');
+    if($path->exists()){ $view_path_list[] = $path; }//if
+    
+    $vendor_path_list = array();
+    $path = new Path($app_path,'vendor');
+    if($path->exists()){ $vendor_path_list[] = $path; }//if
     
     // add the plugin paths...
     $plugin_base_path = new Path($app_path,'plugins');
-    foreach($plugin_base_path->createIterator('',1) as $plugin_path => $file){
+    foreach($plugin_base_path->createIterator('',1) as $plugin_path => $plugin_dir){
     
-      if($file->isDir()){
+      if($plugin_dir->isDir()){
       
-        $plugin_path = new Path($plugin_path);
+        $path = new Path($plugin_path,'config');
+        if($path->exists()){ $reflection_path_list[] = $path; }//if
+        
+        $path = new Path($plugin_path,'src');
+        if($path->exists()){ $reflection_path_list[] = $path; }//if 
       
-        $reflection->addPath(new Path($plugin_path,'config'));
-        $reflection->addPath(new Path($plugin_path,'src')); 
+        $path = new Path($plugin_path,'view');
+        if($path->exists()){ $view_path_list[] = $path; }//if
+        
+        $path = new Path($plugin_path,'vendor');
+        if($path->exists()){ $vendor_path_list[] = $path; }//if
       
       }//if
     
     }//foreach
-    
-    ///out::i($reflection);
-
-    out::p('add plancast');
-    $reflection->addPath('E:\Projects\Plancast\_active\lib');
-    $reflection->addPath('E:\Projects\Plancast\_active\plugins');
-    out::p();
   
+    $this->setField('reflection_paths',$reflection_path_list);
+    $this->setField('view_paths',$view_path_list);
+    $this->setField('vendor_paths',$vendor_path_list);
   
   }//method
 

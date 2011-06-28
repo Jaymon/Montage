@@ -24,14 +24,6 @@ abstract class Field extends Common {
     $this->setRandomId();
   
   }//method
-
-  /**#@+
-   *  access methods for the name of the form field/element       
-   */
-  public function setName($val){ $this->setAttr('name',$val); }//method
-  public function hasName(){ return $this->hasAttr('name'); }//method
-  public function getName(){ return $this->getAttr('name'); }//method
-  /**#@-*/
   
   /**#@+
    *  access methods for the value of the form field/element       

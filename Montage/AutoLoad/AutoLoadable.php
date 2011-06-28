@@ -1,0 +1,36 @@
+<?php
+/**
+ *  any class can implement this interface and then be registered as autoloader
+ *  
+ *  if you just get blank pages when autoloading a class, maybe you used the @ symbol: 
+ *    http://www.php.net/manual/en/function.error-reporting.php#28181
+ *    http://www.php.net/manual/en/function.include-once.php#53239
+ *  
+ *  @version 0.1
+ *  @author Jay Marcyes {@link http://marcyes.com}
+ *  @since 6-27-11
+ *  @package montage
+ *  @subpackage Autoload 
+ ******************************************************************************/
+namespace Montage\AutoLoad;
+
+interface Autoloadable {
+
+  /**
+   *  this is what will do the actual loading of each autoloader
+   *  
+   *  @param  string  $class_name
+   */
+  public function handle($class_name);
+  
+  /**
+   *  register this class as an autoloader
+   */
+  public function register();
+  
+  /**
+   *  unregister this class as an autoloader
+   */
+  public function unregister();
+  
+}//interface

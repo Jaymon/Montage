@@ -383,8 +383,23 @@ class ReflectionFile implements Reflector {
   
     $namespace = trim($namespace);
     if(!empty($namespace)){
-      if(empty($alias)){ $alias = $namespace; }//if
+      
+      if(empty($alias)){
+      
+        if(($pos = mb_strrpos($namespace,'\\')) !== false){
+        
+          $alias = mb_substr($namespace,$pos + 1);
+        
+        }else{
+        
+          $alias = $namespace;
+        
+        }//if/else
+      
+      }//if
+      
       $ret_map[$alias] = $namespace;
+      
     }//if
   
     return array($i,$ret_map);
