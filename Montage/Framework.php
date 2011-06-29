@@ -181,7 +181,8 @@ class Framework extends Field implements Dependable {
     $container = $this->getContainer();
     
     // create the standard autoloader...
-    $standard_autoloader = $container->findInstance('\Montage\Autoload\StandardAutoloader');
+    // we can't use find here because people might extend the StandardAutoloader (like I did)...
+    $standard_autoloader = $container->getInstance('\Montage\Autoload\StandardAutoloader');
     $standard_autoloader->addPaths($this->getField('vendor_paths'));
     $standard_autoloader->register();
     

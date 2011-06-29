@@ -31,7 +31,7 @@ class Field implements Fieldable {
    *  @param  mixed $val
    *  @return object  the class instance for fluid interface
    */
-  public function setField($key,$val){
+  public function setField($key,$val = null){
     $this->field_map[$key] = $val;
     return $this;
   }//method
@@ -139,7 +139,7 @@ class Field implements Fieldable {
    *  @param  integer $count  the value to increment $key
    *  @return integer the incremented value now stored at $key
    */
-  public function bumpField($key,$count){
+  public function bumpField($key,$count = 1){
     
     $val = $this->getField($key,0);
     $val += $count;

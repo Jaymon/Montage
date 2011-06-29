@@ -19,9 +19,11 @@ abstract class Field extends Common {
   protected $label = '';
   protected $desc = '';
 
-  public function __construct(){
+  public function __construct($name = '',$val = null){
   
     $this->setRandomId();
+    $this->setName($name);
+    $this->setVal($val);
   
   }//method
   

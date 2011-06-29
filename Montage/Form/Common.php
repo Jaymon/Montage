@@ -41,7 +41,7 @@ abstract class Common {
    *  @param  array $attr_map pass in attributes (key => val pairs) to override default values   
    *  @return string
    */
-  abstract public function out($attr_map = array());
+  abstract public function out(array $attr_map = array());
   
   /**
    *  uses the instance's defined {@link out()} method to output the class

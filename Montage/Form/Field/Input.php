@@ -54,6 +54,13 @@ class Input extends Field {
   const TYPE_DATETIME_LOCAL = 'datetime-local';
   /**#@-*/
 
+  public function __construct($name = '',$val = null,$type = self::TYPE_TEXT){
+  
+    parent::__construct($name,$val);
+    $this->setType($type);
+  
+  }//method
+
   /**#@+
    *  access methods for the type of the form field/element       
    */
@@ -86,7 +93,7 @@ class Input extends Field {
   public function getPlaceholder(){ return $this->getAttr('placeholder'); }//method
   /**#@-*/
   
-  public function out($attr_map = array()){
+  public function out(array $attr_map = array()){
   
     // make sure the value is safe...
     if(isset($attr_map['value'])){

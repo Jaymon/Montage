@@ -1,5 +1,4 @@
 <?php
-
 /**
  *  The field is just an easy way to store key/value pairs
  *  
@@ -22,7 +21,7 @@ interface Fieldable {
    *  @param  mixed $val
    *  @return object  the class instance for fluid interface
    */
-  public function setField($key,$val);
+  public function setField($key,$val = null);
   
   /**
    *  check if $key exists and is non-empty
@@ -101,6 +100,6 @@ interface Fieldable {
    *  @param  integer $count  the value to increment $key
    *  @return integer the incremented value now stored at $key
    */
-  public function bumpField($key,$count);
+  public function bumpField($key,$count = 1);
 
 }//class     

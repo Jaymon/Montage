@@ -154,8 +154,9 @@ class Container extends Field {
       
         throw new \UnexpectedValueException(
           sprintf(
-            'there were multiple classes that inherited from [%s], use setPreferred() to set the '
+            'there were multiple classes [%s], that inherited from [%s], use setPreferred() to set the '
             .'preferred class that should be used',
+            join(',',$reflection->findClassNames($class_name)),
             join(',',$class_name)
           )
         );

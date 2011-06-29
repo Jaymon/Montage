@@ -15,8 +15,11 @@ namespace Montage\Form;
 use Montage\Form\Common;
 use Montage\Form\Field\Field;
 use Montage\Form\Field\Input;
+use ReflectionObject;
+use ArrayIterator;
+use ArrayAccess,IteratorAggregate,Montage\Field\Fieldable;
 
-abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggregate {
+abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fieldable {
 
   const METHOD_POST = 'post';
   const METHOD_GET = 'get';
@@ -51,15 +54,28 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
    *  @param  array $field_map  if you want to set values from an array into this instance, you can
    *                            pass them (key/val) here, otherwise, you can call {@link set()} at any time             
    */
-  public function __construct($field_map = array()){
+  public function __construct(array $field_map = array()){
 
     $this->setId($this->getName());
+    
+    $this->populate();
     
     if(!empty($field_map)){
       $this->set($field_map);
     }//if
   
   }//method
+
+  /**
+   *  populate the fields of this form
+   *  
+   *  this is like a schema building method, basically, you would create Field instances
+   *  and set their names in this method. And set any other valuesthat should be default
+   *  on the form   
+   *  
+   *  @since  6-28-11
+   */
+  abstract protected function populate();
 
   /**
    *  get the form's name, this is basically the namespace the form is using
@@ -107,63 +123,6 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
   /**#@-*/
   
   /**
-   *  shortcut to set a field's value
-   *  
-   *  this one is just here as a compliment to all the other *Val() methods since setField()
-   *  does pretty much the same thing as this method         
-   *  
-   *  @since  8-15-10   
-   *  @see  setField()   
-   *  @param  string  $field  the field name
-   *  @param  mixed $val  the $field's value
-   */
-  public function setVal($field,$val){ return $this->setField($field,$val); }//method
-  
-  /**
-   *  shortcut to check if a field has a value
-   *  
-   *  @since  8-15-10      
-   *  @param  string  $field  the field name
-   *  @return boolean   
-   */
-  public function hasVal($field){
-    // canary...
-    if(!$this->hasField($field)){ return false; }//if
-    return $this->getField($field)->hasVal();
-  }//method
-  
-  /** 
-   *  provides a quick way to get the value of a field of the form
-   *  
-   *  so, rather than having to do:
-   *    $this->getField('name')->getVal();
-   *  you can do:
-   *    $this->getVal('name');
-   *      
-   *  @since  8-15-10      
-   *  @param  string  $field  the field name
-   *  @return mixed
-   */
-  public function getVal($field){
-    // canary...
-    if(!$this->hasField($field)){ return null; }//if
-    return $this->getField($field)->getVal();
-  }//method
-  
-  /**
-   *  shortcut to clear a field's value
-   *  
-   *  @since  8-15-10      
-   *  @param  string  $field  the field name
-   *  @return boolean
-   */
-  public function clearVal($field){
-    // canary...
-    if(!$this->hasField($field)){ return false; }//if
-    return $this->getField($field)->clearVal();
-  }//method
-  
-  /**
    *  map an associative array of values to the fields defined in the form
    *  
    *  the supported fields of this form should already be defined before calling this
@@ -171,9 +130,12 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
    *  will be ignored
    *  
    *  the reason this function exists is to make it easy to map submitted values
-   *  back into a form instance           
+   *  back into a form instance
    *  
-   *  @param  array $field_map  name/val pairs      
+   *  the reason $field_map isn't specified as an array is to allow children to override
+   *  this method and pass in things like an Orm instance or something               
+   *  
+   *  @param  array $field_map  name/val pairs
    */
   public function set($field_map){
     
@@ -214,7 +176,7 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
    *                            2 - string, mixed - $name,$value where value is either the string value, or a
    *                                                field instance           
    */
-  public function setField(){
+  public function setField($name,$val = null){
   
     $args = func_get_args();
     
@@ -235,23 +197,23 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
           }//if
         }//if
         
-        if($name_info_map['is_array_index']){
+        if($name_info_map['is_array']){ // name has multiple values
         
           if(!isset($this->field_map[$name_info_map['namespace']])){
             $this->field_map[$name_info_map['namespace']] = array();
           }//if
         
-          if($name_info_map['index'] === null){
+          if($name_info_map['index'] === null){ // name[]
           
             $this->field_map[$name_info_map['namespace']][] = $field;
           
-          }else{
+          }else{ // name[index]
           
             $this->field_map[$name_info_map['namespace']][$name_info_map['index']] = $field;
           
           }//if/else
         
-        }else{
+        }else{ // name
         
           $this->field_map[$name_info_map['namespace']] = $field;
         
@@ -273,8 +235,8 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
             if(is_array($this->field_map[$name_info_map['namespace']])){
             
               // canary...
-              if(empty($name_info_map['is_array_index'])){
-                throw new UnexpectedValueException(
+              if(empty($name_info_map['is_array'])){
+                throw new \UnexpectedValueException(
                   sprintf(
                     'you are trying to turn an array field %s into a non array field',
                     $name_info_map['namespace']
@@ -331,11 +293,198 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
   
   }//method
   
-  public function getField($name){ return isset($this->field_map[$name]) ? $this->field_map[$name] : null; }//method
-  public function hasField($name){ return isset($this->field_map[$name]); }//method
-  public function killField($name){
-    if($this->hasField($name)){ unset($this->field_map[$name]); }//if
+  /**
+   *  return the value of $key, return $default_val if key doesn't exist
+   *
+   *  @param  string  $key
+   *  @param  mixed $default_val  here for compatibality with Fieldable interface, not used
+   *  @return mixed
+   */
+  public function getField($name,$default_val = null){
+  
+    $ret_mixed = null;
+    $name_map = $this->getNameInfo($name);
+    $name = $name_map['namespace'];
+
+    if(isset($this->field_map[$name])){
+      
+      $ret_mixed = $this->field_map[$name];
+      $is_arr = is_array($ret_mixed);
+      
+      if($name_map['is_array']){
+      
+        if(!$is_arr){ $ret_mixed = array($ret_mixed); }//if
+        
+      }//if
+      
+    }else{
+    
+      $ret_mixed = $name_map['is_array'] ? array() : null;
+      
+    }//if/else
+    
+    return $ret_mixed;
+    
   }//method
+  
+  /**
+   *  check if $key exists and is non-empty
+   *  
+   *  @param  string  $key   
+   *  @return  boolean
+   */
+  public function hasField($name){
+  
+    $ret_bool = false;
+    $name_map = $this->getNameInfo($name);
+    $name = $name_map['namespace'];
+  
+    if(isset($this->field_map[$name])){
+    
+      if($name_map['is_array']){
+      
+        $ret_bool = is_array($this->field_map[$name]);
+      
+      }else{
+      
+        $ret_bool = true;
+      
+      }//if/else
+      
+    }//if
+  
+    return $ret_bool;
+  
+  }//method
+  
+  /**
+   *  check if $key exists
+   *  
+   *  @param  string  $key   
+   *  @return  boolean
+   */
+  public function existsField($name){ return $this->hasField($name); }//method
+  
+  /**
+   *  remove $key and its value from the map
+   *  
+   *  @param  string  $key
+   *  @return object  the class instance for fluid interface
+   */
+  public function killField($name){
+  
+    $name_map = $this->getNameInfo($name);
+    $name = $name_map['namespace'];
+    
+    if(isset($this->field_map[$name])){
+    
+      if($name_map['is_array'] && !empty($name_map['index'])){
+      
+        unset($this->field_map[$name][$name_map['index']]);
+      
+      }else{
+      
+        unset($this->field_map[$name]);
+      
+      }//if/else
+    
+    }//if
+    
+    return $this;
+    
+  }//method
+  
+  /**
+   *  bump the field at $name by $count
+   *  
+   *  @since  5-26-10
+   *      
+   *  @param  string  $name  the name
+   *  @param  integer $count  the value to increment $name
+   *  @return integer the incremented value now stored at $name
+   */
+  public function bumpField($name,$count = 1){
+  
+    $ret_count = 0;
+  
+    if($field = $this->getField($name)){
+    
+      if(is_array($field)){
+      
+        foreach($field as $f){
+        
+          $field_val = $f->getVal();
+          $ret_count += ((int)$field_val + (int)$count);
+          $f->setVal($ret_count);
+        
+        }//foreach
+      
+      }else{
+      
+        $field_val = $field->getVal();
+        $ret_count = (int)$field_val + (int)$count;
+        $field->setVal($ret_count);
+        
+      }//if/else
+      
+    }//if
+    
+    return $ret_count;
+  
+  }//method
+  
+  /**
+   *  check's if a field exists and is equal to $val
+   *  
+   *  @param  string  $name  the name
+   *  @param  string  $val  the value to compare to the $name's set value
+   *  @return boolean
+   */
+  public function isField($name,$val){
+  
+    $ret_bool = false;
+  
+    if($field = $this->getField($name)){
+      $ret_bool = ($val === $field->getVal());
+    }//if
+    
+    return $ret_bool;
+  
+  }//method
+  
+  /**
+   *  add all the fields in $field_map to the instance field_map
+   *  
+   *  $field_map takes precedence, it will overwrite previously set values
+   *      
+   *  @param  array $field_map      
+   *  @return object  the class instance for fluid interface
+   */
+  public function addFields(array $field_map){
+  
+    $this->field_map = array_merge($this->field_map,$field_map);
+    return $this;
+  
+  }//method
+  
+  /**
+   *  set all the fields in $field_map to the instance field_map
+   *  
+   *  @since  6-3-11   
+   *  @param  array $field_map      
+   *  @return object  the class instance for fluid interface
+   */
+  public function setFields(array $field_map){
+    $this->form_map = $field_map;
+    return $this;
+  }//method
+  
+  /**
+   *  return the instance's field_map
+   *  
+   *  @return array
+   */
+  public function getFields(){ return $this->field_map; }//method
   
   /**
    *  get an array with all the errors mapped to their names, this includes the global
@@ -347,7 +496,7 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
   
     $ret_map = array();
     if($this->hasError()){
-      $ret_map[$this->form_name] = $this->getError();
+      $ret_map[$this->getName()] = $this->getError();
     }//if
     
     foreach($this as $field_name => $field){
@@ -362,7 +511,7 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
     
   }//method
   
-  public function out($attr_map = array()){
+  public function out(array $attr_map = array()){
     
     $ret_str = $this->outStart($attr_map);
     
@@ -401,7 +550,7 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
     
   }//method
   
-  public function outStart($attr_map = array()){
+  public function outStart(array $attr_map = array()){
   
     $this->setMethod($this->getMethod());
     $this->setEncoding($this->getEncoding());
@@ -445,26 +594,26 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
   /**
    *  Set a value given it's key e.g. $A['title'] = 'foo';
    */
-  public function offsetSet($key,$val){
+  public function offsetSet($name,$val){
     
     // if they are trying to do a $obj[] = $val let's append the $val
     // via: http://www.php.net/manual/en/class.arrayobject.php#93100
     
-    $this->setField($key,$val);
+    $this->setField($name,$val);
     
   }//method
   /**
    *  Return a value given it's key e.g. echo $A['title'];
    */
-  public function offsetGet($key){ return $this->getField($key); }//method
+  public function offsetGet($name){ return $this->getField($name); }//method
   /**
    *  Unset a value by it's key e.g. unset($A['title']);
    */
-  public function offsetUnset($key){ $this->killField($key); }//method
+  public function offsetUnset($name){ $this->killField($name); }//method
   /**
    *  Check value exists, given it's key e.g. isset($A['title'])
    */
-  public function offsetExists($key){ return $this->hasField($key); }//method
+  public function offsetExists($name){ return $this->hasField($name); }//method
   /**#@-*/
 
   /**
@@ -484,12 +633,6 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
     
     return new ArrayIterator($ret_list);
   }//spl method
-  
-  /**
-   *  Required definition for Countable, allows count($this) to work
-   *  @link http://www.php.net/manual/en/class.countable.php
-   */
-  public function count(){ return count($this->field_map); }//method
 
   /**
    *  gets the form specific name of the given $name, also normalizes $name
@@ -499,14 +642,14 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
    *  the key that it would be in the array   
    *  
    *  @param  string  $name
-   *  @return array array($name,$form_name,$is_array_index). $is_array_index will be set to true if
+   *  @return array array($name,$form_name,$is_array). $is_array will be set to true if
    *                [] was found in $name   
    */
   protected function getNameInfo($name){
     
     $ret_map = array();
     $ret_map['name'] = $ret_map['namespace'] = $name;
-    $ret_map['is_array_index'] = false;
+    $ret_map['is_array'] = false;
     $ret_map['index'] = '';
     
     $postfix = '';
@@ -520,7 +663,7 @@ abstract class Form extends Common implements ArrayAccess,Countable,IteratorAggr
       $ret_map['namespace'] = mb_substr($name,0,$index);
       $ret_map['index'] = trim($postfix,'[]');
       if($ret_map['index'] === ''){ $ret_map['index'] = null; }//if
-      $ret_map['is_array_index'] = true;
+      $ret_map['is_array'] = true;
       
     }//if
 

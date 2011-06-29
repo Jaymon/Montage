@@ -15,7 +15,7 @@ use Montage\Form\Field\Field;
 
 class Textarea extends Field {
   
-  public function out($attr_map = array()){
+  public function out(array $attr_map = array()){
   
     $ret_str = '';
     $orig_val = $this->getVal();
