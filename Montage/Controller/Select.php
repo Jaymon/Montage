@@ -31,6 +31,7 @@ class Select {
   /**
    *  a list of all the namespaces to try
    *
+   *  @see  addNamespace()   
    *  @var  array   
    */
   protected $class_namespace_list = array(
@@ -90,9 +91,36 @@ class Select {
    *  
    *  @param  Reflection  $reflection needed to be able to find a suitable controller class            
    */
-  function __construct(Reflection $reflection){
+  public function __construct(Reflection $reflection){
   
     $this->reflection = $reflection;
+  
+  }//method
+  
+  /**
+   *  add a namespace to the list of usable controller namespaces
+   *
+   *  this is handy for plugins to add a controller that can be easily overridden by
+   *  the application (which would be harder to do if the plugin had controller \Controller\Foo and
+   *  the app wanted to change Foo a bit it couldn't easily extend \Controller\Foo since the 
+   *  plugin already defined it).         
+   *      
+   *  @since  6-29-11
+   *  @param  string  $namespace  the namespace to add   
+   */        
+  public function addNamespace($namespace){
+    
+    // canary...
+    if(empty($namespace)){ throw new \InvalidArgumentException('$namespace was empty'); }//if
+    
+    // always keep montage as the last controller so plugins can override it...
+    $montage_namespace = end($this->class_namespace_list);
+    $key = key($this->class_namespace_list);
+    
+    $this->class_namespace_list[$key] = $namespace;
+    $this->class_namespace_list[] = $montage_namespace;
+    
+    return $this->class_namespace_list;
   
   }//method
   
@@ -136,7 +164,7 @@ class Select {
   
     $ret_str = '';
     $reflection = $this->reflection;
-  
+
     foreach($this->class_namespace_list as $class_namespace){
       
       $full_class_name = $this->normalizeClass($class_namespace,$class_name);
@@ -252,7 +280,11 @@ class Select {
       
       $class_name = $this->getClassName($fallback_class_name);
       
-    }//if
+    }else{
+    
+      $path_list = array_slice($path_list,1);
+    
+    }//if/else
   
     if(empty($class_name)){
       throw new \UnexpectedValueException(
@@ -289,7 +321,7 @@ class Select {
     if(!empty($path_bit)){
     
       $method_name = $this->normalizeMethod($path_bit);
-        
+      
       // if the controller method does not exist then use the default...
       if(method_exists($class_name,$method_name)){ // confirmed controller/method
       

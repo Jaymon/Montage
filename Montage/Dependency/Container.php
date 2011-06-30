@@ -30,16 +30,47 @@ class Container extends Field {
   protected $instance_map = array();
   
   protected $preferred_map = array();
+  
+  /**
+   *  holds the class keys with a callback that should be executed when the instance is created
+   *
+   *  @since  6-29-11   
+   *  @var  array   
+   */
+  protected $on_create_map = array();
 
   /**
-   *  final so as not to interfere with the creation of this class automatically
+   *  create an instance of this class
    */
-  final public function __construct(Reflection $reflection){
+  public function __construct(Reflection $reflection){
   
     $this->reflection = $reflection;
     $this->setInstance($reflection);
     $this->setInstance($this); // we want to be able to inject this also
     
+  }//method
+  
+  /**
+   *  the callback will be triggered when the instance is about to be created
+   *
+   *  the callback should take an instance of container and the method params:
+   *  and return params. Eg, callback(Container $container,array $params){ return $params; }      
+   *
+   *  @since  6-29-11   
+   *  @param  string  $class_name the class this will be active for
+   *  @param  callback $callback a valid php callback         
+   */
+  public function onCreate($class_name,$callback){
+  
+    // canary...
+    if(!is_callable($callback)){
+      throw new \InvalidArgumentException('$callback was not callable');
+    }//if
+  
+    $class_key = $this->getKey($class_name);
+  
+    $this->on_create_map[$class_key] = $callback;
+  
   }//method
   
   /**
@@ -96,7 +127,7 @@ class Container extends Field {
       
     }else{
     
-      $ret_instance = $this->getNewInstance($class_name,$params);
+      $ret_instance = $this->createInstance($class_name,$params);
       $this->setInstance($ret_instance);
     
     }//if/else
@@ -125,6 +156,12 @@ class Container extends Field {
       try{
     
         $cn_key = $this->getKey($cn);
+        
+        if(isset($this->on_create_map[$cn_key])){
+        
+          $params = call_user_func($this->on_create_map[$cn_key],$this,$params);
+        
+        }//if
         
         // check to see if there has been a preferred class set...
         if(isset($this->preferred_map[$cn_key])){
@@ -194,7 +231,7 @@ class Container extends Field {
         
       }else{
     
-        $ret_instance = $this->getNewInstance($instance_class_name,$params);
+        $ret_instance = $this->createInstance($instance_class_name,$params);
         $this->setInstance($ret_instance);
       
       }//if/else
@@ -214,7 +251,7 @@ class Container extends Field {
    *                                then you would pass in array(1,2) and $one = 1, $two = 2               
    *  @return object
    */
-  public function getNewInstance($class_name,$params = array()){
+  public function createInstance($class_name,$params = array()){
   
     // canary...
     if(empty($class_name)){
@@ -225,10 +262,12 @@ class Container extends Field {
     $instance_params = array();
     
     $params = (array)$params;
+
     $rclass = new ReflectionClass($class_name);
     
     // canary, make sure there is a __construct() method since we are passing in arguments...
     $rconstructor = $rclass->getConstructor();
+    
     if(empty($rconstructor)){
       
       if(!empty($params)){
@@ -313,8 +352,8 @@ class Container extends Field {
     ///if(ctype_digit((string)join('',array_keys($params)))){ return $params; }//if
     
     $ret_params = array();
-    $rparams = $rmethod->getParameters();
     
+    $rparams = $rmethod->getParameters();
     foreach($rparams as $index => $rparam){
 
       // first try and resolve numeric keys, then do string keys...
@@ -333,6 +372,7 @@ class Container extends Field {
         }else{
         
           $rclass = $rparam->getClass();
+            
           if($rclass === null){
           
             if($this->existsField($field_name)){
@@ -347,8 +387,9 @@ class Container extends Field {
             
               throw new \UnexpectedValueException(
                 sprintf(
-                  'no suitable value could be found for %s\'s __construct() param "%s"',
-                  $rclass->getName(),
+                  'no suitable value could be found for %s::%s() param "%s"',
+                  $rmethod->getDeclaringClass()->getName(),
+                  $rmethod->getName(),
                   $field_name
                 )
               );

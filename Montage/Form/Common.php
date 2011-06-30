@@ -116,7 +116,7 @@ abstract class Common {
       
       }else{
       
-        if(isset($args[1])){
+        if(array_key_exists(1,$args)){
         
           $val = $args[1];
           if(is_array($args[1])){

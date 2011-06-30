@@ -520,8 +520,11 @@ class Reflection extends ObjectCache implements \Reflector {
     $class_map['path'] = $class_file;
     $this->class_map[$key] = $class_map;
     
+    $parent_list = array_merge($extend_list,$implement_list);
+    ///$class_map['dependencies'] = $parent_file;
+    
     // add class as child to all its parent classes...
-    foreach(array_merge($extend_list,$implement_list) as $parent_class){
+    foreach($parent_list as $parent_class){
       $parent_key = $this->normalizeClassName($parent_class);
       if(!isset($this->parent_class_map[$parent_key])){
         $this->parent_class_map[$parent_key] = array();

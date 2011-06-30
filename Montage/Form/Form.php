@@ -528,6 +528,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
         $format_str .= '%s:<br>';
         $format_vals[] = $field->outLabel();
       }//if
+      
       if($field->hasError()){
         $format_str .= '%s<br>';
         $format_vals[] = $field->outError();

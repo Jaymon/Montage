@@ -35,7 +35,44 @@ class FrameworkStart extends Start {
     $container->setPreferred(
       'Symfony\Component\HttpFoundation\SessionStorage\SessionStorageInterface',
       'Symfony\Component\HttpFoundation\SessionStorage\NativeSessionStorage'
-     );
+    );
+     
+     // set up some lazy load dependency resolves...
+    $container->onCreate(
+      'Montage\Request\Requestable',
+      function($container,array $params = array()){
+      
+        // set the values for the url instance on creation...
+        $ret_map = array(
+          'query' => (strncasecmp(PHP_SAPI, 'cli', 3) === 0) ? $_SERVER['argv'] : $_GET,
+          'request' => $_POST,
+          'attributes' => array(),
+          'cookies' => $_COOKIE,
+          'files' => $_FILES,
+          'server' => $_SERVER
+        );
+        
+        return array_merge($ret_map,$params);
+        
+      }
+    );
+    
+    $container->onCreate(
+      'Montage\Url',
+      function($container,array $params = array()){
+
+        $request = $container->findInstance('Montage\Request\Requestable');
+        
+        // set the values for the url instance on creation...
+        $ret_map = array(
+          'current_url' => $request->getUrl(),
+          'base_url' => $request->getBase()
+        );
+        
+        return array_merge($ret_map,$params);
+        
+      }
+    );
      
     // start the error handler if it hasn't been started...
     $container->findInstance('Montage\Error');

@@ -50,6 +50,7 @@ use Montage\Dependency\Container;
 use Montage\Dependency\Dependable;
 
 use Montage\AutoLoad\ReflectionAutoloader;
+use Montage\Template;
 
 class Framework extends Field implements Dependable {
   
@@ -150,23 +151,61 @@ class Framework extends Field implements Dependable {
 
       // start the START classes...
       $this->handleStart();
+      
+      $this->handleTemplate();
   
-      // get the request instance...
-      $this->request = $container->findInstance('Montage\Request\Requestable');
+      $request = $this->getRequest();
   
       // decide where the request should be forwarded to...
       list($controller_class,$controller_method,$controller_method_params) = $this->getControllerSelect()->find(
-        $this->request->getHost(),
-        $this->request->getPath()
+        $request->getHost(),
+        $request->getPath()
       );
 
-      $ret_handle = $this->handleController($controller_class,$controller_method,$controller_method_params);
-          
+      $ret_mixed = $this->handleController($controller_class,$controller_method,$controller_method_params);
+    
+      $this->handleResponse($ret_mixed);
+    
     }catch(Exception $e){
     
       $ret_mixed = $this->handleException($e);
     
     }//try/catch
+  
+  }//method
+
+  protected function handleResponse($controller_ret_val = null){
+  
+    if(is_string($controller_ret_val)){
+    
+      echo $controller_ret_val;
+    
+    }else if(is_object($controller_ret_val)){
+    
+      if(method_exists($controller_ret_val,'__toString')){
+      
+        echo (string)$controller_ret_val;
+      
+      }else{
+      
+        throw new \RuntimeException(
+          sprintf(
+            'Controller returned an "%s" instance, which has no __toString()',
+            get_class($controller_ret_val)
+          )
+        );
+      
+      }//if/else
+    
+    }else{
+    
+      $container = $this->getContainer();
+      $template = $container->findInstance('\Montage\Template');
+      
+      // just output the template response to the screen...
+      $template->handle(Template::OUT_STD);
+    
+    }//if/else
   
   }//method
 
@@ -221,6 +260,19 @@ class Framework extends Field implements Dependable {
     }//foreach
      
   }//method
+  
+  /**
+   *  start the template
+   *  
+   *  @since  6-29-11   
+   */
+  protected function handleTemplate(){
+  
+    $container = $this->getContainer();
+    $template = $container->findInstance('\Montage\Template');
+    $template->addPaths($this->getField('view_paths'));
+     
+  }//method
 
   /**
    *  create a controller instance and call that instance's $method to handle the request
@@ -232,6 +284,7 @@ class Framework extends Field implements Dependable {
   protected function handleController($class_name,$method,array $params = array()){
   
     $container = $this->getContainer();
+    $reflection = $container->getReflection();
     
     $controller = $container->findInstance($class_name);
     $rmethod = new \ReflectionMethod($controller,$method);
@@ -262,6 +315,36 @@ class Framework extends Field implements Dependable {
         )
       );
     }//if
+    
+    // check for Forms and populate them if there are matching passed in vars...
+    foreach($rmethod_params as $rmethod_param){
+    
+      if(is_object($rmethod_param)){
+      
+        $robject = new \ReflectionObject($rmethod_param);
+      
+        if($reflection->isChildClass($robject->getName(),'\Montage\Form\Form')){
+        
+          $form_name = $robject->getShortName();
+          $request = $this->getRequest();
+          if($form_field_map = $request->getField($form_name)){
+          
+            $rmethod_param->set($form_field_map);
+          
+          }//if
+          
+          if(!$rmethod_param->hasUrl()){
+          
+            $url = $container->findInstance('Montage\Url');
+            $rmethod_param->setUrl($url->getCurrent());
+          
+          }//if
+        
+        }//if
+      
+      }//if
+    
+    }//foreach
     
     $controller->preHandle();
     $ret_mixed = $rmethod->invokeArgs($controller,$rmethod_params);
@@ -359,7 +442,7 @@ class Framework extends Field implements Dependable {
   
   public function getContainer(){ return $this->container; }//method
 
-  public function getControllerSelect(){
+  protected function getControllerSelect(){
   
     // canary...
     if(!empty($this->controller_select)){ return $this->controller_select; }//if
@@ -367,6 +450,24 @@ class Framework extends Field implements Dependable {
     $container = $this->getContainer();
     $this->controller_select = $container->findInstance('Montage\Controller\Select');
     return $this->controller_select;
+  
+  }//method
+  
+  /**
+   *  get the request instance
+   *  
+   *  @since  6-29-11
+   *  @return Montage\Request\Requestable
+   */
+  protected function getRequest(){
+  
+    // canary...
+    if(!empty($this->request)){ return $this->request; }//if
+  
+    $container = $this->getContainer();
+    $this->request = $container->findInstance('Montage\Request\Requestable');
+    
+    return $this->request;
   
   }//method
   
