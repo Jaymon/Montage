@@ -11,9 +11,9 @@ namespace Montage\Request;
 
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use Montage\Request\Requestable as MontageRequest;
-use Montage\Field\Fieldable;
+use Montage\Field\GetFieldable;
 
-class Request extends SymfonyRequest implements MontageRequest,Fieldable {
+class Request extends SymfonyRequest implements MontageRequest,GetFieldable {
 
   ///public function __construct(){
   
@@ -28,6 +28,43 @@ class Request extends SymfonyRequest implements MontageRequest,Fieldable {
    *  @return string   
    */
   public function getUrl(){ return $this->getUri(); }//method
+  
+  /**
+   *  get the browser's user agent string
+   *  
+   *  @return string  the user agent (eg, Mozilla/5.0 (Windows; U; Windows NT 5.1;) Firefox/3.0.17)
+   */
+  public function getUserAgent(){ return $this->server->get('HTTP_USER_AGENT',''); }//method
+  
+  /**
+   *  Returns true if the request is an XMLHttpRequest.
+   *
+   *  It works if your JavaScript library set an X-Requested-With HTTP header.
+   *  Works with Prototype, Mootools, jQuery, and perhaps others or if ajax_request
+   *  was passed in
+   *
+   *  @return bool true if the request is an XMLHttpRequest, false otherwise
+   */
+  public function isAjax(){
+    return $this->isXmlHttpRequest() || $this->existsField('ajax_request');
+  }//method
+  
+  /**
+   *  shortcut method to know if this is a POST request
+   *  
+   *  @return boolean
+   */
+  public function isPost(){ return $this->isMethod('POST'); }//method
+  
+  /**
+   *  true if the passed in $method is the same as the request method
+   *  
+   *  @param  string  $method
+   *  @return boolean
+   */
+  public function isMethod($method){
+    return $this->getMethod() === mb_strtoupper($method);
+  }//method
   
   /**
    *  return the base requested url
@@ -58,17 +95,6 @@ class Request extends SymfonyRequest implements MontageRequest,Fieldable {
   function isCli(){ return (strncasecmp(PHP_SAPI, 'cli', 3) === 0); }//method
   
   /**
-   *  set the $val into $key
-   *      
-   *  @param  string  $key
-   *  @param  mixed $val
-   *  @return object  the class instance for fluid interface
-   */
-  public function setField($key,$val = null){
-    throw new \BadMethodCallException(sprintf('%s unsupported in this context',__METHOD__));
-  }//method
-  
-  /**
    *  check if $key exists and is non-empty
    *  
    *  @param  string  $key   
@@ -79,6 +105,19 @@ class Request extends SymfonyRequest implements MontageRequest,Fieldable {
     $mixed = $this->getField($key,null);
     return !empty($mixed);
   
+  }//method
+  
+  /**
+   *  return true if there are fields
+   *  
+   *  @since  6-30-11   
+   *  @return boolean
+   */
+  public function hasFields(){
+    
+    $fields = $this->getFields();
+    return !empty($fields);
+    
   }//method
   
   /**
@@ -112,16 +151,6 @@ class Request extends SymfonyRequest implements MontageRequest,Fieldable {
   }//method
   
   /**
-   *  remove $key and its value from the map
-   *  
-   *  @param  string  $key
-   *  @return object  the class instance for fluid interface
-   */
-  public function killField($key){
-    throw new \BadMethodCallException(sprintf('%s unsupported in this context',__METHOD__));
-  }//method
-  
-  /**
    *  check's if a field exists and is equal to $val
    *  
    *  @param  string  $key  the name
@@ -135,29 +164,6 @@ class Request extends SymfonyRequest implements MontageRequest,Fieldable {
   }//method
   
   /**
-   *  add all the fields in $field_map to the instance field_map
-   *  
-   *  $field_map takes precedence, it will overwrite previously set values
-   *      
-   *  @param  array $field_map      
-   *  @return object  the class instance for fluid interface
-   */
-  public function addFields(array $field_map){
-    throw new \BadMethodCallException(sprintf('%s unsupported in this context',__METHOD__));
-  }//method
-  
-  /**
-   *  set all the fields in $field_map to the instance field_map
-   *  
-   *  @since  6-3-11   
-   *  @param  array $field_map      
-   *  @return object  the class instance for fluid interface
-   */
-  public function setFields(array $field_map){
-    throw new \BadMethodCallException(sprintf('%s unsupported in this context',__METHOD__));
-  }//method
-  
-  /**
    *  return the instance's field_map
    *  
    *  @return array
@@ -166,19 +172,6 @@ class Request extends SymfonyRequest implements MontageRequest,Fieldable {
   
     return array_merge($this->query->all(),$this->request->all());
   
-  }//method
-  
-  /**
-   *  bump the field at $key by $count
-   *  
-   *  @since  5-26-10
-   *      
-   *  @param  string  $key  the name
-   *  @param  integer $count  the value to increment $key
-   *  @return integer the incremented value now stored at $key
-   */
-  public function bumpField($key,$count = 1){
-    throw new \BadMethodCallException(sprintf('%s unsupported in this context',__METHOD__));
   }//method
 
 }//class

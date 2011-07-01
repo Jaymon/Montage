@@ -434,6 +434,14 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
   }//method
   
   /**
+   *  return true if there are fields
+   *  
+   *  @since  6-30-11   
+   *  @return boolean
+   */
+  public function hasFields(){ return !empty($this->field_map); }//method
+  
+  /**
    *  check's if a field exists and is equal to $val
    *  
    *  @param  string  $name  the name

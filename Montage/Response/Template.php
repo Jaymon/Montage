@@ -9,10 +9,11 @@
  *  @package montage
  *  @subpackage template 
  ******************************************************************************/
-namespace Montage;
+namespace Montage\Response;
 
 use Montage\Field\Field;
 use Montage\Escape;
+use Montage\Path;
 
 class Template extends Field {
 
@@ -166,6 +167,9 @@ class Template extends Field {
    *  @return string  the full template path
    */
   protected function normalizePath($template){
+  
+    // canary, template might already be a full path...
+    if(is_file($template)){ return $template; }//if
   
     $ret_path = null;
     $template = $this->normalizeTemplateName($template);

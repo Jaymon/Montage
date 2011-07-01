@@ -73,7 +73,17 @@ class FrameworkStart extends Start {
         
       }
     );
-     
+    
+    $container->onCreated(
+      '\Montage\Response\Template',
+      function($container,$instance){
+
+        $framework = $container->findInstance('Montage\Framework');
+        $instance->addPaths($framework->getField('view_paths'));
+        
+      }
+    );
+    
     // start the error handler if it hasn't been started...
     $container->findInstance('Montage\Error');
   

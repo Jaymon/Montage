@@ -149,6 +149,14 @@ class Field implements Fieldable {
   }//method
   
   /**
+   *  return true if there are fields
+   *  
+   *  @since  6-30-11   
+   *  @return boolean
+   */
+  public function hasFields(){ return !empty($this->field_map); }//method
+  
+  /**
    *  designed to be called from a __call() magic method, this will decide what
    *  method to call and return the result
    *  

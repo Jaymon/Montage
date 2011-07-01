@@ -331,6 +331,8 @@ class ReflectionFile implements Reflector {
   /**
    *  parse out the USE statements
    *  
+   *  @link http://us.php.net/manual/en/language.namespaces.importing.php
+   *      
    *  @param  integer $i  where the parser is in the tokens
    *  @param  array $tokens all the tokens
    *  @return array the current $i and the found info   
@@ -408,7 +410,7 @@ class ReflectionFile implements Reflector {
   
   /**
    *  the USE statements can have AS aliases
-   *  
+   *      
    *  @param  integer $i  where the parser is in the tokens
    *  @param  array $tokens all the tokens
    *  @return array the current $i and the found info   

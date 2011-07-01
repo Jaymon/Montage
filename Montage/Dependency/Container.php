@@ -32,12 +32,20 @@ class Container extends Field {
   protected $preferred_map = array();
   
   /**
-   *  holds the class keys with a callback that should be executed when the instance is created
+   *  holds the class keys with a callback that should be executed before the instance is created
    *
    *  @since  6-29-11   
    *  @var  array   
    */
   protected $on_create_map = array();
+  
+  /**
+   *  holds the class keys with a callback that should be executed after the instance is created
+   *
+   *  @since  6-30-11 
+   *  @var  array   
+   */
+  protected $on_created_map = array();
 
   /**
    *  create an instance of this class
@@ -70,6 +78,29 @@ class Container extends Field {
     $class_key = $this->getKey($class_name);
   
     $this->on_create_map[$class_key] = $callback;
+  
+  }//method
+  
+  /**
+   *  the callback will be triggered when the instance was just created
+   *
+   *  the callback should take an instance of container and the just created instance:
+   *  Eg, callback(Container $container,$instance){}      
+   *
+   *  @since  6-30-11   
+   *  @param  string  $class_name the class this will be active for
+   *  @param  callback $callback a valid php callback         
+   */
+  public function onCreated($class_name,$callback){
+  
+    // canary...
+    if(!is_callable($callback)){
+      throw new \InvalidArgumentException('$callback was not callable');
+    }//if
+  
+    $class_key = $this->getKey($class_name);
+  
+    $this->on_created_map[$class_key] = $callback;
   
   }//method
   
@@ -127,8 +158,18 @@ class Container extends Field {
       
     }else{
     
+      // handle on create...
+      if(isset($this->on_create_map[$class_key])){
+        $params = call_user_func($this->on_create_map[$class_key],$this,$params);
+      }//if
+    
       $ret_instance = $this->createInstance($class_name,$params);
       $this->setInstance($ret_instance);
+      
+      // handle on created...
+      if(isset($this->on_created_map[$class_key])){
+        call_user_func($this->on_created_map[$class_key],$this,$ret_instance);
+      }//if
     
     }//if/else
   
@@ -146,6 +187,7 @@ class Container extends Field {
 
     $ret_instance = null;
     $class_name = (array)$class_name;
+    $find_class_key = '';
     $params = (array)$params;
     $reflection = $this->getReflection();
     $instance_class_name = '';
@@ -155,13 +197,7 @@ class Container extends Field {
     
       try{
     
-        $cn_key = $this->getKey($cn);
-        
-        if(isset($this->on_create_map[$cn_key])){
-        
-          $params = call_user_func($this->on_create_map[$cn_key],$this,$params);
-        
-        }//if
+        $cn_key = $find_class_key = $this->getKey($cn);
         
         // check to see if there has been a preferred class set...
         if(isset($this->preferred_map[$cn_key])){
@@ -200,11 +236,13 @@ class Container extends Field {
       
       }else{
       
-        // since reflection failed check all the classes in memory...
+        // since reflection failed check all the classes against php's loaded classes...
         foreach($class_name as $cn){
         
           if(class_exists($cn)){
             $instance_class_name = $cn;
+            $find_class_key = $this->getKey($cn);
+            break;
           }//if
             
         }//foreach
@@ -230,9 +268,19 @@ class Container extends Field {
         $ret_instance = $this->instance_map[$class_key];
         
       }else{
+      
+        // handle on create...
+        if(isset($this->on_create_map[$find_class_key])){
+          $params = call_user_func($this->on_create_map[$find_class_key],$this,$params);
+        }//if
     
-        $ret_instance = $this->createInstance($instance_class_name,$params);
+        $ret_instance = $this->createInstance($class_key,$params);
         $this->setInstance($ret_instance);
+        
+        // handle on created...
+        if(isset($this->on_created_map[$find_class_key])){
+          call_user_func($this->on_created_map[$find_class_key],$this,$ret_instance);
+        }//if
       
       }//if/else
     

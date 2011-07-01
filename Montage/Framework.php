@@ -26,6 +26,8 @@ require_once(__DIR__.'/Dependency/ReflectionFile.php');
 require_once(__DIR__.'/Dependency/Reflection.php');
 require_once(__DIR__.'/Path.php');
 
+require_once(__DIR__.'/Field/SetFieldable.php');
+require_once(__DIR__.'/Field/GetFieldable.php');
 require_once(__DIR__.'/Field/Fieldable.php');
 require_once(__DIR__.'/Field/Field.php');
 
@@ -50,7 +52,9 @@ use Montage\Dependency\Container;
 use Montage\Dependency\Dependable;
 
 use Montage\AutoLoad\ReflectionAutoloader;
-use Montage\Template;
+
+use Montage\Response\Response;
+use Montage\Response\Template;
 
 class Framework extends Field implements Dependable {
   
@@ -152,8 +156,6 @@ class Framework extends Field implements Dependable {
       // start the START classes...
       $this->handleStart();
       
-      $this->handleTemplate();
-  
       $request = $this->getRequest();
   
       // decide where the request should be forwarded to...
@@ -162,11 +164,11 @@ class Framework extends Field implements Dependable {
         $request->getPath()
       );
 
-      $ret_mixed = $this->handleController($controller_class,$controller_method,$controller_method_params);
+      $controller_response = $this->handleController($controller_class,$controller_method,$controller_method_params);
     
-      $this->handleResponse($ret_mixed);
+      $this->handleResponse($controller_response);
     
-    }catch(Exception $e){
+    }catch(\Exception $e){
     
       $ret_mixed = $this->handleException($e);
     
@@ -174,24 +176,49 @@ class Framework extends Field implements Dependable {
   
   }//method
 
-  protected function handleResponse($controller_ret_val = null){
+  /**
+   *  decide how to respond depending on how the controller returned
+   *  
+   *  this will actually output the response to the user
+   *      
+   *  if the controller returned...
+   *    string - then that string will be sent to the user
+   *    array - the array will be json encoded and sent as json to the user
+   *    object - if the object has a __toString method then that will be sent to the user
+   *    null - response object will be checked for content, if the response object
+   *           has content, that will be sent, otherwise any fields set in the response
+   *           object will be handed over to the template and the template will be rendered
+   *           and sent to the user
+   *
+   *  @param  mixed $controller_response  what the controller returned
+   */
+  protected function handleResponse($controller_response = null){
   
-    if(is_string($controller_ret_val)){
+    $container = $this->getContainer();
+    $template = null;
+    $response = $container->findInstance('\Montage\Response\Response');
+  
+    if(is_string($controller_response)){
     
-      echo $controller_ret_val;
+      $response->setContent($controller_response);
     
-    }else if(is_object($controller_ret_val)){
+    }else if(is_array($controller_response)){
     
-      if(method_exists($controller_ret_val,'__toString')){
+      $response->setContentType(Response::CONTENT_JSON);
+      $response->setContent(json_encode($controller_response));
+    
+    }else if(is_object($controller_response)){
+    
+      if(method_exists($controller_response,'__toString')){
       
-        echo (string)$controller_ret_val;
+        $response->setContent((string)$controller_response);
       
       }else{
       
         throw new \RuntimeException(
           sprintf(
             'Controller returned an "%s" instance, which has no __toString()',
-            get_class($controller_ret_val)
+            get_class($controller_response)
           )
         );
       
@@ -199,13 +226,35 @@ class Framework extends Field implements Dependable {
     
     }else{
     
-      $container = $this->getContainer();
-      $template = $container->findInstance('\Montage\Template');
-      
-      // just output the template response to the screen...
-      $template->handle(Template::OUT_STD);
+      if(!$response->hasContent()){
+    
+        if($response->hasTemplate()){
+        
+          $template = $container->findInstance('\Montage\Response\Template');
+          
+          // update template with response values...
+          $template->setTemplate($response->getTemplate());
+          $template->setFields($response->getFields());
+        
+        }else{
+        
+          $response->setContentType(Response::CONTENT_JSON);
+          $response->setContent(json_encode($response->getFields()));
+        
+        }//if/else
+        
+      }//if
     
     }//if/else
+    
+    $response->send(); // send headers and content
+    
+    if(!empty($template)){
+    
+      // output the template response to the screen...
+      $template->handle(Template::OUT_STD);
+      
+    }//if
   
   }//method
 
@@ -258,19 +307,6 @@ class Framework extends Field implements Dependable {
       $container->callMethod($instance_list[$i],$method_name);
       
     }//foreach
-     
-  }//method
-  
-  /**
-   *  start the template
-   *  
-   *  @since  6-29-11   
-   */
-  protected function handleTemplate(){
-  
-    $container = $this->getContainer();
-    $template = $container->findInstance('\Montage\Template');
-    $template->addPaths($this->getField('view_paths'));
      
   }//method
 
@@ -379,6 +415,18 @@ class Framework extends Field implements Dependable {
         $ret_mixed = $this->handleController($controller_class,$controller_method,$controller_method_params);
       
       }else if($e instanceof RedirectException){
+      
+        if(headers_sent()){
+  
+          // http://en.wikipedia.org/wiki/Meta_refresh
+          echo sprintf('<meta http-equiv="refresh" content="%s;url=%s">',$wait_time,$url);
+      
+        }else{
+        
+          if($wait_time > 0){ sleep($wait_time); }//if
+          header(sprintf('Location: %s',$url));
+          
+        }//if/else
       
       
       }else if($e instanceof StopException){
