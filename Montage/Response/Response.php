@@ -95,6 +95,7 @@ class Response extends SymfonyResponse implements Fieldable {
   function setTemplate($val){ return $this->setField('template',$val); }//method
   function getTemplate(){ return $this->getField('template',''); }//method
   function hasTemplate(){ return $this->hasField('template'); }//method
+  function killTemplate(){ return $this->killField('template'); }//method
   
   /**
    *  hold the title

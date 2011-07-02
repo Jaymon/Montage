@@ -304,6 +304,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
   
     $ret_mixed = null;
     $name_map = $this->getNameInfo($name);
+
     $name = $name_map['namespace'];
 
     if(isset($this->field_map[$name])){
@@ -320,6 +321,8 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
     }else{
     
       $ret_mixed = $name_map['is_array'] ? array() : null;
+      
+      // @todo  should this thrown an \InvalidArgumentException() ?
       
     }//if/else
     
@@ -675,6 +678,9 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
       $ret_map['is_array'] = true;
       
     }//if
+
+    $ret_map['namespace'] = mb_strtolower($ret_map['namespace']);
+    $ret_map['name'] = mb_strtolower($ret_map['name']);
 
     $ret_map['form_name'] = sprintf('%s[%s]%s',$this->getName(),$ret_map['namespace'],$postfix);
 

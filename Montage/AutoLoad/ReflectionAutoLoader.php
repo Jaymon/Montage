@@ -43,6 +43,8 @@ class ReflectionAutoLoader extends Autoloader {
     
     }//if
 
+    \out::e(''.sprintf('%s("%s")',__METHOD__,$class_name));
+
     return $ret_bool;
   
   }//method

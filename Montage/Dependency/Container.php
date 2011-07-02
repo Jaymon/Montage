@@ -225,11 +225,19 @@ class Container extends Field {
     
       if($has_multi){
       
+        $child_class_list = array();
+      
+        foreach($class_name as $cn){
+        
+          $child_class_list = array_merge($child_class_list,$reflection->findClassNames($cn));
+        
+        }//foreach
+      
         throw new \UnexpectedValueException(
           sprintf(
             'there were multiple classes [%s], that inherited from [%s], use setPreferred() to set the '
             .'preferred class that should be used',
-            join(',',$reflection->findClassNames($class_name)),
+            join(',',$child_class_name),
             join(',',$class_name)
           )
         );

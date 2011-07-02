@@ -196,7 +196,7 @@ class Framework extends Field implements Dependable {
   
     $container = $this->getContainer();
     $template = null;
-    $response = $container->findInstance('\Montage\Response\Response');
+    $response = $this->getResponse();
   
     if(is_string($controller_response)){
     
@@ -238,8 +238,12 @@ class Framework extends Field implements Dependable {
         
         }else{
         
-          $response->setContentType(Response::CONTENT_JSON);
-          $response->setContent(json_encode($response->getFields()));
+          if(!$response->isRedirect()){
+          
+            $response->setContentType(Response::CONTENT_JSON);
+            $response->setContent(json_encode($response->getFields()));
+            
+          }//if
         
         }//if/else
         
@@ -363,6 +367,7 @@ class Framework extends Field implements Dependable {
         
           $form_name = $robject->getShortName();
           $request = $this->getRequest();
+
           if($form_field_map = $request->getField($form_name)){
           
             $rmethod_param->set($form_field_map);
@@ -416,18 +421,29 @@ class Framework extends Field implements Dependable {
       
       }else if($e instanceof RedirectException){
       
+        $response = $this->getResponse();
+        $redirect_url = $e->getUrl();
+        $wait_time = $e->getWait();
+        
+        $response->killTemplate();
+        $response->setContent('');
+        $response->setStatusCode($e->getCode());
+        $response->setHeader('Location',$redirect_url);
+      
         if(headers_sent()){
   
           // http://en.wikipedia.org/wiki/Meta_refresh
-          echo sprintf('<meta http-equiv="refresh" content="%s;url=%s">',$wait_time,$url);
-      
+          $response->setContent(
+            sprintf('<meta http-equiv="refresh" content="%s;url=%s">',$wait_time,$redirect_url)
+          );
+  
         }else{
         
           if($wait_time > 0){ sleep($wait_time); }//if
-          header(sprintf('Location: %s',$url));
           
         }//if/else
       
+        $this->handleResponse(null);
       
       }else if($e instanceof StopException){
         
@@ -520,6 +536,19 @@ class Framework extends Field implements Dependable {
   }//method
   
   /**
+   *  get the response instance
+   *  
+   *  @since  6-29-11
+   *  @return Montage\Response\Response
+   */
+  protected function getResponse(){
+  
+    $container = $this->getContainer();
+    return $container->findInstance('\Montage\Response\Response');
+  
+  }//method
+  
+  /**
    *
    *  @since  6-27-11
    */
@@ -547,6 +576,10 @@ class Framework extends Field implements Dependable {
     $path = new Path($app_path,'vendor');
     if($path->exists()){ $vendor_path_list[] = $path; }//if
     
+    $assets_path_list = array();
+    $path = new Path($app_path,'assets');
+    if($path->exists()){ $assets_path_list[] = $path; }//if
+    
     // add the plugin paths...
     $plugin_base_path = new Path($app_path,'plugins');
     foreach($plugin_base_path->createIterator('',1) as $plugin_path => $plugin_dir){
@@ -564,6 +597,9 @@ class Framework extends Field implements Dependable {
         
         $path = new Path($plugin_path,'vendor');
         if($path->exists()){ $vendor_path_list[] = $path; }//if
+        
+        $path = new Path($plugin_path,'assets');
+        if($path->exists()){ $assets_path_list[] = $path; }//if
       
       }//if
     
@@ -572,6 +608,7 @@ class Framework extends Field implements Dependable {
     $this->setField('reflection_paths',$reflection_path_list);
     $this->setField('view_paths',$view_path_list);
     $this->setField('vendor_paths',$vendor_path_list);
+    $this->setField('assets_paths',$assets_path_list);
   
   }//method
 

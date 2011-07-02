@@ -16,6 +16,8 @@ class RedirectException extends Exception {
 
   protected $url = '';
   
+  protected $wait = 0;
+  
   /**
    *  the different redirect codes
    *     
@@ -30,7 +32,14 @@ class RedirectException extends Exception {
     307 => 'Temporary Redirect'
   );
   
-  public function __construct($url,$code = 302){
+  /**
+   *  create instance
+   *  
+   *  @param  string  $url  the url you want to redirect to
+   *  @param  integer $wait how many seconds you want to wait before redirecting
+   *  @param  integer $code the redirect code
+   */
+  public function __construct($url,$wait = 0,$code = 302){
   
     $this->url = $url;
     
@@ -39,5 +48,7 @@ class RedirectException extends Exception {
   }//method
   
   public function getUrl(){ return $this->url; }//method
+  
+  public function getWait(){ return $this->wait; }//method
   
 }//class

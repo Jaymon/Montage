@@ -58,15 +58,20 @@ class StandardAutoLoader extends Autoloader {
    */
   public function handle($class_name){
 
+    \out::b($class_name,3);
+
     $ret_bool = false;
     $class_name = ltrim($class_name, '\\'); // get rid of absolute
     $namespace = array();
     
     $class_bits = explode('\\',$class_name);
+    
+    // if a second item was set then there is a namespace...
     if(isset($class_bits[1])){
       
-      $class_name = $class_bits[1];
-      $namespace = array_slice($class_bits,0,-1);
+      end($class_bits);
+      $class_name = $class_bits[key($class_bits)]; // last bit is the class name
+      $namespace = array_slice($class_bits,0,-1); // everything else is namespace
       
     }//if
     
@@ -79,14 +84,20 @@ class StandardAutoLoader extends Autoloader {
     foreach($this->getAllPaths() as $path){
     
       $file = new Path($path,$file_name);
+      
+      \out::e($file,$file->isFile());
+      
       if($file->isFile()){
+        
         require($file);
         $ret_bool = true;
         break;
+        
       }//if
     
     }//foreach
     
+    \out::e($ret_bool);
     return $ret_bool;
   
   }//method

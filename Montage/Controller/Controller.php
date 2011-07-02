@@ -12,15 +12,24 @@ namespace Montage\Controller;
 
 use Montage\Field\Field;
 use Montage\Controller\Controllable;
+
 use Montage\Request\Request;
+use Montage\Response\Response;
+use Montage\Url;
 
 abstract class Controller extends Field implements Controllable {
 
   protected $request = null;
+  
+  protected $response = null;
+  
+  protected $url = null;
 
-  public function __construct(Request $request){
+  public function __construct(Request $request,Response $response,Url $url){
   
     $this->request = $request;
+    $this->response = $response;
+    $this->url = $url;
   
   }//method
 

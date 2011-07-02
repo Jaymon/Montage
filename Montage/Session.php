@@ -9,7 +9,7 @@
  ******************************************************************************/
 namespace Montage;
 
-use Montage\Fieldable;
+use Montage\Field\Fieldable;
 use Symfony\Component\HttpFoundation\Session as SymfonySession;
 use Symfony\Component\HttpFoundation\SessionStorage\SessionStorageInterface;
 
@@ -22,6 +22,7 @@ class Session extends SymfonySession implements Fieldable {
     // only start the session if headers haven't been sent...
     $file = $line = '';
     if(!headers_sent($file,$line)){
+    
       $this->start();
       
     }//if
@@ -35,7 +36,7 @@ class Session extends SymfonySession implements Fieldable {
    *  @param  mixed $val
    *  @return object  the class instance for fluid interface
    */
-  public function setField($key,$val){
+  public function setField($key,$val = null){
     $this->set($key,$val);
     return $this;
   }//method
@@ -136,7 +137,7 @@ class Session extends SymfonySession implements Fieldable {
    *  @param  integer $count  the value to increment $key
    *  @return integer the incremented value now stored at $key
    */
-  public function bumpField($key,$count){
+  public function bumpField($key,$count = 1){
     
     $val = $this->getField($key,0);
     $val += $count;
@@ -144,6 +145,14 @@ class Session extends SymfonySession implements Fieldable {
     return $val;
     
   }//method
+  
+  /**
+   *  return true if there are fields
+   *  
+   *  @since  6-30-11   
+   *  @return boolean
+   */
+  public function hasFields(){ return true; }//method
   
   /**
    *  get a field from any part of the session
