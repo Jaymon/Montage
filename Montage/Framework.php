@@ -281,12 +281,15 @@ class Framework extends Field implements Dependable {
     // create any other autoloader classes...
     $select = $container->findInstance('\Montage\Autoload\Select');
     $class_list = $select->find();
+    
     foreach($class_list as $i => $class_name){
     
       $instance_list[$i] = $container->getInstance($class_name);
       $instance_list[$i]->register();
       
     }//foreach
+    
+    ///out::e(spl_autoload_functions());
      
   }//method
 

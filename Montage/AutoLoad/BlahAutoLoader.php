@@ -14,14 +14,27 @@
  ******************************************************************************/
 namespace Montage\AutoLoad;
 
-use Montage\Autoload\AutoLoader;
 use Montage\Path;
 
-class StandardAutoLoader extends Autoloader {
+class BlahAutoLoader {
 
   protected $path_list = array();
   
   protected $all_path_list = array();
+
+  /**
+   *  register this class as an autoloader
+   */
+  public function register(){
+    spl_autoload_register(array($this,'handle'));
+  }//method
+  
+  /**
+   *  unregister this class as an autoloader
+   */
+  public function unregister(){
+    spl_autoload_unregister(array($this,'handle'));
+  }//method
 
   public function addPaths(array $path_list){
   

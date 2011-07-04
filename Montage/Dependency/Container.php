@@ -237,7 +237,7 @@ class Container extends Field {
           sprintf(
             'there were multiple classes [%s], that inherited from [%s], use setPreferred() to set the '
             .'preferred class that should be used',
-            join(',',$child_class_name),
+            join(',',$child_class_list),
             join(',',$class_name)
           )
         );
@@ -319,7 +319,12 @@ class Container extends Field {
     
     $params = (array)$params;
 
-    $rclass = new ReflectionClass($class_name);
+    // get around absolute namespace reflection bug
+    // absolute namespaced classes like \foo\bar cause all the autoloaders to fire where
+    // foo\bar doesn't. This is a bug in php...
+    $rclass_name = $class_name;
+    if($rclass_name[0] === '\\'){ $rclass_name = mb_substr($rclass_name,1); }//if
+    $rclass = new ReflectionClass($rclass_name);
     
     // canary, make sure there is a __construct() method since we are passing in arguments...
     $rconstructor = $rclass->getConstructor();

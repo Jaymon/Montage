@@ -19,6 +19,7 @@ abstract class AutoLoader implements AutoLoadable {
    *  register this class as an autoloader
    */
   public function register(){
+    \out::b(sprintf('%s registered',get_class($this)));
     spl_autoload_register(array($this,'handle'));
   }//method
   
