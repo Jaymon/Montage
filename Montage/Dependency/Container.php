@@ -13,7 +13,7 @@
  ******************************************************************************/
 namespace Montage\Dependency;
 
-use ReflectionObject, ReflectionClass, ReflectionMethod;
+use ReflectionObject, ReflectionClass, ReflectionMethod, ReflectionParameter;
 use Montage\Field\Field;
 use out;
 
@@ -115,9 +115,8 @@ class Container extends Field {
   public function setPreferred($class_name,$preferred_class_name){
   
     $class_key = $this->getKey($class_name);
-    $preferred_class_key = $this->getKey($preferred_class_name);
-  
-    $this->preferred_map[$class_key] = $preferred_class_key;
+    ///$preferred_class_key = $this->getKey($preferred_class_name);
+    $this->preferred_map[$class_key] = $preferred_class_name;
   
   }//method
   
@@ -203,6 +202,12 @@ class Container extends Field {
         if(isset($this->preferred_map[$cn_key])){
       
           $cn_key = $this->preferred_map[$cn_key];
+          if(class_exists($cn_key)){
+          
+            $instance_class_name = $cn_key;
+            break;
+          
+          }//if
         
         }//if
     
@@ -390,6 +395,108 @@ class Container extends Field {
   }//method
   
   /**
+   *  normalize one param of a method
+   *  
+   *  @since  7-5-11
+   *  @param  ReflectionParameter $rparam
+   *  @param  array $params see {@link normalizeParams()} for description of the $params array
+   *  @return mixed the normalized param
+   */
+  public function normalizeParam(ReflectionParameter $rparam,array $params = array()){
+  
+    $ret_param = null;
+    $index = $rparam->getPosition();
+  
+    // first try and resolve numeric keys, then do string keys...
+    if(array_key_exists($index,$params)){
+    
+      $ret_param = $params[$index];
+    
+    }else{
+
+      $field_name = $rparam->getName();
+    
+      if(array_key_exists($field_name,$params)){
+        
+        $ret_param = $params[$field_name];
+      
+      }else{
+      
+        $rclass = $rparam->getClass();
+          
+        if($rclass === null){
+        
+          if($this->existsField($field_name)){
+          
+            $ret_param = $this->getField($field_name);
+            
+          }else if($rparam->isDefaultValueAvailable()){
+          
+            $ret_param = $rparam->getDefaultValue();
+          
+          }else{
+          
+            throw new \UnexpectedValueException(
+              sprintf(
+                'no suitable value could be found for %s::%s() param "%s"',
+                $rparam->getDeclaringClass()->getName(),
+                $rparam->getName(),
+                $field_name
+              )
+            );
+          
+          }//if/else if/else
+        
+        }else{
+        
+          $class_name = $rclass->getName();
+          
+          try{
+          
+            $ret_param = $this->findInstance($class_name);
+            
+          }catch(\Exception $e){
+          
+            if($rparam->isDefaultValueAvailable()){
+            
+              $ret_param = $rparam->getDefaultValue();
+            
+            }else{
+            
+              $ret_param = $this->getInstance($class_name);
+            
+              /* $reflection = $this->getReflection();
+              $found_instance = false;
+            
+              foreach($this->instance_map as $class_key => $instance){
+              
+                if($this->isRelatedClass($class_name,$class_key)){
+              
+                  $ret_params[] = $instance;
+                  $found_instance = true;
+                  break;
+                  
+                }//if
+              
+              }//foreach */
+            
+              ///throw $e;
+              
+            }//if/else
+          
+          }//try/catch
+        
+        }//if/else
+      
+      }//if/else
+      
+    }//if/else
+  
+    return $ret_param;
+  
+  }//method
+  
+  /**
    *  normalize the params of the $rmethod to allow a valid call
    *
    *  @example
@@ -415,92 +522,9 @@ class Container extends Field {
     $ret_params = array();
     
     $rparams = $rmethod->getParameters();
-    foreach($rparams as $index => $rparam){
+    foreach($rparams as $rparam){
 
-      // first try and resolve numeric keys, then do string keys...
-      if(array_key_exists($index,$params)){
-      
-        $ret_params[] = $params[$index];
-      
-      }else{
-  
-        $field_name = $rparam->getName();
-      
-        if(array_key_exists($field_name,$params)){
-          
-          $ret_params[] = $params[$field_name];
-        
-        }else{
-        
-          $rclass = $rparam->getClass();
-            
-          if($rclass === null){
-          
-            if($this->existsField($field_name)){
-            
-              $ret_params[] = $this->getField($field_name);
-              
-            }else if($rparam->isDefaultValueAvailable()){
-            
-              $ret_params[] = $rparam->getDefaultValue();
-            
-            }else{
-            
-              throw new \UnexpectedValueException(
-                sprintf(
-                  'no suitable value could be found for %s::%s() param "%s"',
-                  $rmethod->getDeclaringClass()->getName(),
-                  $rmethod->getName(),
-                  $field_name
-                )
-              );
-            
-            }//if/else if/else
-          
-          }else{
-          
-            $class_name = $rclass->getName();
-            
-            try{
-            
-              $ret_params[] = $this->findInstance($class_name);
-              
-            }catch(\Exception $e){
-            
-              if($rparam->isDefaultValueAvailable()){
-              
-                $ret_params[] = $rparam->getDefaultValue();
-              
-              }else{
-              
-                $ret_params[] = $this->getInstance($class_name);
-              
-                /* $reflection = $this->getReflection();
-                $found_instance = false;
-              
-                foreach($this->instance_map as $class_key => $instance){
-                
-                  if($this->isRelatedClass($class_name,$class_key)){
-                
-                    $ret_params[] = $instance;
-                    $found_instance = true;
-                    break;
-                    
-                  }//if
-                
-                }//foreach */
-              
-                ///throw $e;
-                
-              }//if/else
-            
-            }//try/catch
-          
-          }//if/else
-        
-        }//if/else
-        
-      }//if/else
+      $ret_params[] = $this->normalizeParam($rparam,$params);
       
     }//foreach
     

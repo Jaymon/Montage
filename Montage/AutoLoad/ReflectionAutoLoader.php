@@ -43,7 +43,6 @@ class ReflectionAutoLoader extends Autoloader {
     
     }//if
 
-    \out::e(''.sprintf('%s - %s - %s - class_exists(%s)',$class_name,get_class($this),$ret_bool ? 'TRUE' : 'FALSE',class_exists($class_name) ? 'TRUE' : 'FALSE'));
     return $ret_bool;
   
   }//method

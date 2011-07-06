@@ -57,9 +57,7 @@ class StandardAutoLoader extends Autoloader {
    *  @param  string  $class_name
    */
   public function handle($class_name){
-
-    $oc = $class_name;
-
+  
     $ret_bool = false;
     $class_name = ltrim($class_name, '\\'); // get rid of absolute
     $namespace = array();
@@ -95,7 +93,6 @@ class StandardAutoLoader extends Autoloader {
     
     }//foreach
     
-    \out::e(''.sprintf('%s - %s - %s - class_exists(%s)',$oc,get_class($this),$ret_bool ? 'TRUE' : 'FALSE',class_exists($oc) ? 'TRUE' : 'FALSE'));
     return $ret_bool;
   
   }//method

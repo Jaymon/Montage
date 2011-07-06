@@ -83,8 +83,9 @@ class Reflection extends ObjectCache implements \Reflector {
     ///$class_name = preg_replace('#\\+#','\\',$class_name);
   
     // make the namespace fully qualified...
-    if($class_name[0] !== '\\'){ $class_name = sprintf('\\%s',$class_name); }//if
-  
+    ///if($class_name[0] !== '\\'){ $class_name = sprintf('\\%s',$class_name); }//if
+    
+    $class_name = $this->qualifyClassName($class_name);
     return mb_strtoupper($class_name);
     
   }//method
@@ -409,17 +410,29 @@ class Reflection extends ObjectCache implements \Reflector {
     $ret_bool = false;
   
     $parent_key = $this->normalizeClassName($parent_class_name);
+    $child_class_name = $this->qualifyClassName($child_class_name);
+    
+    // first check the parents...
     $parent_list = class_parents($child_class_name,true);
-    $implement_list = class_implements($child_class_name,true);
-    
-    foreach(array_merge($parent_list,$implement_list) as $class_name){
-    
+    foreach($parent_list as $class_name){
       if($parent_key === $this->normalizeClassName($class_name)){
         $ret_bool = true;
         break;
       }//if
-    
     }//foreach
+    
+    // only if parents fail check interfaces...
+    if(empty($ret_bool)){
+    
+      $implement_list = class_implements($child_class_name,true);
+      foreach($implement_list as $class_name){
+        if($parent_key === $this->normalizeClassName($class_name)){
+          $ret_bool = true;
+          break;
+        }//if
+      }//foreach
+    
+    }//if
   
     return $ret_bool;
   
@@ -513,7 +526,7 @@ class Reflection extends ObjectCache implements \Reflector {
   
     $class_map = array();
     $key = $this->normalizeClassName($class_name);
-    $class_map['class'] = $class_name;
+    $class_map['class'] = $this->qualifyClassName($class_name);
     ///$class_map['last_modified'] = filemtime($class_file); // use MD5 instead?
     $class_map['hash'] = md5_file($class_file);
     
@@ -577,6 +590,22 @@ class Reflection extends ObjectCache implements \Reflector {
     
     return $ret_bool;
     
+  }//method
+  
+  /**
+   *  get the class name that will be used in {@link setClass()}
+   *
+   *  @since  6-5-11
+   *  @param  string  $class_name
+   *  @return string  the class name         
+   */
+  protected function qualifyClassName($class_name){
+  
+    // do to a bug in php <5.3.6 we turn fully qualified class names to non-qualified ones...
+    if($class_name[0] === '\\'){ $class_name = mb_substr($class_name,1); }//if
+    
+    return $class_name;
+  
   }//method
 
 }//method

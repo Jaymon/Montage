@@ -18,16 +18,19 @@ abstract class AutoLoader implements AutoLoadable {
   /**
    *  register this class as an autoloader
    */
-  public function register(){
-    \out::b(sprintf('%s registered',get_class($this)));
-    spl_autoload_register(array($this,'handle'));
-  }//method
+  public function register(){ spl_autoload_register($this->getCallback()); }//method
   
   /**
    *  unregister this class as an autoloader
    */
-  public function unregister(){
-    spl_autoload_unregister(array($this,'handle'));
-  }//method
+  public function unregister(){ spl_autoload_unregister($this->getCallback()); }//method
+  
+  /**
+   *  get the callback that will be used to handle autoloading
+   *  
+   *  @since  7-5-11
+   *  @return callback
+   */
+  public function getCallback(){ return array($this,'handle'); }//method
 
 }//class     

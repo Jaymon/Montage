@@ -334,53 +334,56 @@ class Framework extends Field implements Dependable {
     
     // if the first param is an array, then it will take all the passed in $params...
     // quick/nice way to do a catch-all...
-    $rmethod_params = $rmethod->getParameters();
-    if(isset($rmethod_params[0])){
+    $rparams = $rmethod->getParameters();
+    if(isset($rparams[0])){
     
-      if($rmethod_params[0]->isArray()){
+      if($rparams[0]->isArray()){
         $params = array($params);
       }//if
     
     }//if
     
-    $rmethod_params = $container->normalizeParams($rmethod,$params);
-    
-    // make sure there are enough required params...
-    $required_param_count = $rmethod->getNumberOfParameters();
-    if($required_param_count !== count($rmethod_params)){
-      throw new NotFoundException(
-        sprintf(
-          '%s::%s expects %s arguments to be passed to it, but %s args were passed',
-          $class_name,
-          $method,
-          $required_param_count,
-          count($rmethod_params)
-        )
-      );
-    }//if
+    $rmethod_params = array();
     
     // check for Forms and populate them if there are matching passed in vars...
-    foreach($rmethod_params as $rmethod_param){
+    foreach($rparams as $index => $rparam){
     
-      if(is_object($rmethod_param)){
-      
-        $robject = new \ReflectionObject($rmethod_param);
-      
-        if($reflection->isChildClass($robject->getName(),'\Montage\Form\Form')){
+      try{
+    
+        $rmethod_params[$index] = $container->normalizeParam($rparam,$params);
         
+      }catch(\Exception $e){
+      
+        throw new NotFoundException(
+          sprintf(
+            '%s::%s param $%s was not found and a substitute value could not be inferred',
+            $class_name,
+            $method,
+            $rparam->getName()
+          )
+        );
+      
+      }//try/catch
+    
+      if(is_object($rmethod_params[$index])){
+      
+        if($rmethod_params[$index] instanceof Montage\Form\Form){
+      
+          $robject = new \ReflectionObject($rmethod_params[$index]);
           $form_name = $robject->getShortName();
           $request = $this->getRequest();
 
           if($form_field_map = $request->getField($form_name)){
           
-            $rmethod_param->set($form_field_map);
+            $rmethod_params[$index]->set($form_field_map);
           
           }//if
           
-          if(!$rmethod_param->hasUrl()){
+          // set the current url...
+          if(!$rmethod_params[$index]->hasUrl()){
           
             $url = $container->findInstance('Montage\Url');
-            $rmethod_param->setUrl($url->getCurrent());
+            $rmethod_params[$index]->setUrl($url->getCurrent());
           
           }//if
         

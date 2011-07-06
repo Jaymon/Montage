@@ -152,7 +152,7 @@ class Select {
    *  returns a full class name if it is a child of {@link $class_interface}
    *  
    *  @since  6-20-11
-   *  @param  string  $class_name a partial blass name that will be turned into a full class name   
+   *  @param  string  $class_name a partial class name that will be turned into a full class name   
    *  @return string
    */
   public function getClassName($class_name){
