@@ -14,7 +14,6 @@ use Montage\Path;
 
 class Cache {
 
-  const PREFIX = 'montage_';
 
   /**
    *  hold the path where stuff will be cached
@@ -24,6 +23,11 @@ class Cache {
    */
   protected $path = null;
   
+  /**
+   *  the prefix that will be used for any cache created by this class
+   *
+   *  @var  string   
+   */
   protected $prefix = 'montage_';
   
   protected $namespace = array();
@@ -33,6 +37,13 @@ class Cache {
     return $this;
   }//method
 
+  /**
+   *  namespace is used to globally set a folder structure that everything cached
+   *  will automatically go into   
+   *
+   *  @param  string|array  $namespace  one or more folders (eg setNamespace('foo') or setNamespace(array('foo','bar'))   
+   *  @return this
+   */
   public function setNamespace($namespace){
     $this->namespace = (array)$namespace;
     return $this;
@@ -47,12 +58,9 @@ class Cache {
   public function setPath($path){
   
     // canary...
-    if(!($path instanceof Path)){
-      $path = new Path($path);
-    }//if
+    if(!($path instanceof Path)){ $path = new Path($path); }//if
   
     $path->assure();
-    $this->namespace_map[(string)$path] = true;
     $this->path = $path;
     return $this;
   
@@ -106,67 +114,6 @@ class Cache {
   }//method
   
   /**
-   *  generate a key for the cache
-   *  
-   *  @param  string  $val
-   *  @return string
-   */
-  protected function getKey($val){
-    
-    // canary...
-    if(empty($val)){
-      throw new UnexpectedValueException('cannot generate a key for an empty $val');
-    }//if
-    
-    return sprintf('%s%s',self::PREFIX,md5($val));
-    
-  }//method
-
-  /**
-   *  get the full file cache path
-   *  
-   *  @param  string|array  $key  if string, then just the filename, if array, then it will be
-   *                              the path and the last element will be the filename
-   *                              (eg, array('foo','bar') becomes: self::getPath()/foo/self::getKey(bar))      
-   *  @return string  the full path
-   */
-  protected function getPath($key){
-    // canary...
-    if(empty($this->path)){
-      throw new \RuntimeException(sprintf('cache path is not set, call %s::setPath()',__CLASS__));
-    }//if
-    
-    $base_path = $this->path;
-    
-    if(is_array($key)){
-      
-      // everything except the last element is the namespace, merge it with the global namespace...
-      $namespace = array_slice($key,0,-1);
-      if(!empty($namespace)){
-      
-        $namespace = array_merge($this->namespace,$namespace);
-        
-      }//if
-      
-      // if the merged namespace exists, then append it onto the path...
-      if(!empty($namespace)){
-      
-        $base_path = new Path($this->path,$namespace);
-        $base_path->assure();
-        
-      }//if
-      
-      $key = end($key);
-      
-    }//if
-    
-    $key = $this->getKey($key);
-    
-    return new Path($base_path,$key);
-    
-  }//method
-  
-  /**
    *  delete the given key from the cache
    *  
    *  @since  9-04-08
@@ -178,6 +125,77 @@ class Cache {
     $path = $this->getPath($key);
     return $path->kill();
   
+  }//method
+  
+  /**
+   *  clear all the cache
+   *  
+   *  @since  7-6-11
+   *  @return integer cleared cache count
+   */
+  public function clear(){
+  
+    $path = $this->getPath('',false);
+    return $path->kill();
+  
+  }//method
+  
+  /**
+   *  generate a key for the cache
+   *  
+   *  @param  string  $val
+   *  @return string
+   */
+  protected function getKey($val){
+    
+    // canary...
+    if(empty($val)){
+      throw new \UnexpectedValueException('cannot generate a key for an empty $val');
+    }//if
+    
+    return $this->prefix.md5($val);
+    
+  }//method
+
+  /**
+   *  get the full file cache path
+   *  
+   *  @param  string|array  $key  if string, then just the filename, if array, then it will be
+   *                              the path and the last element will be the filename
+   *                              (eg, array('foo','bar') becomes: self::getPath()/foo/self::getKey(bar))      
+   *  @return string  the full path
+   */
+  protected function getPath($key = '',$assure_key = true){
+    // canary...
+    if(empty($this->path)){
+      throw new \RuntimeException(sprintf('cache path is not set, call %s::setPath()',__CLASS__));
+    }//if
+    if($assure_key && empty($key)){
+      throw new \UnexpectedValueException('$key was empty');
+    }//if
+    
+    $namespace = array();
+    
+    if(is_array($key)){
+      
+      // everything except the last element is the namespace, merge it with the global namespace...
+      $namespace = array_slice($key,0,-1);
+      $key = end($key);
+      
+    }//if
+    
+    $path = new Path($this->path,$this->namespace,$namespace);
+    $path->assure();
+    
+    if(!empty($key)){
+      
+      $key = $this->getKey($key);
+      $path = new Path($path,$key);
+      
+    }//if
+    
+    return $path;
+    
   }//method
 
 }//class     

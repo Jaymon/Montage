@@ -19,13 +19,6 @@ use Countable,IteratorAggregate;
 use SplFileInfo;
  
 class Path extends SplFileInfo implements Countable,IteratorAggregate {
-
-  /**
-   *  this will hold the actual path this object represents 
-   *
-   *  @var  string   
-   */        
-  protected $path = '';
   
   protected $children_map = array();
 
@@ -40,9 +33,9 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
   
     $path = func_get_args();
     $path = $this->build($path);
-    $this->path = $this->format($path);
+    $path = $this->format($path);
     
-    parent::__construct($this->path);
+    parent::__construct($path);
   
   }//method
 
@@ -57,7 +50,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     // canary...
     if($this->exists()){ return true; }//if
   
-    $path = $this->path;
+    $path = $this->getPathname();
   
     // make sure path isn't empty...
     if(empty($path)){
@@ -90,7 +83,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
    *  
    *  @return boolean
    */
-  public function exists(){ return file_exists($this->path); }//method
+  public function exists(){ return file_exists($this->getPathname()); }//method
   
   /**
    *  count all the descendants of the path
@@ -267,7 +260,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
    *  
    *  @since  6-22-11
    *  @param  array $path_list  an array of paths to compare against the internal path
-   *  @param  callback  $callback a callback that takes ($this->path,$path)
+   *  @param  callback  $callback a callback that takes ($this->getPathname(),$path)
    *  @param  mixed $break_on the return value of $callback will be compared with this to
    *                          decide if comparing is done                  
    *  @return mixed whatever $callback returns
@@ -288,7 +281,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
         }else{
         
           if(!($path instanceof $self)){ $path = new $self($path); }//if
-          $ret_mixed = $callback($this->path,$path);
+          $ret_mixed = $callback($this->getPathname(),$path);
         
         }//if/else
       
@@ -410,7 +403,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
   public function kill(){
   
     $ret_count = $this->clear();
-    if(rmdir($this->path)){ $ret_count++; }//if
+    if(rmdir($this->getPathname())){ $ret_count++; }//if
     
     return $ret_count;
   
@@ -488,7 +481,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     
       $iterator = new RecursiveIteratorIterator(
         new RecursiveDirectoryIterator(
-          $this->path,
+          $this->getPathname(),
           FilesystemIterator::CURRENT_AS_FILEINFO | FilesystemIterator::KEY_AS_PATHNAME | FilesystemIterator::SKIP_DOTS
         ),
         RecursiveIteratorIterator::SELF_FIRST
@@ -499,7 +492,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     }else{
     
       $iterator = new FilesystemIterator(
-        $this->path,
+        $this->getPathname(),
         FilesystemIterator::CURRENT_AS_FILEINFO | FilesystemIterator::KEY_AS_PATHNAME | FilesystemIterator::SKIP_DOTS
       );
       
@@ -540,17 +533,25 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
         
       }else{
         
-        $path_bit = preg_split('#[\\\\/]#',$path_bit); // split on dir separators
-        $path_bit = array_map('trim',$path_bit); // trim all the individual bits
-        $path_bit = array_filter($path_bit); // get rid of any empty values
-        if(!empty($path_bit)){
-          $ret_list = array_merge($ret_list,$path_bit); // merge the bits into the final list
-        }//if
+        if($path_bit instanceof self){
         
-        ///$path_bit = trim((string)$path_bit,'\\/');
-        ///if(!empty($path_bit) && !ctype_space($path_bit)){
-        ///  $ret_list[] = $path_bit;
-        ///}//if
+          $ret_list[] = $path_bit->__toString();
+        
+        }else{
+          
+          $path_bit = preg_split('#[\\\\/]#',$path_bit); // split on dir separators
+          $path_bit = array_map('trim',$path_bit); // trim all the individual bits
+          $path_bit = array_filter($path_bit); // get rid of any empty values
+          if(!empty($path_bit)){
+            $ret_list = array_merge($ret_list,$path_bit); // merge the bits into the final list
+          }//if
+          
+          ///$path_bit = trim((string)$path_bit,'\\/');
+          ///if(!empty($path_bit) && !ctype_space($path_bit)){
+          ///  $ret_list[] = $path_bit;
+          ///}//if
+          
+        }//if/else
         
       }//if/else
       
@@ -578,7 +579,21 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
       $path = $realpath;
     }//if
   
-    // make sure path doesn't end with a slash...
+    $path = $this->trimSlash($path);
+    
+    return $path;
+  
+  }//method
+  
+  /**
+   *  make sure path doesn't end with a slash...
+   *  
+   *  @since  7-6-11
+   *  @param  string  $path
+   *  @return string
+   */
+  protected function trimSlash($path){
+  
     if(mb_substr($path,-1) == DIRECTORY_SEPARATOR){
       $path = mb_substr($path,0,-1);
     }//if

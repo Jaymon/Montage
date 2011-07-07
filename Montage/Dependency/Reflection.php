@@ -59,6 +59,15 @@ class Reflection extends ObjectCache implements \Reflector {
    */
   protected $parent_class_map = array();
   
+  /**
+   *  holds the cache for all the known absolute children of classes
+   * 
+   *  @see  findClassNames()
+   *  @since  7-6-11
+   *  @var  array
+   */
+  protected $children_class_map = array();
+  
   protected $path_map = array('files' => array(),'folders' => array());
   
   protected $reloaded = false;
@@ -104,9 +113,9 @@ class Reflection extends ObjectCache implements \Reflector {
     $ret_list = array();
   
     // canary, return cached if available...
-    if(isset($this->class_map[$key][__function__])){
+    if(isset($this->children_class_map[$key])){
       
-      $ret_list = $this->class_map[$key][__function__];
+      $ret_list = $this->children_class_map[$key];
     
     }else{
     
@@ -133,7 +142,7 @@ class Reflection extends ObjectCache implements \Reflector {
       
       // cache result, this slows down the first request but converts other requests
       // from around ~7ms to .1ms
-      $this->class_map[$key][__function__] = $ret_list;
+      $this->children_class_map[$key] = $ret_list;
       $this->exportCache();
       
     }//if/else
@@ -483,6 +492,13 @@ class Reflection extends ObjectCache implements \Reflector {
    */
   protected function isChangedClass($class_key){
   
+    // canary...
+    if(!file_exists($this->class_map[$class_key]['path'])){
+      throw new \UnexpectedValueException(
+        sprintf('%s does not exist anymore',$this->class_map[$class_key]['path'])
+      );
+    }//if
+  
     $old = $this->class_map[$class_key]['hash'];
     $new = md5_file($this->class_map[$class_key]['path']);
 
@@ -547,6 +563,9 @@ class Reflection extends ObjectCache implements \Reflector {
     
     }//if
     
+    // this gets cleared anytime something is added, because it is easier that way
+    $this->children_class_map = array();
+    
     return true;
   
   }//method
@@ -557,7 +576,7 @@ class Reflection extends ObjectCache implements \Reflector {
    *  @return array an array of the param names that should be cached    
    */
   public function cacheParams(){
-    return array('class_map','parent_class_map','path_map');
+    return array('class_map','parent_class_map','path_map','children_class_map');
   }//method
   
   /**

@@ -5,8 +5,13 @@
  *  other names: handler, sequence, assembler, dispatcher, scheduler
  *  http://en.wikipedia.org/wiki/Montage_%28filmmaking%29  
  *  
- *  the best name might be Server or Framework (I like Framework, it will most likely
- *  be changed to Framework at some point)
+ *  
+ *  This class creates a lot of new instances
+ *  we shouldn't have "new" inside the class, but sometimes you just have to break the rules 
+ *  to make things easier, I didn't want to have to create a Cache and Reflection 
+ *  instance to pass in here to resolve all the dependencies...
+ *  see: http://misko.hevery.com/2008/07/08/how-to-think-about-the-new-operator/ for how
+ *  I'm wrong about this, but convenience trumps rightness in this instance for me  
  *   
  *  @version 0.6
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -57,28 +62,15 @@ use Montage\Response\Response;
 use Montage\Response\Template;
 
 class Framework extends Field implements Dependable {
-  
+
+
   /**
-   *  @var  Montage\Request\Requestable
-   */
-  protected $request = null;
-  
-  /**
-   *  @var  Montage\Controller\Select
-   */
-  protected $controller_select = null;
-  
-  /**
-   *  #var  Montage\Config\FrameworkConfig
-   */
-  protected $framework_config = null;
-  
-  /**
-   *  holds the dependancy injection container instance
+   *  holds any important internal instances this class is going to use
    *
-   *  @var  \Montage\Dependancy\Container   
+   *  @since  7-6-11  changed from individual protected instance vars to this array
+   *  @var  array
    */
-  protected $container = null;
+  protected $instance_map = array();
 
   /**
    *  create this object
@@ -100,42 +92,10 @@ class Framework extends Field implements Dependable {
     // collect all the paths we're going to use...
     $this->compilePaths($app_path);
     
-    // we shouldn't have "new" here, but sometimes you just have to break the rules
-    // to make things easier, I didn't want to have to create a Cache and Reflection
-    // instance to pass in here to resolve all the dependencies...
-    // see: http://misko.hevery.com/2008/07/08/how-to-think-about-the-new-operator/ for how
-    // I'm wrong about this, but convenience trumps rightness in this instance
-
-    // create the caching object that Reflection will use...
-    $cache = new Cache();
-    $cache->setPath($this->getField('cache_path'));
-    $cache->setNamespace($env);
-  
-    // create reflection, load the cache...
-    $reflection = new Reflection();
-    $reflection->setCache($cache);
-    $reflection->importCache();
-    $reflection->addPaths($this->getField('reflection_paths'));
-    
-    // create the reflection autoloader...
-    $autoloader_class_name = $reflection->findClassName('Montage\AutoLoad\ReflectionAutoloader');
-    $autoloader = new $autoloader_class_name($reflection);
-    $autoloader->register();
-
-    $container_class_name = $reflection->findClassName('Montage\Dependency\Container');
-    $container = new $container_class_name($reflection);
-    // just in case, container should know about this instance for circular-dependency goodness...
-    $container->setInstance($this);
-    $container->setInstance($cache);
-    
-    $this->setContainer($container);
-    
-    // set all the default configuration stuff...
-    $this->framework_config = $container->findInstance('\Montage\Config\FrameworkConfig');
-    $this->framework_config->setField('env',$env);
-    $this->framework_config->setField('debug_level',$debug_level);
-    $this->framework_config->setField('app_path',$app_path);
-    $this->framework_config->setField('framework_path',$this->getField('framework_path'));
+    $this->setField('env',$env);
+    $this->setField('debug_level',$debug_level);
+    $this->setField('app_path',$app_path);
+    $this->setField('framework_path');
     
   }//method
   
@@ -147,6 +107,7 @@ class Framework extends Field implements Dependable {
   public function handle(){
   
     $container = $this->getContainer();
+    $controller_response = null;
   
     try{
 
@@ -166,13 +127,24 @@ class Framework extends Field implements Dependable {
 
       $controller_response = $this->handleController($controller_class,$controller_method,$controller_method_params);
     
-      $this->handleResponse($controller_response);
-    
     }catch(\Exception $e){
     
-      $ret_mixed = $this->handleException($e);
+      $controller_response = $this->handleException($e);
     
     }//try/catch
+    
+    while(true){
+    
+      try{
+    
+        $this->handleResponse($controller_response);
+        break;
+        
+      }catch(\Exception $e){
+    
+        $controller_response = $this->handleException($e);
+      
+      }//try/catch
   
   }//method
 
@@ -301,12 +273,14 @@ class Framework extends Field implements Dependable {
   protected function handleStart(){
   
     $instance_list = array();
-    $env = $this->framework_config->getEnv();
+    $env = $this->getConfig()->getEnv();
     $container = $this->getContainer();
     $select = $container->findInstance('\Montage\Start\Select');
     
     $start_class_list = $select->find($env);
     $method_name = $select->getMethod();
+
+    \out::e($start_class_list);
 
     foreach($start_class_list as $i => $class_name){
     
@@ -455,6 +429,22 @@ class Framework extends Field implements Dependable {
         
         // don't do anything, we're done
         
+      }else if($e instanceof \FrameworkBoomException){
+        
+        out::e($e);
+        // this should restart the framework...
+        
+        // clear all the app cache...
+        $cache = $this->getCache();
+        $cache->clear();
+        
+        // start all the objects over again...
+        $this->instance_map = array();
+        
+        // re-handle the request...
+        $this->handle();
+        throw new StopException('request was re-handled successfully from FrameworkException');
+        
       }else{
         
         list($controller_class,$controller_method,$controller_method_params) = $this->getControllerSelect()->findException($e);
@@ -506,20 +496,92 @@ class Framework extends Field implements Dependable {
   
   }//method
 
+  /**
+   *  set the dependency injection container
+   *  
+   *  this is required for the Dependable interface and is best left alone for this
+   *  particular class since this class will try to flush the cache and container and
+   *  re do the request if it fails            
+   *
+   *  @param  Montage\Dependency\Container  $container
+   */
   public function setContainer(\Montage\Dependency\Container $container){
-    $this->container = $container;
+    $this->instance_map['container'] = $container;
   }//method
   
-  public function getContainer(){ return $this->container; }//method
+  /**
+   *  return the dependancy injection container 
+   *
+   *  @return Montage\Dependency\Container   
+   */
+  public function getContainer(){
+  
+    // canary...
+    if(isset($this->instance_map['container'])){ return $this->instance_map['container']; }//if
+  
+    $reflection = $this->getReflection();
+    $container_class_name = $reflection->findClassName('Montage\Dependency\Container');
+    $container = new $container_class_name($reflection);
+    
+    // just in case, container should know about this instance for circular-dependency goodness...
+    $container->setInstance($this);
+    $container->setInstance($this->getCache());
+    
+    // normally this would go in the start class, but the start class takes a FrameworkConfig
+    // instance, so this needs to be set as soon as we have a container, which is why it is
+    // here, this is configuration that can't go anywhere else...    
+    $container->onCreated(
+      '\Montage\Config\FrameworkConfig',
+      function($container,$instance){
 
+        $framework = $container->findInstance('Montage\Framework');
+        $instance->setField('env',$framework->getField('env'));
+        $instance->setField('debug_level',$framework->getField('debug_level'));
+        $instance->setField('app_path',$framework->getField('app_path'));
+        $instance->setField('framework_path',$framework->getField('framework_path'));
+        
+      }
+    );
+    
+    $this->setContainer($container);
+  
+    return $container;
+    
+  }//method
+  
+  /**
+   *  return the framework configuration instance
+   *  
+   *  @since  7-6-11
+   *  @return \Montage\Config\FrameworkConfig
+   */
+  protected function getConfig(){
+  
+    // canary...
+    if(isset($this->instance_map['config'])){ return $this->instance_map['config']; }//if
+  
+    $container = $this->getContainer();
+    
+    $this->instance_map['config'] = $container->findInstance('\Montage\Config\FrameworkConfig');
+    
+    return $this->instance_map['config'];
+  
+  }//method
+
+  /**
+   *  create the controller selector
+   *  
+   *  @return Montage\Controller\Select
+   */
   protected function getControllerSelect(){
   
     // canary...
-    if(!empty($this->controller_select)){ return $this->controller_select; }//if
+    if(isset($this->instance_map['controller_select'])){ return $this->instance_map['controller_select']; }//if
     
     $container = $this->getContainer();
-    $this->controller_select = $container->findInstance('Montage\Controller\Select');
-    return $this->controller_select;
+    $this->instance_map['controller_select'] = $container->findInstance('Montage\Controller\Select');
+    
+    return $this->instance_map['controller_select'];
   
   }//method
   
@@ -532,12 +594,12 @@ class Framework extends Field implements Dependable {
   protected function getRequest(){
   
     // canary...
-    if(!empty($this->request)){ return $this->request; }//if
+    if(isset($this->instance_map['request'])){ return $this->instance_map['request']; }//if
   
     $container = $this->getContainer();
-    $this->request = $container->findInstance('Montage\Request\Requestable');
+    $this->instance_map['request'] = $container->findInstance('Montage\Request\Requestable');
     
-    return $this->request;
+    return $this->instance_map['request'];
   
   }//method
   
@@ -555,8 +617,59 @@ class Framework extends Field implements Dependable {
   }//method
   
   /**
+   *  create or return the caching object
+   *  
+   *  @since  7-6-11
+   *  @return Montage\Cache\Cacheable instance
+   */
+  protected function getCache(){
+  
+    // canary...
+    if(isset($this->instance_map['cache'])){ return $this->instance_map['cache']; }//if
+  
+    // create the caching object...
+    $cache = new Cache();
+    $cache->setPath($this->getField('cache_path'));
+    $cache->setNamespace($this->getField('env'));
+    $this->instance_map['cache'] = $cache;
+  
+    return $cache;
+  
+  }//method
+  
+  /**
+   *  create or return the reflection object
+   *  
+   *  @since  7-6-11
+   *  @return Montage\Cache\Cacheable instance
+   */
+  protected function getReflection(){
+  
+    // canary...
+    if(isset($this->instance_map['reflection'])){ return $this->instance_map['reflection']; }//if
+  
+    // create reflection, load the cache...
+    $reflection = new Reflection();
+    $reflection->setCache($this->getCache());
+    $reflection->importCache();
+    $reflection->addPaths($this->getField('reflection_paths'));
+    
+    // create the reflection autoloader...
+    $autoloader_class_name = $reflection->findClassName('Montage\AutoLoad\ReflectionAutoloader');
+    $autoloader = new $autoloader_class_name($reflection);
+    $autoloader->register();
+    
+    $this->instance_map['reflection'] = $reflection;
+  
+    return $reflection;
+  
+  }//method
+  
+  /**
+   *  compile all the important framework paths
    *
    *  @since  6-27-11
+   *  @param  string  $app_path the application path   
    */
   protected function compilePaths($app_path){
   
