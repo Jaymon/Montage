@@ -179,125 +179,67 @@ class Container extends Field {
   /**
    *  find the absolute descendant of the class(es) you pass in
    *
-   *  @param  string|array  $class_name the name(s) of the class(es) you are looking for
+   *  @param  string  $class_name the name of the class you are looking for
    *  @param  array $params any params you want to pass into the constructor of the instance      
    */
   public function findInstance($class_name,$params = array()){
 
     $ret_instance = null;
-    $class_name = (array)$class_name;
-    $find_class_key = '';
+    $class_name = $class_name;
+    $class_key = $this->getKey($class_name);
+    $cn_key = $class_key;
     $params = (array)$params;
     $reflection = $this->getReflection();
     $instance_class_name = '';
-    $has_multi = false;
     
-    foreach($class_name as $cn){
+    if(isset($this->instance_map[$cn_key])){ // check to see if there is already an instance
     
-      try{
+      $ret_instance = $this->instance_map[$cn_key];
     
-        $cn_key = $find_class_key = $this->getKey($cn);
-        
-        // check to see if there has been a preferred class set...
-        if(isset($this->preferred_map[$cn_key])){
-      
-          $cn_key = $this->preferred_map[$cn_key];
-          if(class_exists($cn_key)){
-          
-            $instance_class_name = $cn_key;
-            break;
-          
-          }//if
-        
-        }//if
-    
-        if($reflection->hasClass($cn_key)){
-    
-          $instance_class_name = $reflection->findClassName($cn_key);
-          break;
-          
-        }//if
-        
-      }catch(\LogicException $e){
-    
-        $has_multi = true;  
-      
-      }catch(\Exception $e){}//try/catch
-      
-    }//foreach
+    }else if(isset($this->preferred_map[$cn_key])){ // check to see if there has been a preferred class set
   
-    if(empty($instance_class_name)){
-    
-      if($has_multi){
-      
-        $child_class_list = array();
-      
-        foreach($class_name as $cn){
-        
-          $child_class_list = array_merge($child_class_list,$reflection->findClassNames($cn));
-        
-        }//foreach
-      
-        throw new \UnexpectedValueException(
-          sprintf(
-            'there were multiple classes [%s], that inherited from [%s], use setPreferred() to set the '
-            .'preferred class that should be used',
-            join(',',$child_class_list),
-            join(',',$class_name)
-          )
-        );
-      
-      }else{
-      
-        // since reflection failed check all the classes against php's loaded classes...
-        foreach($class_name as $cn){
-        
-          if(class_exists($cn)){
-            $instance_class_name = $cn;
-            $find_class_key = $this->getKey($cn);
-            break;
-          }//if
-            
-        }//foreach
-      
-        if(empty($instance_class_name)){
-        
-          throw new \UnexpectedValueException(
-            sprintf('Unable to find suitable class using [%s]',join(',',$class_name))
-          );
-          
-        }//if
-        
-      }//if/else
+      $cn_key = $this->preferred_map[$cn_key];
     
     }//if
+      
+    if(empty($ret_instance)){
     
-    if(!empty($instance_class_name)){
+      if($reflection->hasClass($cn_key)){
+
+        $instance_class_name = $reflection->findClassName($cn_key);
+        
+      }else if(class_exists($cn_key)){
+        
+        $instance_class_name = $cn_key;
+        
+      }//if/else if
+    
+      if(empty($instance_class_name)){
       
-      $class_key = $this->getKey($instance_class_name);
-  
-      if(isset($this->instance_map[$class_key])){
-      
-        $ret_instance = $this->instance_map[$class_key];
+        throw new \UnexpectedValueException(
+          sprintf('Unable to find suitable child class using "%s"',$class_name)
+        );
         
       }else{
       
         // handle on create...
-        if(isset($this->on_create_map[$find_class_key])){
-          $params = call_user_func($this->on_create_map[$find_class_key],$this,$params);
-        }//if
-    
-        $ret_instance = $this->createInstance($class_key,$params);
-        $this->setInstance($ret_instance);
-        
-        // handle on created...
-        if(isset($this->on_created_map[$find_class_key])){
-          call_user_func($this->on_created_map[$find_class_key],$this,$ret_instance);
+        if(isset($this->on_create_map[$class_key])){
+          $params = call_user_func($this->on_create_map[$class_key],$this,$params);
         }//if
       
+        $ret_instance = $this->getInstance($instance_class_name,$params);
+        
+        // handle on created...
+        if(isset($this->on_created_map[$class_key])){
+          call_user_func($this->on_created_map[$class_key],$this,$ret_instance);
+        }//if
+        
+        // also map to the passed in class key for quicker repeat lookups of the same child class...
+        $this->instance_map[$class_key] = $ret_instance;
+        
       }//if/else
-    
-    }//if/else
+      
+    }//if
       
     return $ret_instance;
     

@@ -187,11 +187,10 @@ class Reflection extends ObjectCache implements \Reflector {
       
         throw new \LogicException(
           sprintf(
-            'the given $class_name (%s) has %s children who extend "%s" but are' 
-            .' not related to each other) so a best class cannot be found.',
+            'the given $class_name (%s) is extended by %s children [%s] so a best class cannot be found',
             $class_name,
             $child_count,
-            $class_name
+            join(',',$this->findClassNames($class_name))
           )
         );
       

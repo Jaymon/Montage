@@ -126,25 +126,15 @@ class Framework extends Field implements Dependable {
       );
 
       $controller_response = $this->handleController($controller_class,$controller_method,$controller_method_params);
+      $ret_mixed = $this->handleResponse($controller_response);
     
     }catch(\Exception $e){
     
-      $controller_response = $this->handleException($e);
+      $ret_mixed = $this->handleException($e);
     
     }//try/catch
     
-    while(true){
-    
-      try{
-    
-        $this->handleResponse($controller_response);
-        break;
-        
-      }catch(\Exception $e){
-    
-        $controller_response = $this->handleException($e);
-      
-      }//try/catch
+    return $ret_mixed;
   
   }//method
 
@@ -280,8 +270,6 @@ class Framework extends Field implements Dependable {
     $start_class_list = $select->find($env);
     $method_name = $select->getMethod();
 
-    \out::e($start_class_list);
-
     foreach($start_class_list as $i => $class_name){
     
       $instance_list[$i] = $container->getInstance($class_name);
@@ -305,18 +293,7 @@ class Framework extends Field implements Dependable {
     
     $controller = $container->findInstance($class_name);
     $rmethod = new \ReflectionMethod($controller,$method);
-    
-    // if the first param is an array, then it will take all the passed in $params...
-    // quick/nice way to do a catch-all...
     $rparams = $rmethod->getParameters();
-    if(isset($rparams[0])){
-    
-      if($rparams[0]->isArray()){
-        $params = array($params);
-      }//if
-    
-    }//if
-    
     $rmethod_params = array();
     
     // check for Forms and populate them if there are matching passed in vars...
@@ -324,7 +301,24 @@ class Framework extends Field implements Dependable {
     
       try{
     
-        $rmethod_params[$index] = $container->normalizeParam($rparam,$params);
+        // if any param is an array, then it will take all the remainder passed in $params...
+        // quick/nice way to do a catch-all...
+        if($rparam->isArray()){
+        
+          $rmethod_params[$index] = array();
+        
+          if(count($params) < $index){
+        
+            $rmethod_params[$index] = array_slice($params,$index + 1);
+            $params = array();
+            
+          }//if
+        
+        }else{
+    
+          $rmethod_params[$index] = $container->normalizeParam($rparam,$params);
+          
+        }//if/else
         
       }catch(\Exception $e){
       
@@ -397,7 +391,8 @@ class Framework extends Field implements Dependable {
           $e->getPath()
         );
       
-        $ret_mixed = $this->handleController($controller_class,$controller_method,$controller_method_params);
+        $controller_response = $this->handleController($controller_class,$controller_method,$controller_method_params);
+        $ret_mixed = $this->handleResponse($controller_response);
       
       }else if($e instanceof RedirectException){
       
@@ -423,11 +418,12 @@ class Framework extends Field implements Dependable {
           
         }//if/else
       
-        $this->handleResponse(null);
+        $ret_mixed = $this->handleResponse(null);
       
       }else if($e instanceof StopException){
         
         // don't do anything, we're done
+        $ret_mixed = $this->handleResponse('');
         
       }else if($e instanceof \FrameworkBoomException){
         
@@ -438,18 +434,23 @@ class Framework extends Field implements Dependable {
         $cache = $this->getCache();
         $cache->clear();
         
+        // clear all the autoloaders...
+        foreach(spl_autoload_functions() as $callback){
+          spl_autoload_unregister($callback);
+        }//foreach
+        
         // start all the objects over again...
         $this->instance_map = array();
         
         // re-handle the request...
-        $this->handle();
-        throw new StopException('request was re-handled successfully from FrameworkException');
+        $ret_mixed = $this->handle();
         
       }else{
         
         list($controller_class,$controller_method,$controller_method_params) = $this->getControllerSelect()->findException($e);
         
-        $ret_mixed = $this->handleController($controller_class,$controller_method,$controller_method_params);
+        $controller_response = $this->handleController($controller_class,$controller_method,$controller_method_params);
+        $ret_mixed = $this->handleResponse($controller_response);
         
       }//try/catch
       

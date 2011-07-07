@@ -3,6 +3,7 @@
 namespace Montage\Controller;
 
 use Montage\Controller\Controller;
+use Montage\Exception\StopException;
 
 class ExceptionController extends Controller {
 
@@ -24,6 +25,8 @@ class ExceptionController extends Controller {
       echo nl2br($e); // html
     
     }//if/else
+    
+    throw new StopException();
   
   }//method
 
