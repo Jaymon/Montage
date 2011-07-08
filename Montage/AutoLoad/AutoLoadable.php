@@ -5,7 +5,8 @@
  *  if you just get blank pages when autoloading a class, maybe you used the @ symbol: 
  *    http://www.php.net/manual/en/function.error-reporting.php#28181
  *    http://www.php.net/manual/en/function.include-once.php#53239
- *    
+ *   
+ *  @link http://devzone.zend.com/article/4525 
  *  @link http://php.net/manual/en/language.oop5.autoload.php
  *  @link http://groups.google.com/group/php-standards/web/psr-0-final-proposal   
  *  

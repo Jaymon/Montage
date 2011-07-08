@@ -86,8 +86,8 @@ abstract class Test extends PHPUnit_Framework_TestCase {
         
       }catch(\Exception $e){
       
-        if(!($e instanceof $test_map['out'])){
-          $this->fail($e);
+        if(!is_string($test_map['out']) || !($e instanceof $test_map['out'])){
+          throw $e;
         }//if
       
       }//try/catch

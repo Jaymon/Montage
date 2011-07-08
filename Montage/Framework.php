@@ -151,6 +151,7 @@ class Framework extends Field implements Dependable {
    *           has content, that will be sent, otherwise any fields set in the response
    *           object will be handed over to the template and the template will be rendered
    *           and sent to the user
+   *    boolean - if false then don't output anything
    *
    *  @param  mixed $controller_response  what the controller returned
    */
@@ -188,28 +189,34 @@ class Framework extends Field implements Dependable {
     
     }else{
     
-      if(!$response->hasContent()){
-    
-        if($response->hasTemplate()){
-        
-          $template = $container->findInstance('\Montage\Response\Template');
+      // wipe the rendering if the controller returned false... 
+      if(is_bool($controller_response) && empty($controller_response)){
+      
+        $response->killTemplate();
+        $response->setContent('');
+      
+      }else{
+      
+        if(!$response->hasContent()){
+      
+          if($response->hasTemplate()){
           
-          // update template with response values...
-          $template->setTemplate($response->getTemplate());
-          $template->setFields($response->getFields());
-        
-        }else{
-        
-          if(!$response->isRedirect()){
+            $template = $this->getTemplate($response);
           
-            $response->setContentType(Response::CONTENT_JSON);
-            $response->setContent(json_encode($response->getFields()));
+          }else{
+          
+            if(!$response->isRedirect()){
             
-          }//if
+              $response->setContentType(Response::CONTENT_JSON);
+              $response->setContent(json_encode($response->getFields()));
+              
+            }//if
+          
+          }//if/else
+          
+        }//if
         
-        }//if/else
-        
-      }//if
+      }//if/else
     
     }//if/else
     
@@ -335,10 +342,10 @@ class Framework extends Field implements Dependable {
     
       if(is_object($rmethod_params[$index])){
       
-        if($rmethod_params[$index] instanceof Montage\Form\Form){
+        // populate a form object if there are passed in values...
+        if($rmethod_params[$index] instanceof \Montage\Form\Form){
       
-          $robject = new \ReflectionObject($rmethod_params[$index]);
-          $form_name = $robject->getShortName();
+          $form_name = $rmethod_params[$index]->getName();
           $request = $this->getRequest();
 
           if($form_field_map = $request->getField($form_name)){
@@ -423,9 +430,9 @@ class Framework extends Field implements Dependable {
       }else if($e instanceof StopException){
         
         // don't do anything, we're done
-        $ret_mixed = $this->handleResponse('');
+        $ret_mixed = $this->handleResponse(true);
         
-      }else if($e instanceof \FrameworkBoomException){
+      }else if($e instanceof FrameworkBoomException){
         
         out::e($e);
         // this should restart the framework...
@@ -664,6 +671,29 @@ class Framework extends Field implements Dependable {
   
     return $reflection;
   
+  }//method
+  
+  /**
+   *  get the template object that corresponds to the template file found in $response
+   *
+   *  @since  7-7-11
+   *  @param  Montage\Response\Response $response
+   *  @return Montage\Response\Template         
+   */
+  protected function getTemplate(Response $response){
+  
+    // canary...
+    if(!$response->hasTemplate()){ return null; }//if
+    
+    $container = $this->getContainer();
+    $template = $container->findInstance('\Montage\Response\Template');
+    
+    // update template with response values...
+    $template->setTemplate($response->getTemplate());
+    $template->setFields($response->getFields());
+    
+    return $template;
+    
   }//method
   
   /**

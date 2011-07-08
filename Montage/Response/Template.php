@@ -152,6 +152,9 @@ class Template extends Field {
    */
   protected function render($template){
   
+    // canary...
+    if(empty($template)){ throw new \InvalidArgumentException('$template was empty'); }//if
+  
     // go ahead and just print the output to the screen
     $template_path = $this->normalizePath($template);
     include($template_path);

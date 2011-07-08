@@ -587,8 +587,8 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
   
     foreach($this as $field){
     
-      if($field instanceof input_field){
-        if($field->isType(input_field::TYPE_HIDDEN)){
+      if($field instanceof Input){
+        if($field->isType(Input::TYPE_HIDDEN)){
           $ret_str .= $field->out();
         }//if
       }//if

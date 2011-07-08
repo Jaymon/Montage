@@ -3,6 +3,9 @@
 /**
  *  class for generating urls
  *
+ *  wikipedia uses component for each individual part of a path, I use bit
+ *  http://en.wikipedia.org/wiki/Path_%28computing%29 
+ *  
  *  @version 0.3
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 2-22-10
@@ -18,6 +21,8 @@ class Url extends Field {
   
   const SCHEME_NORMAL = 'http';
   const SCHEME_SECURE = 'https';
+  
+  protected $scheme = self::SCHEME_NORMAL;
 
   /**
    *  create object instance
@@ -37,7 +42,7 @@ class Url extends Field {
    *  
    *  @param  string  $url  the current requested url   
    */
-  public function setCurrent($url){ $this->setField('Url.current_url',$url); }//method
+  public function setCurrent($url){ $this->setField('Url.current_url',$this->trimSlash($url)); }//method
   
   /**
    *  set the base url that will be used as the default if no other url is passed into
@@ -45,7 +50,7 @@ class Url extends Field {
    *
    *  @param  string  $url  the url that will be used as the default base
    */
-  public function setBase($url){ $this->setField('Url.base_url',$url); }//method
+  public function setBase($url){ $this->setField('Url.base_url',$this->trimSlash($url)); }//method
 
   /**
    *  get a url
@@ -66,17 +71,17 @@ class Url extends Field {
    *    $this->getCurrent(); // -> http://app.com/bar/foo/?che=baz
    *    $this->get('http://example.com','bar','foo'); // -> http://example.com/bar/foo   
    *            
-   *  @param  mixed $arg,...  first argument can be a root last argument can be
+   *  @param  mixed $bit,...  first argument can be a root. Last argument can be
    *                          an array of key/val mappings that will be turned into
-   *                          a query string, all other args will be treated as path bits                     
+   *                          a query string, all other args will be treated as path components
    *  @return string  a complete url with the passed in args used to build it
    */
-  public function get(){
+  public function get($bit){
   
     $args = func_get_args();
-    list($base_url,$path_list,$field_map) = $this->parse($args);
+    $url_map = $this->normalize($args);
     
-    return $this->build($base_url,$path_list,$field_map);
+    return $this->build($url_map['url'],$url_map['path'],$url_map['query']);
   
   }//method
   
@@ -97,7 +102,7 @@ class Url extends Field {
   
     $args = func_get_args();
     
-    list($base_url,$path_list,$field_map) = $this->parse($args);
+    list($base_url,$path_list,$field_map) = $this->normalize($args);
     list($base_url,$current_field_map) = $this->split($this->getCurrent());
     
     return self::build($base_url,$path_list,$field_map);
@@ -114,7 +119,7 @@ class Url extends Field {
   public function getCurrent(){
   
     $args = func_get_args();
-    list($base_url,$path_list,$field_map) = $this->parse($args);
+    list($base_url,$path_list,$field_map) = $this->normalize($args);
     
     // get the base url...
     $base_url = $this->getField('Url.current_url',null);
@@ -244,7 +249,7 @@ class Url extends Field {
   
     $args = func_get_args();
     // sort through the passed in args...
-    list($url,$kill_path_list,$kill_field_map) = $this->parse($args);
+    list($url,$kill_path_list,$kill_field_map) = $this->normalize($args);
     // deconstruct the passed in url that will have stuff removed...
     list($base_url,$path_list,$field_map) = $this->unbuild($url);
 
@@ -305,7 +310,7 @@ class Url extends Field {
   public function unbuild($url){
   
     // canary...
-    if(empty($url)){ return array('',array(),array()); }//if
+    if(empty($url)){ throw new \InvalidArgumentException('$url was empty'); }//if
   
     $url_map = parse_url($url);
     
@@ -313,7 +318,7 @@ class Url extends Field {
     if(!empty($url_map['host'])){
       $ret_base = sprintf(
         '%s://%s',
-        empty($url_map['scheme']) ? self::SCHEME_NORMAL : $url_map['scheme'],
+        empty($url_map['scheme']) ? $this->scheme : $url_map['scheme'],
         $url_map['host']
       );
     }//if
@@ -522,74 +527,98 @@ class Url extends Field {
   }//method
   
   /**
-   *  this will convert a list of $args into a base url and all the stuff that
-   *  will be appended to the base url
-   *  
-   *  @param  array $args
-   *  @return array array($base_url,$path_list,$field_map) where $base_url is the url that will be at the beginning
-   *                and $path_list is all the path elements (eg, array('foo','bar' would become: /foo/bar)
-   *                and $field_map are the get vars (eg, array('foo' => 'bar') would become ?foo=bar)      
-   */
-  protected function parse($args){
-  
+   *  same as parse_url but guarrantees all keys are returned
+   *
+   *
+   */           
+  protected function parse($url){
+
     // canary...
-    if(empty($args)){    
-      return array($this->getField('Url.base_url',''),array(),array());
-    }//if
+    if(empty($url)){ throw new \InvalidArgumentException('$url was empty'); }//if
+
+    $url_map = parse_url($url);
     
-    list($path_list,$field_map) = $this->sortArgs($args);
+    if(!isset($url_map['scheme'])){ $url_map['scheme'] = $this->scheme; }//if
     
-    $base_url = empty($path_list[0]) ? '' : $path_list[0];
-    
-    if(!empty($base_url)){
-    
-      if($this->isUrl($base_url)){
-      
-        $path_list = array_slice($path_list,1);
-        
-      }else{
-      
-        $base_url = $this->getField('Url.base_url','');
-      
-      }//if/else if/else
-    
-    }else{
-    
-      $base_url = $this->getField('Url.base_url','');
-    
-    }//if/else
-    
-    return array($base_url,$path_list,$field_map);
+    if(!isset($url_map['user'])){ $url_map['user'] = ''; }//if
+    if(!isset($url_map['pass'])){ $url_map['pass'] = ''; }//if
+  
+        * scheme - e.g. http
+    * host
+    * port
+    * user
+    * pass
+    * path
+    * query - after the question mark ?
+    * fragment - after the hashmark #
+
+  
   
   }//method
   
   /**
+   *  this will convert a list of $args into a base url and all the stuff that
+   *  will be appended to the base url
+   *  
    *  most of the get methods can take a variable string of arguments, with an array at the
    *  end that will be turned into a get parameter string, this separates the path vars (eg, foo/bar)
    *  from the parameter fields (eg, ?foo=bar) and returns them
-   *  
-   *  @param  array $args an array of path/parameters
-   *  @return array($path_list,$get_field_map)
-   */              
-  protected function sortArgs($args){
+   *      
+   *  @param  array $args
+   *  @return array array has keys: url, path, and query. Where url is the url that will be at the beginning
+   *                and $path is all the path elements (eg, array('foo','bar') to become: /foo/bar later)
+   *                and query are the get vars (eg, array('foo' => 'bar') would become ?foo=bar later)      
+   */
+  protected function normalize(array $args){
+  
+    $ret_map = array(
+      'url' => '',
+      'path' => array(),
+      'query' => array()
+    );
+  
+    if(empty($args)){
     
-    // canary...
-    if(empty($args)){ return array(array(),array()); }//if
-    
-    $path_list = $field_map = array();
-    
-    // if the last element is an array, then it is a var_map, else it is just a normal value...
-    $field_map = end($args);
-    if(is_array($field_map)){
-      // the last element isn't part of the url var list, it contains the get vars...
-      $path_list = array_slice($args,0,-1);
+      $ret_map['url'] = $this->getField('Url.base_url','');
+      
     }else{
-      $path_list = $args;
-      $field_map = array();
+      
+      $path_list = $field_map = array();
+    
+      // if the last element is an array, then it is a var_map, else it is just a normal value...
+      $field_map = end($args);
+      if(is_array($field_map)){
+      
+        // the last element isn't part of the url path list, it contains the get vars...
+        $path_list = array_slice($args,0,-1);
+        
+      }else{
+      
+        $path_list = $args;
+        $field_map = array();
+        
+      }//if/else
+      
+      $url = empty($path_list[0]) ? '' : $path_list[0];
+      
+      if($this->isUrl($url)){
+      
+        $path_list = array_slice($path_list,1);
+      
+      }else{
+      
+        $url = $this->getField('Url.base_url','');
+      
+      }//if/else
+      
+      $ret_map['url'] = $url;
+      $ret_map['path'] = $path_list;
+      $ret_map['query'] = $field_map;
+      
     }//if/else
     
-    return array($path_list,$field_map);
-    
+    return $ret_map;
+  
   }//method
   
   /**
@@ -627,7 +656,7 @@ class Url extends Field {
     
       // get rid of the :// because we are going to add it later and don't want to
       // add it twice...
-      $scheme = empty($scheme) ? self::SCHEME_NORMAL : rtrim($scheme,':/');
+      $scheme = empty($scheme) ? $this->scheme : rtrim($scheme,':/');
     
     }//if/else
 
@@ -651,7 +680,8 @@ class Url extends Field {
   
   /**
    *  build a specific url
-   *  build works by adding all arguments to the base url, if the last argument is 
+   *     
+   *  build works by adding all arguments to the $url, if the last argument is 
    *  an array, those values will be added as get variables (ie, build('one','two',array('this' => 'that'))
    *  would turn into "[base]/one/two/?this=that), likewise, if the last non-array var has a # as the first
    *  char, it will become a fragment on the url before the get vars
@@ -659,15 +689,15 @@ class Url extends Field {
    *  @since  9-6-08
    *      
    *  @param  string  $base the base url to start from
-   *  @param  array $var_list the vars to add to the base
-   *  @param  array $field_map  the get vars to append to the end of the url build with $bars and $var_list   
+   *  @param  array $path the vars to add to the base
+   *  @param  array $query  the get vars to append to the end of the url build with $bars and $var_list   
    *  @return string  the completely built url
    */
-  protected function build($base,$path_list,$field_map = array()){
+  protected function build($url,array $path,array $query = array()){
     
     // sanity...
-    if(empty($path_list) && empty($field_map)){ return $base; }//if
-    if(!is_array($path_list)){ $path_list = array($path_list); }//if
+    if(empty($url)){ throw new \InvalidArgumentException('$url was empty'); }//if
+    if(empty($query) && empty($query)){ return $url; }//if
     
     $ret_str = '';
     
@@ -692,7 +722,7 @@ class Url extends Field {
     
     }//if
     
-    // add mod_rewrite url vars to the end of the url if there are any...
+    // add path bits to the end of the url if there are any...
     if(!empty($path_list)){
     
       // see if we have a fragment at the end of the path...
@@ -711,13 +741,17 @@ class Url extends Field {
             $path_list
           )
         );
-      
-        $ret_str .= self::URL_SEP.join(self::URL_SEP,$path_list);
         
-        // see if we want to add a trailing slash...
-        $last = end($path_list);
-        if((mb_strrpos($last,'.') === false) && $this->getField('trailing_slash',true)){
-          $ret_str .= self::URL_SEP;
+        if(!empty($path_list)){
+        
+          $ret_str .= self::URL_SEP.join(self::URL_SEP,$path_list);
+          
+          // see if we want to add a trailing slash...
+          $last = end($path_list);
+          if((mb_strrpos($last,'.') === false) && $this->getField('trailing_slash',true)){
+            $ret_str .= self::URL_SEP;
+          }//if
+          
         }//if
         
       }else{
@@ -745,12 +779,35 @@ class Url extends Field {
   protected function format($val){
     
     // canary...
+    if(ctype_space($val)){ return ''; }//if
     if(empty($val)){ return ''; }//if
     
     $ret_str = is_object($val) ? get_class($val) : $val;
-    $ret_str = mb_strtolower(trim($ret_str,self::URL_SEP));
+    $ret_str = $this->trimSlash($val);
     return $ret_str;
     
+  }//method
+  
+  /**
+   *  trim a slash / off the end of $val
+   *  
+   *  @since  7-7-11
+   *  @return string
+   */
+  protected function trimSlash($val,$both_sides = true){
+  
+    if($both_sides){
+  
+      $val = trim($val,self::URL_SEP);
+      
+    }else{
+    
+      $val = rtrim($val,self::URL_SEP);
+    
+    }//if/else
+  
+    return $val;
+  
   }//method
 
 }//class     

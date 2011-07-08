@@ -16,17 +16,21 @@ class ExceptionController extends Controller {
 
   public function handleIndex(\Exception $e){
   
+    $title = sprintf('Exception handled by %s',__METHOD__);
+  
     if(strncasecmp(PHP_SAPI, 'cli', 3) === 0){
     
+      echo $title,PHP_EOL,PHP_EOL;
       echo $e; // CLI
     
     }else{
     
+      echo $title,'<br><br>';
       echo nl2br($e); // html
     
     }//if/else
-    
-    throw new StopException();
+     
+    return false;
   
   }//method
 
