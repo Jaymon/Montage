@@ -224,9 +224,12 @@ class Field implements Fieldable {
     
     if(empty($ret_field)){
     
-      throw new UnexpectedValueException(
-        'no field was specified in the method, for example, if you want to "get" the field "foo" '.
-        'you would do: getFoo() (notice the capital F)'
+      throw new \UnexpectedValueException(
+        sprintf(
+          'no field was specified in the method (%s), for example, if you want to "get" the field "foo" '.
+          'you would do: getFoo() (notice the capital F)',
+          $method
+        )
       ); 
     
     }//if

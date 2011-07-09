@@ -40,6 +40,30 @@ class PathTest extends Test {
       ),
       'out' => 'http://app.com/foo/bar/?get=1'
     );
+    $test_list[] = array(
+      'in' => array(
+        'http://app.com/foo/bar',
+        array(),
+        array('get' => 1)
+      ),
+      'out' => 'http://app.com/foo/bar/?get=1'
+    );
+    $test_list[] = array(
+      'in' => array(
+        'http://app.com/?get=2',
+        array(),
+        array('get' => 1)
+      ),
+      'out' => 'http://app.com/?get=1'
+    );
+    $test_list[] = array(
+      'in' => array(
+        'http://app.com/?get=2',
+        array('foo','bar'),
+        array('get' => 1)
+      ),
+      'out' => 'http://app.com/foo/bar/?get=1'
+    );
     
     $this->assertCalls($this->url,'build',$test_list);
   
@@ -92,7 +116,7 @@ class PathTest extends Test {
       )
     );
   
-    $this->assertCalls($this->url,'parse',$test_list);
+    $this->assertCalls($this->url,'normalize',$test_list);
   
   }//method
 
@@ -104,14 +128,77 @@ class PathTest extends Test {
     $test_list = array();
     $test_list[] = array(
       'in' => array(''),
-      'out' => 'http://example.com'
+      'out' => 'http://example.com/'
     );
     $test_list[] = array(
       'in' => array(' '),
-      'out' => 'http://example.com'
+      'out' => 'http://example.com/'
+    );
+    $test_list[] = array(
+      'in' => array('http://app.com',array('get' => 2)),
+      'out' => 'http://app.com/?get=2'
+    );
+    $test_list[] = array(
+      'in' => array('http://app.com','foo','bar',array('get' => 2)),
+      'out' => 'http://app.com/foo/bar/?get=2'
+    );
+    $test_list[] = array(
+      'in' => array('http://app.com','foo','bar'),
+      'out' => 'http://app.com/foo/bar/'
+    );
+    $test_list[] = array(
+      'in' => array('foo/bar'),
+      'out' => 'http://example.com/foo/bar/'
+    );
+    $test_list[] = array(
+      'in' => array('foo','bar'),
+      'out' => 'http://example.com/foo/bar/'
+    );
+    $test_list[] = array(
+      'in' => array('http://localhost:8080','foo','bar'),
+      'out' => 'http://localhost:8080/foo/bar/'
+    );
+    $test_list[] = array(
+      'in' => array('http://user:pass@localhost:8080','foo','bar'),
+      'out' => 'http://user:pass@localhost:8080/foo/bar/'
+    );
+    $test_list[] = array(
+      'in' => array('http://user:pass@app.com','foo',array('bar' => 1)),
+      'out' => 'http://user:pass@app.com/foo/?bar=1'
     );
     
     $this->assertCalls($this->url,'get',$test_list);
+  
+  }//method
+  
+  /**
+   *  test the url get method   
+   */
+  public function testGetCurrent(){
+  
+    $test_list = array();
+    $test_list[] = array(
+      'in' => array(''),
+      'out' => 'http://example.com/current/'
+    );
+    $test_list[] = array(
+      'in' => array(' '),
+      'out' => 'http://example.com/current/'
+    );
+    $test_list[] = array(
+      'in' => array(array('get' => 2)),
+      'out' => 'http://example.com/current/?get=2'
+    );
+    $test_list[] = array(
+      'in' => array('foo/bar'),
+      'out' => 'http://example.com/current/foo/bar/'
+    );
+    $test_list[] = array(
+      'in' => array('foo','bar'),
+      'out' => 'http://example.com/current/foo/bar/'
+    );
+    
+    $this->assertCalls($this->url,'getCurrent',$test_list);
   
   }//method
 

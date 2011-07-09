@@ -76,7 +76,7 @@ class Url extends Field {
    *                          a query string, all other args will be treated as path components
    *  @return string  a complete url with the passed in args used to build it
    */
-  public function get($bit){
+  public function get($bit = ''){
   
     $args = func_get_args();
     $url_map = $this->normalize($args);
@@ -98,14 +98,17 @@ class Url extends Field {
    *  @see  get()
    *  @return string  the base url with no ?key=val... string (unless one was passed in)   
    */
-  public function getPath(){
+  public function getPath($bit = ''){
   
     $args = func_get_args();
     
-    list($base_url,$path_list,$field_map) = $this->normalize($args);
-    list($base_url,$current_field_map) = $this->split($this->getCurrent());
+    $url_map = $this->normalize($args);
+    $current_url_map = $this->split($this->getCurrent());
     
-    return self::build($base_url,$path_list,$field_map);
+    
+    list($url,$current_query) = $this->split($this->getCurrent());
+    
+    return $this->build($base_url,$path_list,$field_map);
   
   }//method
   
@@ -116,19 +119,18 @@ class Url extends Field {
    *  @see  get()         
    *  @return string  the current url with any passed in vars appended to it
    */
-  public function getCurrent(){
+  public function getCurrent($bit = ''){
   
     $args = func_get_args();
-    list($base_url,$path_list,$field_map) = $this->normalize($args);
-    
     // get the base url...
-    $base_url = $this->getField('Url.current_url',null);
-    if($base_url === null){
-      $base_url = $this->getField('Url.base_url','');
+    $current_url = $this->getField('Url.current_url',null);
+    if($current_url === null){
+      $current_url = $this->getField('Url.base_url','');
     }//if
     
-    return $this->build($base_url,$path_list,$field_map);
-  
+    $url_map = $this->normalize($args);
+    return $this->build($current_url,$url_map['path'],$url_map['query']);
+    
   }//method
   
   /**
@@ -527,36 +529,6 @@ class Url extends Field {
   }//method
   
   /**
-   *  same as parse_url but guarrantees all keys are returned
-   *
-   *
-   */           
-  protected function parse($url){
-
-    // canary...
-    if(empty($url)){ throw new \InvalidArgumentException('$url was empty'); }//if
-
-    $url_map = parse_url($url);
-    
-    if(!isset($url_map['scheme'])){ $url_map['scheme'] = $this->scheme; }//if
-    
-    if(!isset($url_map['user'])){ $url_map['user'] = ''; }//if
-    if(!isset($url_map['pass'])){ $url_map['pass'] = ''; }//if
-  
-        * scheme - e.g. http
-    * host
-    * port
-    * user
-    * pass
-    * path
-    * query - after the question mark ?
-    * fragment - after the hashmark #
-
-  
-  
-  }//method
-  
-  /**
    *  this will convert a list of $args into a base url and all the stuff that
    *  will be appended to the base url
    *  
@@ -688,7 +660,7 @@ class Url extends Field {
    *  
    *  @since  9-6-08
    *      
-   *  @param  string  $base the base url to start from
+   *  @param  string  $url  the base url to start from
    *  @param  array $path the vars to add to the base
    *  @param  array $query  the get vars to append to the end of the url build with $bars and $var_list   
    *  @return string  the completely built url
@@ -697,77 +669,79 @@ class Url extends Field {
     
     // sanity...
     if(empty($url)){ throw new \InvalidArgumentException('$url was empty'); }//if
-    if(empty($query) && empty($query)){ return $url; }//if
+    if(empty($path) && empty($query)){ return $url; }//if
     
     $ret_str = '';
     
-    $base_bits = parse_url($base);
+    $base_bits = parse_url($url);
     
-    $ret_str .= empty($base_bits['scheme']) ? '' : $base_bits['scheme'].'://'; 
+    $ret_str .= empty($base_bits['scheme']) ? '' : $base_bits['scheme'].'://';
+    
+    if(!empty($base_bits['user']) && !empty($base_bits['pass'])){
+      $ret_str .= $base_bits['user'].':'.$base_bits['pass'].'@';
+    }//if
+    
     $ret_str .= empty($base_bits['host']) ? '' : $base_bits['host'];
+    $ret_str .= empty($base_bits['port']) ? '' : ':'.$base_bits['port'];
     $ret_str .= empty($base_bits['path']) ? '' : $base_bits['path'];
     
-    ///$query_str = empty($base_bits['query']) ? '' : '?'.$base_bits['query'];
     if(!empty($base_bits['query'])){
     
-      $query_map = array();
-      parse_str(htmlspecialchars_decode($base_bits['query']),$query_map);
+      $url_query = array();
+      parse_str(htmlspecialchars_decode($base_bits['query']),$url_query);
     
-      if(empty($field_map)){
-        $field_map = $query_map;
+      if(empty($url_query)){
+      
+        $url_query = $query;
+      
       }else{
-        // field map dominates the original query fields...
-        $field_map = array_merge($query_map,$field_map);
+      
+        // passed in $query dominates the original $url query fields...
+        $query = array_merge($url_query,$query);
+        
       }//if/else
     
     }//if
+    
+    $ret_str = rtrim($ret_str,self::URL_SEP);
+    $check_slash = true;
     
     // add path bits to the end of the url if there are any...
-    if(!empty($path_list)){
+    if(!empty($path)){
+    
+      // format and remove blank path bits...
+      $path = array_map(array($this,'format'),$path);
+      $path = array_filter($path);
     
       // see if we have a fragment at the end of the path...
-      $last = $this->format(end($path_list));
-      if(!empty($last) && is_string($last) && ($last[0] == '#')){
-        $path_list = array_slice($path_list,0,-1);
-        $base_bits['fragment'] = $last;
+      $last = end($path);
+      if($last[0] === '#'){
+      
+        $path = array_slice($path,0,-1); // remove the fragment
+        $base_bits['fragment'] = $last; // takes precedense over $url fragment
+        
       }//if
       
-      if(!empty($path_list)){
-        
-        // get the path list to be a url path...
-        $path_list = array_filter(
-          array_map(
-            array($this,'format'),
-            $path_list
-          )
-        );
-        
-        if(!empty($path_list)){
-        
-          $ret_str .= self::URL_SEP.join(self::URL_SEP,$path_list);
-          
-          // see if we want to add a trailing slash...
-          $last = end($path_list);
-          if((mb_strrpos($last,'.') === false) && $this->getField('trailing_slash',true)){
-            $ret_str .= self::URL_SEP;
-          }//if
-          
-        }//if
-        
-      }else{
+      if(!empty($path)){
       
-        if(!$this->getField('trailing_slash',true)){
-          $ret_str .= (mb_substr($ret_str,-1) == self::URL_SEP) ? '' : self::URL_SEP;
-        }//if
-      
+        $ret_str .= self::URL_SEP.join(self::URL_SEP,$path);
+        
+        // see if we want to add a trailing slash...
+        $last = end($path);
+        $check_slash = (mb_strrpos($last,'.') === false);
+        
       }//if/else
     
     }//if
     
-    ///$ret_str .= $query_str; // add any query string back on
+    if($check_slash){
+    
+      if($this->getField('trailing_slash',true)){ $ret_str .= self::URL_SEP; }//if
+    
+    }//if
     
     // add any get vars to the url...
-    $ret_str = $this->append($ret_str,$field_map);
+    $ret_str = $this->append($ret_str,$query);
     
     // fragment should always be at the end...
     $ret_str .= empty($base_bits['fragment']) ? '' : $base_bits['fragment'];

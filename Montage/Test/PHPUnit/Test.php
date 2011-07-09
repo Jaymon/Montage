@@ -82,7 +82,7 @@ abstract class Test extends PHPUnit_Framework_TestCase {
         if(!is_array($test_map['in'])){ $test_map['in'] = (array)$test_map['in']; }//if
       
         $ret = call_user_func_array(array($instance,$method),$test_map['in']);
-        $this->assertEquals($test_map['out'],$ret,$i);
+        $this->assertEquals($test_map['out'],$ret,sprintf('Iteration %s',$i));
         
       }catch(\Exception $e){
       
