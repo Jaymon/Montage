@@ -13,6 +13,8 @@ use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use Montage\Request\Requestable as MontageRequest;
 use Montage\Field\GetFieldable;
 
+\out::t();
+
 class Request extends SymfonyRequest implements MontageRequest,GetFieldable {
 
   ///public function __construct(){

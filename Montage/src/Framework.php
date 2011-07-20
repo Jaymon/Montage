@@ -13,32 +13,12 @@
  *  see: http://misko.hevery.com/2008/07/08/how-to-think-about-the-new-operator/ for how
  *  I'm wrong about this, but convenience trumps rightness in this instance for me  
  *   
- *  @version 0.6
+ *  @version 0.7
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 12-28-09
  *  @package montage 
  ******************************************************************************/
 namespace Montage;
-
-// these are the files needed to use this class, after this class is loaded, the
-// autoloader should handle everything else...
-require_once(__DIR__.'/Cache/Cacheable.php');
-require_once(__DIR__.'/Cache/Cache.php');
-require_once(__DIR__.'/Cache/ObjectCache.php');
-
-require_once(__DIR__.'/Dependency/Dependable.php');
-require_once(__DIR__.'/Dependency/ReflectionFile.php');
-require_once(__DIR__.'/Dependency/Reflection.php');
-require_once(__DIR__.'/Path.php');
-
-require_once(__DIR__.'/Field/SetFieldable.php');
-require_once(__DIR__.'/Field/GetFieldable.php');
-require_once(__DIR__.'/Field/Fieldable.php');
-require_once(__DIR__.'/Field/Field.php');
-
-require_once(__DIR__.'/Autoload/AutoLoadable.php');
-require_once(__DIR__.'/Autoload/AutoLoader.php');
-require_once(__DIR__.'/Autoload/ReflectionAutoloader.php');
 
 use Montage\Cache\Cache;
 use Montage\Path;
@@ -57,9 +37,17 @@ use Montage\Dependency\Container;
 use Montage\Dependency\Dependable;
 
 use Montage\AutoLoad\ReflectionAutoloader;
+use Montage\AutoLoad\FrameworkAutoloader;
 
 use Montage\Response\Response;
 use Montage\Response\Template;
+
+// load the Framework autoloader, this will handle all other dependencies to load this class...
+require_once(__DIR__.'/AutoLoad/AutoLoadable.php');
+require_once(__DIR__.'/AutoLoad/AutoLoader.php');
+require_once(__DIR__.'/AutoLoad/FrameworkAutoloader.php');
+$fal = new FrameworkAutoloader(__DIR__);
+$fal->register();
 
 class Framework extends Field implements Dependable {
 
@@ -94,8 +82,6 @@ class Framework extends Field implements Dependable {
     
     $this->setField('env',$env);
     $this->setField('debug_level',$debug_level);
-    $this->setField('app_path',$app_path);
-    $this->setField('framework_path');
     
   }//method
   
@@ -103,6 +89,8 @@ class Framework extends Field implements Dependable {
    *  call this method to actually handle the request
    *  
    *  once this method is called, everything is taken care of for you
+   *  
+   *  @return mixed usually null if left alone, but if you override anything, it could return almost anything      
    */
   public function handle(){
   
@@ -110,12 +98,19 @@ class Framework extends Field implements Dependable {
     $controller_response = null;
   
     try{
+    
+      // first handle any files the rest of the handling might be dependant on...
+      $this->handleDependencies();
 
       // start the autoloaders...
       $this->handleAutoload();
 
+      out::h();
+
       // start the START classes...
       $this->handleStart();
+      
+      out::h();
       
       $request = $this->getRequest();
   
@@ -135,6 +130,23 @@ class Framework extends Field implements Dependable {
     }//try/catch
     
     return $ret_mixed;
+  
+  }//method
+
+  /**
+   *  handle any dependencies that need to be resolved before the framework can officially "start"
+   *  
+   *  @since  7-19-11
+   */
+  protected function handleDependencies(){
+  
+    $file_list = $this->getIncludes();
+  
+    foreach($file_list as $file){
+  
+      require_once($file);
+      
+    }//foreach
   
   }//method
 
@@ -238,23 +250,27 @@ class Framework extends Field implements Dependable {
    */
   protected function handleAutoload(){
   
-    $instance_list = array();
     $container = $this->getContainer();
     
     // create the standard autoloader...
     // we can't use find here because people might extend the StandardAutoloader (like I did)...
-    $standard_autoloader = $container->getInstance('\Montage\Autoload\StandardAutoloader');
-    $standard_autoloader->addPaths($this->getField('vendor_paths'));
-    $standard_autoloader->register();
+    $sal = $container->getInstance('\Montage\Autoload\StdAutoloader');
+    
+    $sal->registerNamespaces($this->getField('autoload_paths',array()));
+    
+    $sal->addPaths($this->getField('reflection_paths',array()));
+    $sal->addPaths($this->getField('vendor_paths',array()));
+    
+    $sal->register();
     
     // create any other autoloader classes...
     $select = $container->findInstance('\Montage\Autoload\Select');
     $class_list = $select->find();
     
-    foreach($class_list as $i => $class_name){
+    foreach($class_list as $class_name){
     
-      $instance_list[$i] = $container->getInstance($class_name);
-      $instance_list[$i]->register();
+      $instance = $container->getInstance($class_name);
+      $instance->register();
       
     }//foreach
     
@@ -296,13 +312,34 @@ class Framework extends Field implements Dependable {
   protected function handleController($class_name,$method,array $params = array()){
   
     $container = $this->getContainer();
-    $reflection = $container->getReflection();
     
     $controller = $container->findInstance($class_name);
     $rmethod = new \ReflectionMethod($controller,$method);
+    $rmethod_params = $this->normalizeControllerParams($rmethod,$params);
+    
+    $controller->preHandle();
+    $ret_mixed = $rmethod->invokeArgs($controller,$rmethod_params);
+    $controller->postHandle();
+    
+    return $ret_mixed;
+  
+  }//method
+  
+  /**
+   *  get the controller params ready to be passed into the controller
+   *  
+   *  @since  7-19-11
+   *  @see  handleController()
+   *  @param  \ReflectionMethod $rmethod  reflection of the controller method that is going to be called
+   *  @param  array $params the params that were found that are being normalized
+   *  @return array the $params normalized
+   */
+  protected function normalizeControllerParams(\ReflectionMethod $rmethod,array $params){
+  
+    $container = $this->getContainer();
     $rparams = $rmethod->getParameters();
     $rmethod_params = array();
-    
+  
     // check for Forms and populate them if there are matching passed in vars...
     foreach($rparams as $index => $rparam){
     
@@ -345,8 +382,8 @@ class Framework extends Field implements Dependable {
         // populate a form object if there are passed in values...
         if($rmethod_params[$index] instanceof \Montage\Form\Form){
       
-          $form_name = $rmethod_params[$index]->getName();
           $request = $this->getRequest();
+          $form_name = $rmethod_params[$index]->getName();
 
           if($form_field_map = $request->getField($form_name)){
           
@@ -367,12 +404,8 @@ class Framework extends Field implements Dependable {
       }//if
     
     }//foreach
-    
-    $controller->preHandle();
-    $ret_mixed = $rmethod->invokeArgs($controller,$rmethod_params);
-    $controller->postHandle();
-    
-    return $ret_mixed;
+  
+    return $rmethod_params;
   
   }//method
   
@@ -660,12 +693,13 @@ class Framework extends Field implements Dependable {
     $reflection = new Reflection();
     $reflection->setCache($this->getCache());
     $reflection->importCache();
+    
     $reflection->addPaths($this->getField('reflection_paths'));
     
     // create the reflection autoloader...
-    $autoloader_class_name = $reflection->findClassName('Montage\AutoLoad\ReflectionAutoloader');
-    $autoloader = new $autoloader_class_name($reflection);
-    $autoloader->register();
+    ///$autoloader_class_name = $reflection->findClassName('Montage\AutoLoad\ReflectionAutoloader');
+    ///$autoloader = new $autoloader_class_name($reflection);
+    ///$autoloader->register();
     
     $this->instance_map['reflection'] = $reflection;
   
@@ -706,15 +740,22 @@ class Framework extends Field implements Dependable {
   
     $this->setField('app_path',$app_path);
     
-    $framework_path = __DIR__;
+    $framework_path = new Path(__DIR__,'..');
     $this->setField('framework_path',$framework_path);
     
     $path = new Path($app_path,'cache');
     $path->assure();
     $this->setField('cache_path',$path);
     
+    $autoload_path_list = array();
+    $autoload_path_list['Montage'] = array();
+    
     $reflection_path_list = array();
-    $reflection_path_list[] = $framework_path;
+    
+    $framework_src_path = new Path($framework_path,'src');
+    $reflection_path_list[] = $framework_src_path;
+    $autoload_path_list['Montage'] = $framework_src_path;
+    
     $reflection_path_list[] = new Path($app_path,'src');
     $reflection_path_list[] = new Path($app_path,'config');
     
@@ -731,34 +772,86 @@ class Framework extends Field implements Dependable {
     if($path->exists()){ $assets_path_list[] = $path; }//if
     
     // add the plugin paths...
-    $plugin_base_path = new Path($app_path,'plugins');
-    foreach($plugin_base_path->createIterator('',1) as $plugin_path => $plugin_dir){
-    
-      if($plugin_dir->isDir()){
+    $plugin_base_path_list = array();
+    $plugin_base_path_list[] = new Path($framework_path,'plugins');
+    $plugin_base_path_list[] = new Path($app_path,'plugins');
+    foreach($plugin_base_path_list as $plugin_base_path){
       
-        $path = new Path($plugin_path,'config');
-        if($path->exists()){ $reflection_path_list[] = $path; }//if
+      if($plugin_base_path->isDir()){
         
-        $path = new Path($plugin_path,'src');
-        if($path->exists()){ $reflection_path_list[] = $path; }//if 
-      
-        $path = new Path($plugin_path,'view');
-        if($path->exists()){ $view_path_list[] = $path; }//if
+        foreach($plugin_base_path->createIterator('',1) as $plugin_path => $plugin_dir){
         
-        $path = new Path($plugin_path,'vendor');
-        if($path->exists()){ $vendor_path_list[] = $path; }//if
+          if($plugin_dir->isDir()){
+          
+            $plugin_name = $plugin_dir->getBasename();
+            if(!isset($autoload_path_list[$plugin_name])){
+              $autoload_path_list[$plugin_name] = array();
+            }//if
+          
+            $path = new Path($plugin_path,'config');
+            if($path->exists()){
+              
+              $reflection_path_list[] = $path;
+              $autoload_path_list[$plugin_name][] = $path;
+              
+            }//if
+            
+            $path = new Path($plugin_path,'src');
+            if($path->exists()){
+              
+              $reflection_path_list[] = $path;
+              $autoload_path_list[$plugin_name][] = $path;
+              
+            }//if 
+          
+            $path = new Path($plugin_path,'view');
+            if($path->exists()){ $view_path_list[] = $path; }//if
+            
+            $path = new Path($plugin_path,'vendor');
+            if($path->exists()){
+              
+              $vendor_path_list[] = $path;
+              $autoload_path_list[$plugin_name][] = $path;
+            
+            }//if
+            
+            $path = new Path($plugin_path,'assets');
+            if($path->exists()){ $assets_path_list[] = $path; }//if
+          
+          }//if
         
-        $path = new Path($plugin_path,'assets');
-        if($path->exists()){ $assets_path_list[] = $path; }//if
-      
+        }//foreach
+        
       }//if
-    
+      
     }//foreach
   
+    $this->setField('autoload_paths',$autoload_path_list);
     $this->setField('reflection_paths',$reflection_path_list);
     $this->setField('view_paths',$view_path_list);
     $this->setField('vendor_paths',$vendor_path_list);
     $this->setField('assets_paths',$assets_path_list);
+  
+  }//method
+  
+  /**
+   *  return a list of files that need to be included
+   *  
+   *  sometimes, things need to be inlcuded before all the autoloaders have been loaded, these
+   *  files will be loaded before the autoloaders
+   *  
+   *  @since  7-19-11
+   *  @see  handleDependencies()
+   *  @return array
+   */
+  protected function getIncludes(){
+  
+    $path_list = array();
+    $path_list[] = new Path(
+      $this->getField('framework_path'),'plugins','Symfony','vendor','ClassLoader','UniversalClassLoader.php'
+    );
+  
+    return $path_list;
   
   }//method
 

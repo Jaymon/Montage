@@ -29,8 +29,20 @@ interface Autoloadable {
   
   /**
    *  register this class as an autoloader
+   *  
+   *  @param  boolean $prepend      
    */
-  public function register();
+  public function register($prepend = false);
+  
+  /**
+   *  get the callback that will be used to handle autoloading
+   *  
+   *  this will usually just return array($this,'handle');      
+   *  
+   *  @since  7-5-11
+   *  @return callback
+   */
+  public function getCallback();
   
   /**
    *  unregister this class as an autoloader

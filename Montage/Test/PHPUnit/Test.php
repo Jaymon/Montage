@@ -1,24 +1,26 @@
 <?php
-namespace Montage\Test\PHPUnit;
+namespace Montage\PHPUnit;
+
 use PHPUnit_Framework_TestCase;
 use ReflectionClass;
+
+use Montage\AutoLoad\FrameworkAutoloader;
+use Montage\AutoLoad\FrameworkAutoloader;
 
 error_reporting(-1);
 ini_set('display_errors','on');
 
-/*
-// declare a simple autoloader we can use...
-include_once(
-  join(
-    DIRECTORY_SEPARATOR,
-    array(
-      dirname(__FILE__),
-      'montage_test_autoload_class.php'
-    )
-  )
-);
-montage_test_autoload::register();
-*/
+require_once('../../src/AutoLoad/FrameworkAutoloader.php');
+
+// add the framework autoloader...
+$fal = new FrameworkAutoloader();
+$fal->addPath(realpath(__DIR__.'../../src'));
+$fal->register();
+
+// add a test autoloader...
+$tal = new FrameworkAutoloader();
+$tal->addPath(realpath(__DIR__.'..'));
+$tal->register();
 
 abstract class Test extends PHPUnit_Framework_TestCase {
 
@@ -61,7 +63,7 @@ abstract class Test extends PHPUnit_Framework_TestCase {
    *  @return string
    */
   protected function getTestBase(){
-    return realpath(join(DIRECTORY_SEPARATOR,array(dirname(__FILE__),'..')));
+    return realpath(join(DIRECTORY_SEPARATOR,array(__DIR__,'..')));
   }//method
   
   /**
