@@ -20,7 +20,7 @@ namespace Montage\Dependency;
 
 interface Dependable {
 
-  public function setContainer(\Montage\Dependency\Container $container);
+  public function setContainer(\Montage\Dependency\Containable $container);
   
   public function getContainer();
 

@@ -15,7 +15,7 @@ namespace Montage\Start;
 
 use Montage\Config\FrameworkConfig;
 
-use Montage\Dependency\Container;
+use Montage\Dependency\Containable;
 use Montage\Dependency\Dependable;
 
 use Montage\Field\Field;
@@ -32,7 +32,7 @@ abstract class Start extends Field implements Startable, Dependable {
   
   }//method
   
-  public function setContainer(Container $container){ $this->container = $container; }//method
+  public function setContainer(Containable $container){ $this->container = $container; }//method
   public function getContainer(){ return $this->container; }//method
   
 }//class

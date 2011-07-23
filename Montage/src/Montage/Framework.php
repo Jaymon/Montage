@@ -46,7 +46,7 @@ use Montage\Response\Template;
 require_once(__DIR__.'/AutoLoad/AutoLoadable.php');
 require_once(__DIR__.'/AutoLoad/AutoLoader.php');
 require_once(__DIR__.'/AutoLoad/FrameworkAutoloader.php');
-$fal = new FrameworkAutoloader(__DIR__);
+$fal = new FrameworkAutoloader(realpath(__DIR__.'/..'));
 $fal->register();
 
 class Framework extends Field implements Dependable {
@@ -105,12 +105,8 @@ class Framework extends Field implements Dependable {
       // start the autoloaders...
       $this->handleAutoload();
 
-      out::h();
-
       // start the START classes...
       $this->handleStart();
-      
-      out::h();
       
       $request = $this->getRequest();
   
@@ -252,19 +248,18 @@ class Framework extends Field implements Dependable {
   
     $container = $this->getContainer();
     
+    // create the reflection autoloader...
+    $ral = $container->getInstance('\Montage\AutoLoad\ReflectionAutoloader');
+    $ral->register();
+    
     // create the standard autoloader...
     // we can't use find here because people might extend the StandardAutoloader (like I did)...
     $sal = $container->getInstance('\Montage\Autoload\StdAutoloader');
-    
-    $sal->registerNamespaces($this->getField('autoload_paths',array()));
-    
-    $sal->addPaths($this->getField('reflection_paths',array()));
     $sal->addPaths($this->getField('vendor_paths',array()));
-    
     $sal->register();
     
     // create any other autoloader classes...
-    $select = $container->findInstance('\Montage\Autoload\Select');
+    $select = $container->getInstance('\Montage\Autoload\Select');
     $class_list = $select->find();
     
     foreach($class_list as $class_name){
@@ -288,7 +283,7 @@ class Framework extends Field implements Dependable {
     $instance_list = array();
     $env = $this->getConfig()->getEnv();
     $container = $this->getContainer();
-    $select = $container->findInstance('\Montage\Start\Select');
+    $select = $container->getInstance('\Montage\Start\Select');
     
     $start_class_list = $select->find($env);
     $method_name = $select->getMethod();
@@ -313,7 +308,7 @@ class Framework extends Field implements Dependable {
   
     $container = $this->getContainer();
     
-    $controller = $container->findInstance($class_name);
+    $controller = $container->getInstance($class_name);
     $rmethod = new \ReflectionMethod($controller,$method);
     $rmethod_params = $this->normalizeControllerParams($rmethod,$params);
     
@@ -394,7 +389,7 @@ class Framework extends Field implements Dependable {
           // set the current url...
           if(!$rmethod_params[$index]->hasUrl()){
           
-            $url = $container->findInstance('Montage\Url');
+            $url = $container->getInstance('Montage\Url');
             $rmethod_params[$index]->setUrl($url->getCurrent());
           
           }//if
@@ -421,9 +416,7 @@ class Framework extends Field implements Dependable {
     $ret_mixed = null;
   
     try{
-    
-      // needs: Request, Forward
-    
+
       if($e instanceof InternalRedirectException){
       
         list($controller_class,$controller_method,$controller_method_params) = $this->getControllerSelect()->find(
@@ -465,9 +458,8 @@ class Framework extends Field implements Dependable {
         // don't do anything, we're done
         $ret_mixed = $this->handleResponse(true);
         
-      }else if($e instanceof FrameworkBoomException){
+      }else if($e instanceof \ReflectionException){
         
-        out::e($e);
         // this should restart the framework...
         
         // clear all the app cache...
@@ -514,7 +506,7 @@ class Framework extends Field implements Dependable {
    */
   protected function handleRecursion(\Exception $e){
   
-    $max_ir_count = $this->getField('Handler.recursion_max_count',10);
+    $max_ir_count = $this->getField('Handler.recursion_max_count',3);
     $ir_field = 'Handler.recursion_count'; 
     $ir_count = $this->getField($ir_field,0);
     if($ir_count > 10){
@@ -546,7 +538,7 @@ class Framework extends Field implements Dependable {
    *
    *  @param  Montage\Dependency\Container  $container
    */
-  public function setContainer(\Montage\Dependency\Container $container){
+  public function setContainer(\Montage\Dependency\Containable $container){
     $this->instance_map['container'] = $container;
   }//method
   
@@ -561,28 +553,12 @@ class Framework extends Field implements Dependable {
     if(isset($this->instance_map['container'])){ return $this->instance_map['container']; }//if
   
     $reflection = $this->getReflection();
-    $container_class_name = $reflection->findClassName('Montage\Dependency\Container');
+    $container_class_name = $reflection->findClassName('Montage\Dependency\ReflectionContainer');
     $container = new $container_class_name($reflection);
     
     // just in case, container should know about this instance for circular-dependency goodness...
-    $container->setInstance($this);
-    $container->setInstance($this->getCache());
-    
-    // normally this would go in the start class, but the start class takes a FrameworkConfig
-    // instance, so this needs to be set as soon as we have a container, which is why it is
-    // here, this is configuration that can't go anywhere else...    
-    $container->onCreated(
-      '\Montage\Config\FrameworkConfig',
-      function($container,$instance){
-
-        $framework = $container->findInstance('Montage\Framework');
-        $instance->setField('env',$framework->getField('env'));
-        $instance->setField('debug_level',$framework->getField('debug_level'));
-        $instance->setField('app_path',$framework->getField('app_path'));
-        $instance->setField('framework_path',$framework->getField('framework_path'));
-        
-      }
-    );
+    $container->setInstance('',$this);
+    $container->setInstance('',$this->getCache());
     
     $this->setContainer($container);
   
@@ -603,7 +579,7 @@ class Framework extends Field implements Dependable {
   
     $container = $this->getContainer();
     
-    $this->instance_map['config'] = $container->findInstance('\Montage\Config\FrameworkConfig');
+    $this->instance_map['config'] = $container->getInstance('\Montage\Config\FrameworkConfig');
     
     return $this->instance_map['config'];
   
@@ -620,7 +596,7 @@ class Framework extends Field implements Dependable {
     if(isset($this->instance_map['controller_select'])){ return $this->instance_map['controller_select']; }//if
     
     $container = $this->getContainer();
-    $this->instance_map['controller_select'] = $container->findInstance('Montage\Controller\Select');
+    $this->instance_map['controller_select'] = $container->getInstance('Montage\Controller\Select');
     
     return $this->instance_map['controller_select'];
   
@@ -638,7 +614,7 @@ class Framework extends Field implements Dependable {
     if(isset($this->instance_map['request'])){ return $this->instance_map['request']; }//if
   
     $container = $this->getContainer();
-    $this->instance_map['request'] = $container->findInstance('Montage\Request\Requestable');
+    $this->instance_map['request'] = $container->getInstance('Montage\Request\Requestable');
     
     return $this->instance_map['request'];
   
@@ -653,7 +629,7 @@ class Framework extends Field implements Dependable {
   protected function getResponse(){
   
     $container = $this->getContainer();
-    return $container->findInstance('\Montage\Response\Response');
+    return $container->getInstance('\Montage\Response\Response');
   
   }//method
   
@@ -696,13 +672,8 @@ class Framework extends Field implements Dependable {
     
     $reflection->addPaths($this->getField('reflection_paths'));
     
-    // create the reflection autoloader...
-    ///$autoloader_class_name = $reflection->findClassName('Montage\AutoLoad\ReflectionAutoloader');
-    ///$autoloader = new $autoloader_class_name($reflection);
-    ///$autoloader->register();
-    
     $this->instance_map['reflection'] = $reflection;
-  
+
     return $reflection;
   
   }//method
@@ -720,7 +691,7 @@ class Framework extends Field implements Dependable {
     if(!$response->hasTemplate()){ return null; }//if
     
     $container = $this->getContainer();
-    $template = $container->findInstance('\Montage\Response\Template');
+    $template = $container->getInstance('\Montage\Response\Template');
     
     // update template with response values...
     $template->setTemplate($response->getTemplate());
@@ -740,21 +711,21 @@ class Framework extends Field implements Dependable {
   
     $this->setField('app_path',$app_path);
     
-    $framework_path = new Path(__DIR__,'..');
+    $framework_path = new Path(__DIR__,'..','..');
     $this->setField('framework_path',$framework_path);
     
     $path = new Path($app_path,'cache');
     $path->assure();
     $this->setField('cache_path',$path);
     
-    $autoload_path_list = array();
-    $autoload_path_list['Montage'] = array();
+    ///$autoload_path_list = array();
+    ///$autoload_path_list['Montage'] = array();
     
     $reflection_path_list = array();
     
     $framework_src_path = new Path($framework_path,'src');
     $reflection_path_list[] = $framework_src_path;
-    $autoload_path_list['Montage'] = $framework_src_path;
+    ///$autoload_path_list['Montage'] = $framework_src_path;
     
     $reflection_path_list[] = new Path($app_path,'src');
     $reflection_path_list[] = new Path($app_path,'config');
@@ -784,15 +755,15 @@ class Framework extends Field implements Dependable {
           if($plugin_dir->isDir()){
           
             $plugin_name = $plugin_dir->getBasename();
-            if(!isset($autoload_path_list[$plugin_name])){
-              $autoload_path_list[$plugin_name] = array();
-            }//if
+            ///if(!isset($autoload_path_list[$plugin_name])){
+            ///  $autoload_path_list[$plugin_name] = array();
+            ///}//if
           
             $path = new Path($plugin_path,'config');
             if($path->exists()){
               
               $reflection_path_list[] = $path;
-              $autoload_path_list[$plugin_name][] = $path;
+              ///$autoload_path_list[$plugin_name][] = $path;
               
             }//if
             
@@ -800,7 +771,7 @@ class Framework extends Field implements Dependable {
             if($path->exists()){
               
               $reflection_path_list[] = $path;
-              $autoload_path_list[$plugin_name][] = $path;
+              ///$autoload_path_list[$plugin_name][] = $path;
               
             }//if 
           
@@ -811,7 +782,7 @@ class Framework extends Field implements Dependable {
             if($path->exists()){
               
               $vendor_path_list[] = $path;
-              $autoload_path_list[$plugin_name][] = $path;
+              ///$autoload_path_list[$plugin_name][] = $path;
             
             }//if
             
@@ -826,7 +797,7 @@ class Framework extends Field implements Dependable {
       
     }//foreach
   
-    $this->setField('autoload_paths',$autoload_path_list);
+    ///$this->setField('autoload_paths',$autoload_path_list);
     $this->setField('reflection_paths',$reflection_path_list);
     $this->setField('view_paths',$view_path_list);
     $this->setField('vendor_paths',$vendor_path_list);
@@ -847,9 +818,9 @@ class Framework extends Field implements Dependable {
   protected function getIncludes(){
   
     $path_list = array();
-    $path_list[] = new Path(
+    /* $path_list[] = new Path(
       $this->getField('framework_path'),'plugins','Symfony','vendor','ClassLoader','UniversalClassLoader.php'
-    );
+    ); */
   
     return $path_list;
   

@@ -18,7 +18,30 @@ use Montage\Start\Start;
 
 class FrameworkStart extends Start {
 
+  /**
+   *  normally start class takes a FrameworkConfig instance but we override parent::__construct()
+   *  so we can create the FrameworkConfig instance in the handle() method of this class
+   */
+  public function __construct(){ parent::__construct(); }//method
+
   public function handle(){
+
+    $container = $this->getContainer();
+      
+    $container->onCreated(
+      '\Montage\Config\FrameworkConfig',
+      function($container,$instance){
+
+        $framework = $container->getInstance('Montage\Framework');
+        $instance->setField('env',$framework->getField('env'));
+        $instance->setField('debug_level',$framework->getField('debug_level'));
+        $instance->setField('app_path',$framework->getField('app_path'));
+        $instance->setField('framework_path',$framework->getField('framework_path'));
+        
+      }
+    );
+    
+    $this->framework_config = $container->getInstance('\Montage\Config\FrameworkConfig');
 
     error_reporting($this->framework_config->getErrorLevel());
     ///error_reporting(E_ALL ^ E_USER_NOTICE);
@@ -28,16 +51,24 @@ class FrameworkStart extends Start {
     // since debug isn't on let's not display the errors to the user and rely on logging...
     ini_set('display_errors',$this->framework_config->showErrors() ? 'on' : 'off'); 
     
-    $container = $this->getContainer();
-    
-    // tell the container what classes we want to use for some of the interfaces that
-    // have multiple children...
-    $container->setPreferred(
-      'Symfony\Component\HttpFoundation\SessionStorage\SessionStorageInterface',
-      'Symfony\Component\HttpFoundation\SessionStorage\NativeSessionStorage'
+    $container->onCreate(
+      'Montage\Session',
+      function($container,array $params = array()){
+      
+        if(!isset($params['storage']) && !isset($params[0])){
+        
+          // there are about 6 children of the SessionInterface, so we are choosing here which one
+          // we want....
+          $params['storage'] = new \Symfony\Component\HttpFoundation\SessionStorage\NativeSessionStorage();
+        
+        }//if
+      
+        return $params;
+        
+      }
     );
-     
-     // set up some lazy load dependency resolves...
+    
+    // set up some lazy load dependency resolves...
     $container->onCreate(
       'Montage\Request\Requestable',
       function($container,array $params = array()){
@@ -61,7 +92,7 @@ class FrameworkStart extends Start {
       'Montage\Url',
       function($container,array $params = array()){
 
-        $request = $container->findInstance('Montage\Request\Requestable');
+        $request = $container->getInstance('Montage\Request\Requestable');
         
         // set the values for the url instance on creation...
         $ret_map = array(
@@ -78,14 +109,14 @@ class FrameworkStart extends Start {
       '\Montage\Response\Template',
       function($container,$instance){
 
-        $framework = $container->findInstance('Montage\Framework');
+        $framework = $container->getInstance('Montage\Framework');
         $instance->addPaths($framework->getField('view_paths'));
         
       }
     );
     
     // start the error handler if it hasn't been started...
-    $container->findInstance('Montage\Error');
+    $container->getInstance('Montage\Error');
   
   }//method
 

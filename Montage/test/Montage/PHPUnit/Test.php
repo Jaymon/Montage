@@ -5,21 +5,22 @@ use PHPUnit_Framework_TestCase;
 use ReflectionClass;
 
 use Montage\AutoLoad\FrameworkAutoloader;
-use Montage\AutoLoad\FrameworkAutoloader;
 
 error_reporting(-1);
 ini_set('display_errors','on');
 
-require_once('../../src/AutoLoad/FrameworkAutoloader.php');
+require_once('out_class.php');
+
+require_once(__DIR__.'/../../../src/Montage/AutoLoad/AutoLoadable.php');
+require_once(__DIR__.'/../../../src/Montage/AutoLoad/AutoLoader.php');
+require_once(__DIR__.'/../../../src/Montage/AutoLoad/FrameworkAutoloader.php');
 
 // add the framework autoloader...
-$fal = new FrameworkAutoloader();
-$fal->addPath(realpath(__DIR__.'../../src'));
+$fal = new FrameworkAutoloader(__DIR__.'/../../../src');
 $fal->register();
 
 // add a test autoloader...
-$tal = new FrameworkAutoloader();
-$tal->addPath(realpath(__DIR__.'..'));
+$tal = new FrameworkAutoloader(__DIR__.'/../..');
 $tal->register();
 
 abstract class Test extends PHPUnit_Framework_TestCase {

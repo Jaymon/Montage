@@ -493,7 +493,8 @@ class Reflection extends ObjectCache implements \Reflector {
   
     // canary...
     if(!file_exists($this->class_map[$class_key]['path'])){
-      throw new \UnexpectedValueException(
+      ///throw new \UnexpectedValueException(
+      throw new \ReflectionException(
         sprintf('%s does not exist anymore',$this->class_map[$class_key]['path'])
       );
     }//if
@@ -546,21 +547,36 @@ class Reflection extends ObjectCache implements \Reflector {
     $class_map['hash'] = md5_file($class_file);
     
     $class_map['path'] = $class_file;
-    $this->class_map[$key] = $class_map;
     
     $parent_list = array_merge($extend_list,$implement_list);
-    ///$class_map['dependencies'] = $parent_file;
+    
+    $dependency_list = array();
     
     // add class as child to all its parent classes...
     foreach($parent_list as $parent_class){
+      
       $parent_key = $this->normalizeClassName($parent_class);
+      
       if(!isset($this->parent_class_map[$parent_key])){
+        
         $this->parent_class_map[$parent_key] = array();
+        
+      }//if
+    
+      if(isset($this->class_map[$parent_key]['dependencies'])){
+      
+        $dependency_list = array_merge($dependency_list,$this->class_map[$parent_key]['dependencies']);
+        $dependency_list[] = $parent_class;
+        
       }//if
     
       $this->parent_class_map[$parent_key][] = $key;
     
     }//if
+    
+    $class_map['dependencies'] = $dependency_list;
+    
+    $this->class_map[$key] = $class_map;
     
     // this gets cleared anytime something is added, because it is easier that way
     $this->children_class_map = array();

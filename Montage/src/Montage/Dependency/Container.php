@@ -1,35 +1,25 @@
 <?php
 /**
- *  the Dependancy Injection Container is like a service locator  
- * 
- *  @todo injectPublicParams() - inject instances via a public param, the problem
- *  is you would have to docblock the param with a @var field telling what object
- *  you want, and that would have to use the full namespaced class name   
+ *  the Dependancy Injection Container is like a service locator. 
  *  
- *  @version 0.2
+ *  This is the base container for any custom containers. Though this could be entirely
+ *  side-stepped in favor of a completely custom container that implements Containable 
+ *     
+ *  @version 0.1
  *  @author Jay Marcyes {@link http://marcyes.com}
- *  @since 6-1-11
+ *  @since 7-22-11
  *  @package montage
  ******************************************************************************/
 namespace Montage\Dependency;
 
+use Montage\Dependency\Containable;
 use ReflectionObject, ReflectionClass, ReflectionMethod, ReflectionParameter;
 use Montage\Field\Field;
 use out;
 
-class Container extends Field {
-
-  /**
-   *  the reflection class is kept outside the {@link $instance_map} because it
-   *  is needed for lots of things   
-   *
-   *  @var  string  the passed in Reflection instances full class name   
-   */
-  protected $reflection = null;
+abstract class Container extends Field implements Containable {
 
   protected $instance_map = array();
-  
-  protected $preferred_map = array();
   
   /**
    *  holds the class keys with a callback that should be executed before the instance is created
@@ -46,17 +36,6 @@ class Container extends Field {
    *  @var  array   
    */
   protected $on_created_map = array();
-
-  /**
-   *  create an instance of this class
-   */
-  public function __construct(Reflection $reflection){
-  
-    $this->reflection = $reflection;
-    $this->setInstance($reflection);
-    $this->setInstance($this); // we want to be able to inject this also
-    
-  }//method
   
   /**
    *  the callback will be triggered when the instance is about to be created
@@ -105,144 +84,29 @@ class Container extends Field {
   }//method
   
   /**
-   *  when "finding" a class, sometimes that class will have multiple children, this
-   *  lets you set which child class you would want returned
+   *  true if there is an existing instance with the $class_name
    *  
-   *  @since  6-18-11
-   *  @param  string  $class_name the class that might be passed into {@link findInstance()}
-   *  @param  string  $preferred_class_name the class that will be searched for instead of $class_name
+   *  @param  string  $class_name
+   *  @return boolean
    */
-  public function setPreferred($class_name,$preferred_class_name){
-  
-    $class_key = $this->getKey($class_name);
-    ///$preferred_class_key = $this->getKey($preferred_class_name);
-    $this->preferred_map[$class_key] = $preferred_class_name;
-  
-  }//method
-  
-  public function getReflection(){ return $this->reflection; }//method
-  
   public function hasInstance($class_name){
     return isset($this->instance_map[$this->getKey($class_name)]);
   }//method
   
-  public function setInstance($instance){
+  /**
+   *  set the given instance using key $class_name
+   *  
+   *  @param  string  $class_name
+   *  @param  object  $instance the instance to set at class_name
+   */
+  public function setInstance($class_name,$instance){
   
     // canary...
     if(!is_object($instance)){ throw new \InvalidArgumentException('$instance was empty'); }//if
   
-    $class_key = $this->getKey($instance);
+    $class_key = $this->getKey($class_name);
     $this->instance_map[$class_key] = $instance;
   
-  }//method
-  
-  /**
-   *  when you know what class you specifically want, use this method over {@link findInstance()}
-   *
-   *  @param  string  $class_name the name of the class you are looking for
-   *  @param  array $params any params you want to pass into the constructor of the instance      
-   */
-  public function getInstance($class_name,$params = array()){
-  
-    // canary...
-    if(empty($class_name)){ throw new \InvalidArgumentException('$class_name was empty'); }//if
-  
-    $ret_instance = null;
-    $params = (array)$params;
-    $class_key = $this->getKey($class_name);
-  
-    if(isset($this->instance_map[$class_key])){
-    
-      $ret_instance = $this->instance_map[$class_key];
-      
-    }else{
-    
-      // handle on create...
-      if(isset($this->on_create_map[$class_key])){
-        $params = call_user_func($this->on_create_map[$class_key],$this,$params);
-      }//if
-    
-      $ret_instance = $this->createInstance($class_name,$params);
-      $this->setInstance($ret_instance);
-      
-      // handle on created...
-      if(isset($this->on_created_map[$class_key])){
-        call_user_func($this->on_created_map[$class_key],$this,$ret_instance);
-      }//if
-    
-    }//if/else
-  
-    return $ret_instance;
-  
-  }//method
-  
-  /**
-   *  find the absolute descendant of the class(es) you pass in
-   *
-   *  @param  string  $class_name the name of the class you are looking for
-   *  @param  array $params any params you want to pass into the constructor of the instance      
-   */
-  public function findInstance($class_name,$params = array()){
-
-    $ret_instance = null;
-    $class_name = $class_name;
-    $class_key = $this->getKey($class_name);
-    $cn_key = $class_key;
-    $params = (array)$params;
-    $reflection = $this->getReflection();
-    $instance_class_name = '';
-    
-    if(isset($this->instance_map[$cn_key])){ // check to see if there is already an instance
-    
-      $ret_instance = $this->instance_map[$cn_key];
-    
-    }else if(isset($this->preferred_map[$cn_key])){ // check to see if there has been a preferred class set
-  
-      $cn_key = $this->preferred_map[$cn_key];
-    
-    }//if
-      
-    if(empty($ret_instance)){
-    
-      if($reflection->hasClass($cn_key)){
-
-        $instance_class_name = $reflection->findClassName($cn_key);
-        
-      }else if(class_exists($cn_key)){
-        
-        $instance_class_name = $cn_key;
-        
-      }//if/else if
-    
-      if(empty($instance_class_name)){
-      
-        throw new \UnexpectedValueException(
-          sprintf('Unable to find suitable child class using "%s"',$class_name)
-        );
-        
-      }else{
-      
-        // handle on create...
-        if(isset($this->on_create_map[$class_key])){
-          $params = call_user_func($this->on_create_map[$class_key],$this,$params);
-        }//if
-      
-        $ret_instance = $this->getInstance($instance_class_name,$params);
-        
-        // handle on created...
-        if(isset($this->on_created_map[$class_key])){
-          call_user_func($this->on_created_map[$class_key],$this,$ret_instance);
-        }//if
-        
-        // also map to the passed in class key for quicker repeat lookups of the same child class...
-        $this->instance_map[$class_key] = $ret_instance;
-        
-      }//if/else
-      
-    }//if
-      
-    return $ret_instance;
-    
   }//method
   
   /**
@@ -344,7 +208,7 @@ class Container extends Field {
    *  @param  array $params see {@link normalizeParams()} for description of the $params array
    *  @return mixed the normalized param
    */
-  public function normalizeParam(ReflectionParameter $rparam,array $params = array()){
+  public function normalizeParam(\ReflectionParameter $rparam,array $params = array()){
   
     $ret_param = null;
     $index = $rparam->getPosition();
@@ -364,7 +228,23 @@ class Container extends Field {
       
       }else{
       
-        $rclass = $rparam->getClass();
+        try{
+      
+          $rclass = $rparam->getClass();
+          
+        }catch(\ReflectionException $e){
+        
+          throw new \ReflectionException(
+            sprintf(
+              '%s which is param %s of method %s::%s()',
+              $e->getMessage(),
+              ($index + 1),
+              $rparam->getDeclaringClass()->getName(),
+              $rparam->getDeclaringFunction()->getName()
+            )
+          );
+        
+        }//try/catch
           
         if($rclass === null){
         
@@ -395,7 +275,7 @@ class Container extends Field {
           
           try{
           
-            $ret_param = $this->findInstance($class_name);
+            $ret_param = $this->getInstance($class_name);
             
           }catch(\Exception $e){
           
@@ -453,7 +333,7 @@ class Container extends Field {
    *                        discovered params
    *  @return array the params ready to be passed to the method using something like call_user_func_array
    */
-  public function normalizeParams(ReflectionMethod $rmethod,array $params = array()){
+  public function normalizeParams(\ReflectionMethod $rmethod,array $params = array()){
   
     // canary...
     if($rmethod->getNumberOfParameters() <= 0){ return $params; }//if
@@ -478,18 +358,10 @@ class Container extends Field {
    *  get the key the instance will use for the instance map
    *
    *  @since  6-13-11
-   *  @Param  string|object $class   
-   *  @return string      
+   *  @Param  string  $class_name
+   *  @return string    
    */
-  protected function getKey($class){
-    
-    $class_name = is_object($class)
-      ? get_class($class)
-      : $class;
-  
-    return $this->getReflection()->normalizeClassName($class_name);
-    
-  }//method
+  protected function getKey($class_name){ return mb_strtoupper($class_name); }//method
 
   /**
    *  inject dependencies via setter methods
@@ -509,7 +381,7 @@ class Container extends Field {
    *  @param  ReflectionClass $rclass the reflection object of the given $instance      
    *  @return object  $instance with its setters injected
    */
-  protected function injectSetters($instance,ReflectionClass $rclass = null){
+  protected function injectSetters($instance,\ReflectionClass $rclass = null){
   
     // canary...
     if(empty($instance)){ throw new \InvalidArgumentException('$instance was empty'); }//if

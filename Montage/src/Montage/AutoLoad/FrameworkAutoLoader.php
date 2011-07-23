@@ -3,7 +3,7 @@
 /**
  *  handle Framework autoloading
  *  
- *  this is a very specific autoloader that only loads classes from the framework src path
+ *  this is a very specific autoloader that only loads classes from the framework's src path
  *  
  *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -34,14 +34,15 @@ class FrameworkAutoLoader extends Autoloader {
   
     $ret_bool = false;
     $file_name = $this->normalizeClassName($class_name);
-    $count = 0;
-    $file_name = str_replace('Montage','',$file_name,$count);
-
-    if($count > 0){
-    ///if(mb_strpos($file_name,'Montage') === 0){
     
-      $file = $this->framework_src_path.$file_name;
-      require($file);
+    ///$count = 0;
+    ///$file_name = str_replace('Montage','',$file_name,$count);
+
+    ///if($count > 0){
+    if(mb_strpos($file_name,'Montage') === 0){
+    
+      $file = $this->framework_src_path.DIRECTORY_SEPARATOR.$file_name;
+      include($file);
     
     }//if
     
