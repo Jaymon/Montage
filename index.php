@@ -1,10 +1,15 @@
 <?php
 
-require_once(__DIR__.'/out_class.php');
-require_once('C:\Projects\Sandbox\Montage\_active\Montage\Start.php');
+/**
+ *  this is an example of the index.php file that should go in your app's web/ folder
+ */
 
-use Montage\Core;
+require_once('path/to/Montage/Framework.php');
 
-$core = new Core('dev',1,realpath(__DIR__.'/..'));
-$response = $core->handle();
-$response->handle();
+$env = 'dev'; // what environment to use
+$debug = 1; // debug level you want to use
+$app_path = realpath(__DIR__.'/..'); // your app's root path
+
+$framework = new Core($env,$debug,$app_path);
+$handler = new Montage\Framework($env,$debug,$app_path);
+$handler->handle();
