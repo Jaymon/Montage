@@ -46,7 +46,7 @@ use Montage\Response\Template;
 require_once(__DIR__.'/AutoLoad/AutoLoadable.php');
 require_once(__DIR__.'/AutoLoad/AutoLoader.php');
 require_once(__DIR__.'/AutoLoad/FrameworkAutoloader.php');
-$fal = new FrameworkAutoloader(realpath(__DIR__.'/..'));
+$fal = new FrameworkAutoloader('Montage',realpath(__DIR__.'/..'));
 $fal->register();
 
 class Framework extends Field implements Dependable {

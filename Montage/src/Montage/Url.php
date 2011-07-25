@@ -1,5 +1,4 @@
 <?php
-
 /**
  *  class for generating urls
  *
@@ -21,6 +20,13 @@ class Url extends Field {
   
   const SCHEME_NORMAL = 'http';
   const SCHEME_SECURE = 'https';
+  
+  /**
+   *  urls using //host.com/blah will use the SCHEME of the last request 
+   *
+   *  @since  7-23-11      
+   */
+  const SCHEME_RELATIVE = '//';
   
   protected $scheme = self::SCHEME_NORMAL;
 

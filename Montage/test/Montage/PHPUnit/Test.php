@@ -16,11 +16,11 @@ require_once(__DIR__.'/../../../src/Montage/AutoLoad/AutoLoader.php');
 require_once(__DIR__.'/../../../src/Montage/AutoLoad/FrameworkAutoloader.php');
 
 // add the framework autoloader...
-$fal = new FrameworkAutoloader(__DIR__.'/../../../src');
+$fal = new FrameworkAutoloader('Montage',realpath(__DIR__.'/../../../src'));
 $fal->register();
 
 // add a test autoloader...
-$tal = new FrameworkAutoloader(__DIR__.'/../..');
+$tal = new FrameworkAutoloader('Montage\PHPUnit',realpath(__DIR__.'/../..'));
 $tal->register();
 
 abstract class Test extends PHPUnit_Framework_TestCase {
