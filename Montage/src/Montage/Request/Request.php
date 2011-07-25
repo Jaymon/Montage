@@ -142,7 +142,7 @@ class Request extends SymfonyRequest implements MontageRequest,GetFieldable {
       $ret_mixed = $this->request->get($key);
     }else{
     
-      $ret_mixed = $this->query->get($default_val);
+      $ret_mixed = $this->query->get($key,$default_val);
     
     }//if/else
   

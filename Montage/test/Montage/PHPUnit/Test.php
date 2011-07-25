@@ -23,6 +23,9 @@ $fal->register();
 $tal = new FrameworkAutoloader('Montage\PHPUnit',realpath(__DIR__.'/../..'));
 $tal->register();
 
+$sal = new FrameworkAutoloader('Symfony',realpath(__DIR__.'/../../../plugins/Symfony/vendor'));
+$sal->register();
+
 abstract class Test extends PHPUnit_Framework_TestCase {
 
   /**

@@ -324,26 +324,23 @@ abstract class Container extends Field implements Containable {
    *  @example
    *    // method signature: foo($bar = '',$baz = '',SomeClass $che);
    *    $rmethod = new ReflectionMethod($instance,'foo');
-   *    $this->normalizeParams($rmethod,array('che','cha') // retuns array('che','cha',automatically created SomeClass Instance)
-   *    $this->normalizeParams($rmethod,array('che') // retuns array('che','',automatically created SomeClass Instance)
-   *    $this->normalizeParams($rmethod,array('che' => new SomeClass(),'bar' => '') // retuns array('','',passed in SomeClass Instance)       
+   *    $this->normalizeParams($rmethod,array('che','cha')) // retuns array('che','cha',automatically created SomeClass Instance)
+   *    $this->normalizeParams($rmethod,array('che')) // retuns array('che','',automatically created SomeClass Instance)
+   *    $this->normalizeParams($rmethod,array('che' => new SomeClass(),'bar' => '')) // retuns array('','',passed in SomeClass Instance)       
    *        
-   *  @param  ReflectionMethod  $rmethod  the reflection of the method
+   *  @param  ReflectionFunctionAbstract  $rfunc  the reflection of the method/function
    *  @param  array $params any params you want to pass to override any magically
    *                        discovered params
    *  @return array the params ready to be passed to the method using something like call_user_func_array
    */
-  public function normalizeParams(\ReflectionMethod $rmethod,array $params = array()){
+  public function normalizeParams(\ReflectionFunctionAbstract $rfunc,array $params = array()){
   
     // canary...
-    if($rmethod->getNumberOfParameters() <= 0){ return $params; }//if
+    if($rfunc->getNumberOfParameters() <= 0){ return $params; }//if
   
-    // canary, params are numeric, so just pass those into the constructor untouched...
-    ///if(ctype_digit((string)join('',array_keys($params)))){ return $params; }//if
-    
     $ret_params = array();
     
-    $rparams = $rmethod->getParameters();
+    $rparams = $rfunc->getParameters();
     foreach($rparams as $rparam){
 
       $ret_params[] = $this->normalizeParam($rparam,$params);

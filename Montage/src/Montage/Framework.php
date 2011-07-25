@@ -325,15 +325,16 @@ class Framework extends Field implements Dependable {
    *  
    *  @since  7-19-11
    *  @see  handleController()
-   *  @param  \ReflectionMethod $rmethod  reflection of the controller method that is going to be called
+   *  @param  \ReflectionFunctionAbstract $rfunc  reflection of the controller method/function that is going to be called
    *  @param  array $params the params that were found that are being normalized
    *  @return array the $params normalized
    */
-  protected function normalizeControllerParams(\ReflectionMethod $rmethod,array $params){
+  protected function normalizeControllerParams(\ReflectionFunctionAbstract $rfunc,array $params){
   
     $container = $this->getContainer();
-    $rparams = $rmethod->getParameters();
-    $rmethod_params = array();
+    $rparams = $rfunc->getParameters();
+    $rfunc_params = array();
+    $count = 0;
   
     // check for Forms and populate them if there are matching passed in vars...
     foreach($rparams as $index => $rparam){
@@ -344,53 +345,67 @@ class Framework extends Field implements Dependable {
         // quick/nice way to do a catch-all...
         if($rparam->isArray()){
         
-          $rmethod_params[$index] = array();
+          $rfunc_params[$index] = array();
         
-          if(count($params) < $index){
+          if($count < count($params)){
         
-            $rmethod_params[$index] = array_slice($params,$index + 1);
+            $rfunc_params[$index] = array_slice($params,$count);
             $params = array();
             
+          }//if
+          
+          // set any default values if they are available, if they were not previously set then
+          // pull from the request variables like $_GET and $_POST to populate the array values...
+          if($rparam->isDefaultValueAvailable()){
+          
+            $request = $this->getRequest();
+          
+            foreach($rparam->getDefaultValue() as $default_key => $default_val){
+            
+              if(!isset($rfunc_params[$index][$default_key])){
+              
+                $rfunc_params[$index][$default_key] = $request->getField($default_key,$default_val);
+              
+              }//if
+            
+            }//foreach
+
           }//if
         
         }else{
     
-          $rmethod_params[$index] = $container->normalizeParam($rparam,$params);
+          $rfunc_params[$index] = $container->normalizeParam($rparam,$params);
           
         }//if/else
         
       }catch(\Exception $e){
       
         throw new NotFoundException(
-          sprintf(
-            '%s::%s param $%s was not found and a substitute value could not be inferred',
-            $class_name,
-            $method,
-            $rparam->getName()
-          )
+          sprintf('wrapped %s exception: %s',get_class($e),$e->getMessage()),
+          $e->getCode()
         );
       
       }//try/catch
     
-      if(is_object($rmethod_params[$index])){
+      if(is_object($rfunc_params[$index])){
       
         // populate a form object if there are passed in values...
-        if($rmethod_params[$index] instanceof \Montage\Form\Form){
+        if($rfunc_params[$index] instanceof \Montage\Form\Form){
       
           $request = $this->getRequest();
-          $form_name = $rmethod_params[$index]->getName();
+          $form_name = $rfunc_params[$index]->getName();
 
           if($form_field_map = $request->getField($form_name)){
           
-            $rmethod_params[$index]->set($form_field_map);
+            $rfunc_params[$index]->set($form_field_map);
           
           }//if
           
           // set the current url...
-          if(!$rmethod_params[$index]->hasUrl()){
+          if(!$rfunc_params[$index]->hasUrl()){
           
             $url = $container->getInstance('Montage\Url');
-            $rmethod_params[$index]->setUrl($url->getCurrent());
+            $rfunc_params[$index]->setUrl($url->getCurrent());
           
           }//if
         
@@ -398,9 +413,11 @@ class Framework extends Field implements Dependable {
       
       }//if
     
+      $count++;
+    
     }//foreach
   
-    return $rmethod_params;
+    return $rfunc_params;
   
   }//method
   

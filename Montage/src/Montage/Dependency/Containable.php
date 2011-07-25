@@ -105,11 +105,11 @@ interface Containable {
    *    $this->normalizeParams($rmethod,array('che') // retuns array('che','',automatically created SomeClass Instance)
    *    $this->normalizeParams($rmethod,array('che' => new SomeClass(),'bar' => '') // retuns array('','',passed in SomeClass Instance)       
    *        
-   *  @param  ReflectionMethod  $rmethod  the reflection of the method
+   *  @param  ReflectionFunctionAbstract  $rfunc  the reflection of the method/function
    *  @param  array $params any params you want to pass to override any magically
    *                        discovered params
    *  @return array the params ready to be passed to the method using something like call_user_func_array
    */
-  public function normalizeParams(\ReflectionMethod $rmethod,array $params = array());
+  public function normalizeParams(\ReflectionFunctionAbstract $rfunc,array $params = array());
 
 }//class

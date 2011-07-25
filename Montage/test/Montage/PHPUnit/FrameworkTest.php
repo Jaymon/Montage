@@ -25,19 +25,77 @@ class FrameworkTest extends Test {
   }//method
 
    /**
-   *  test the build method
+   *  test passing simple controller params
    */
-  public function testNormalizeControllerParams1(){
+  public function testSimpleNormalizeControllerParams(){
   
-    $rmethod = new \ReflectionMethod($this,'ControllerNCP1');
-    $rmethod_params = array('foo' => 1,'bar' => 2);
+    $func = function($foo,$bar){};
+    $rfunc = new \ReflectionFunction($func);
+    $rfunc_params = array('foo' => 1,'bar' => 2);
+    $expected_params = array(1,2);
     
-    $normalized_params = $this->framework->normalizeControllerParams($rmethod,$rmethod_params);
-    \out::e($normalized_params);
-  
+    $normalized_params = $this->framework->normalizeControllerParams($rfunc,$rfunc_params);
+    $this->assertEquals($expected_params,$normalized_params);
+    
+    $rfunc_params = array('foo','bar');
+    $expected_params = array('foo','bar');
+    
+    $normalized_params = $this->framework->normalizeControllerParams($rfunc,$rfunc_params);
+    $this->assertEquals($expected_params,$normalized_params);
+    
   }//method
 
-  public function ControllerNCP1($foo,$bar){}//method
+  /**
+   *  test the array catchall
+   *   
+   *  @since  7-25-11
+   */
+  public function testCatchallNormalizeControllerParams(){
+  
+    // try with just the catch-all...
+    $func = function(array $catchall){};
+    $rfunc = new \ReflectionFunction($func);
+    
+    $rfunc_params = array('foo','bar');
+    $expected_params = array(array('foo','bar'));
+    
+    $normalized_params = $this->framework->normalizeControllerParams($rfunc,$rfunc_params);
+    $this->assertEquals($expected_params,$normalized_params);
+    
+    // try with one simple value before the cactch-all...
+    $func = function($foo,array $catchall){};
+    $rfunc = new \ReflectionFunction($func);
+    
+    $rfunc_params = array('foo','bar','baz');
+    $expected_params = array('foo',array('bar','baz'));
+    
+    $normalized_params = $this->framework->normalizeControllerParams($rfunc,$rfunc_params);
+    $this->assertEquals($expected_params,$normalized_params);
+    
+    // now try with a request value...
+    $func = function($foo,array $catchall = array('che' => 0)){};
+    $rfunc = new \ReflectionFunction($func);
+    $_POST['che'] = 1;
+    
+    $rfunc_params = array('foo');
+    $expected_params = array('foo',array('che' => 1));
+    
+    $normalized_params = $this->framework->normalizeControllerParams($rfunc,$rfunc_params);
+    $this->assertEquals($expected_params,$normalized_params);
+    
+    // now try with a request value set and one default...
+    $func = function($foo,array $catchall = array('che' => 0,'bar' => 1)){};
+    $rfunc = new \ReflectionFunction($func);
+    $_POST['che'] = 1;
+    
+    $rfunc_params = array('foo');
+    $expected_params = array('foo',array('che' => 1,'bar' => 1));
+    
+    $normalized_params = $this->framework->normalizeControllerParams($rfunc,$rfunc_params);
+    \out::e($normalized_params);
+    $this->assertEquals($expected_params,$normalized_params);
+    
+  }//method
 
 }//class
 
@@ -53,8 +111,8 @@ class FrameworkTest extends Test {
  */
 class TestFramework extends Framework {
 
-  public function normalizeControllerParams(\ReflectionMethod $rmethod,array $params){
-    return parent::normalizeControllerParams($rmethod,$params);
+  public function normalizeControllerParams(\ReflectionFunctionAbstract $rfunc,array $params){
+    return parent::normalizeControllerParams($rfunc,$params);
   }//method
 
 }//method
@@ -67,6 +125,18 @@ class TestContainer extends Container {
    *  @param  string  $class_name the name of the class you are looking for
    *  @param  array $params any params you want to pass into the constructor of the instance      
    */
-  public function getInstance($class_name,$params = array()){ return null; }//method
+  public function getInstance($class_name,$params = array()){
+  
+    $ret_instance = null;
+  
+    if($class_name === 'Montage\Request\Requestable'){
+    
+      $ret_instance = new \Montage\Request\Request($_GET, $_POST, array(), $_COOKIE, $_FILES, $_SERVER);
+    
+    }//if
+  
+    return $ret_instance;
+    
+  }//method
 
 }//class
