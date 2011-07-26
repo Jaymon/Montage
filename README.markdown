@@ -41,6 +41,8 @@ A typical Montage app will use the following folder structure:
       cache/
       web/
       plugins/
+      view/
+      data/
   
 What do the different folders do:
 
@@ -50,6 +52,8 @@ What do the different folders do:
   - cache - Montage will try and cache to this directory
   - web - where requests will be handled, this will typically have the index.php file
   - plugins - any plugins you are using, plugin folders are organized more or less the same way
+  - view - all your template files
+  - data - any data files your app will use
 
 ## How Does the Controller Work?
 

@@ -75,7 +75,8 @@ class FrameworkStart extends Start {
       
         // set the values for the url instance on creation...
         $ret_map = array(
-          'query' => (strncasecmp(PHP_SAPI, 'cli', 3) === 0) ? $_SERVER['argv'] : $_GET,
+          'cli' => empty($_SERVER['argv']) ? array() : $_SERVER['argv'],
+          'query' => $_GET,
           'request' => $_POST,
           'attributes' => array(),
           'cookies' => $_COOKIE,

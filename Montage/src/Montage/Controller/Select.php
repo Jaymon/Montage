@@ -170,8 +170,15 @@ class Select {
       $full_class_name = $this->normalizeClass($class_namespace,$class_name);
       
       if($reflection->isChildClass($full_class_name,$this->class_interface)){
-        $ret_str = $full_class_name;
-        break;
+      
+        $rclass = new \ReflectionClass($full_class_name);
+        if($rclass->isInstantiable()){
+        
+          $ret_str = $full_class_name;
+          break;
+          
+        }//if
+        
       }//if
       
     }//foreach

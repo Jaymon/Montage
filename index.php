@@ -10,6 +10,5 @@ $env = 'dev'; // what environment to use
 $debug = 1; // debug level you want to use
 $app_path = realpath(__DIR__.'/..'); // your app's root path
 
-$framework = new Core($env,$debug,$app_path);
-$handler = new Montage\Framework($env,$debug,$app_path);
-$handler->handle();
+$framework = new Montage\Framework($env,$debug,$app_path);
+$framework->handle();

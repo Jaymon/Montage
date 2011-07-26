@@ -250,7 +250,7 @@ class Framework extends Field implements Dependable {
     
     // create the reflection autoloader...
     $ral = $container->getInstance('\Montage\AutoLoad\ReflectionAutoloader');
-    $ral->register();
+    $ral->register(true);
     
     // create the standard autoloader...
     // we can't use find here because people might extend the StandardAutoloader (like I did)...
@@ -735,32 +735,30 @@ class Framework extends Field implements Dependable {
     $path->assure();
     $this->setField('cache_path',$path);
     
-    ///$autoload_path_list = array();
-    ///$autoload_path_list['Montage'] = array();
-    
     $reflection_path_list = array();
+    $view_path_list = array();
+    $vendor_path_list = array();
+    $assets_path_list = array();
+    $plugin_base_path_list = array();
     
-    $framework_src_path = new Path($framework_path,'src');
-    $reflection_path_list[] = $framework_src_path;
-    ///$autoload_path_list['Montage'] = $framework_src_path;
+    $path = new Path($framework_path,'src');
+    $reflection_path_list[] = $path;
     
     $reflection_path_list[] = new Path($app_path,'src');
-    $reflection_path_list[] = new Path($app_path,'config');
     
-    $view_path_list = array();
+    $path = new Path($app_path,'config');
+    if($path->exists()){ $reflection_path_list[] = $path; }//if
+    
     $path = new Path($app_path,'view');
     if($path->exists()){ $view_path_list[] = $path; }//if
     
-    $vendor_path_list = array();
     $path = new Path($app_path,'vendor');
     if($path->exists()){ $vendor_path_list[] = $path; }//if
     
-    $assets_path_list = array();
     $path = new Path($app_path,'assets');
     if($path->exists()){ $assets_path_list[] = $path; }//if
     
     // add the plugin paths...
-    $plugin_base_path_list = array();
     $plugin_base_path_list[] = new Path($framework_path,'plugins');
     $plugin_base_path_list[] = new Path($app_path,'plugins');
     foreach($plugin_base_path_list as $plugin_base_path){
@@ -772,15 +770,11 @@ class Framework extends Field implements Dependable {
           if($plugin_dir->isDir()){
           
             $plugin_name = $plugin_dir->getBasename();
-            ///if(!isset($autoload_path_list[$plugin_name])){
-            ///  $autoload_path_list[$plugin_name] = array();
-            ///}//if
           
             $path = new Path($plugin_path,'config');
             if($path->exists()){
               
               $reflection_path_list[] = $path;
-              ///$autoload_path_list[$plugin_name][] = $path;
               
             }//if
             
@@ -788,7 +782,6 @@ class Framework extends Field implements Dependable {
             if($path->exists()){
               
               $reflection_path_list[] = $path;
-              ///$autoload_path_list[$plugin_name][] = $path;
               
             }//if 
           
@@ -799,7 +792,6 @@ class Framework extends Field implements Dependable {
             if($path->exists()){
               
               $vendor_path_list[] = $path;
-              ///$autoload_path_list[$plugin_name][] = $path;
             
             }//if
             
@@ -814,7 +806,6 @@ class Framework extends Field implements Dependable {
       
     }//foreach
   
-    ///$this->setField('autoload_paths',$autoload_path_list);
     $this->setField('reflection_paths',$reflection_path_list);
     $this->setField('view_paths',$view_path_list);
     $this->setField('vendor_paths',$vendor_path_list);
