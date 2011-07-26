@@ -92,11 +92,10 @@ class FrameworkTest extends Test {
     $expected_params = array('foo',array('che' => 1,'bar' => 1));
     
     $normalized_params = $this->framework->normalizeControllerParams($rfunc,$rfunc_params);
-    \out::e($normalized_params);
     $this->assertEquals($expected_params,$normalized_params);
     
   }//method
-
+  
 }//class
 
 /**

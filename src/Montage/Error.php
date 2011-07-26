@@ -13,7 +13,7 @@ namespace Montage;
 class Error {
 
   /**
-   *  these are the errors that are handled with {@link getErrorRuntime()}.
+   *  these are the errors that are handled with {@link handleRuntime()}.
    */        
   protected $ERRORS_RUNTIME = array(
     E_RECOVERABLE_ERROR => 'E_RECOVERABLE_ERROR',
@@ -28,7 +28,7 @@ class Error {
   );
   
   /**
-   *  these errors are handled by the {@link getErrorFatal()} function
+   *  these errors are handled by the {@link handleFatal()} function
    *  
    *  use get_defined_constants() to see their values.
    */
@@ -68,7 +68,9 @@ class Error {
    */        
   public function handleRuntime($errno,$errstr,$errfile,$errline){
   
-    \out::e($this->getName($errno),$errstr,$errfile,$errline);
+    \out::b($this->getName($errno));
+    \out::e($errstr,$errfile,$errline);
+    \out::b();
   
     // canary...
     if($errno === E_RECOVERABLE_ERROR){
