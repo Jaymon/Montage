@@ -6,7 +6,7 @@
  *  Matcher::find() sounds strange, what about Resolve?  6-17-11 - I went with
  *  Select 
  *  
- *  @version 0.2
+ *  @version 0.3
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 4-6-10
  *  @package montage
@@ -35,8 +35,8 @@ class Select {
    *  @var  array   
    */
   protected $class_namespace_list = array(
-    '\Controller',
-    '\Montage\Controller'
+    'Controller',
+    'Montage\Controller'
   );
   
   /**
@@ -58,7 +58,7 @@ class Select {
    *  
    *  @var  string
    */
-  protected $class_interface = '\Montage\Controller\Controllable';
+  protected $class_interface = 'Montage\Controller\Controllable';
   
   
   /**
@@ -100,6 +100,10 @@ class Select {
   /**
    *  add a namespace to the list of usable controller namespaces
    *
+   *  @deprecated I think this is no longer needed since {@link getClassName()} will now fallback
+   *  to checking all controller classes looking for a match if the defined namespace list doesn't find
+   *  a match      
+   *      
    *  this is handy for plugins to add a controller that can be easily overridden by
    *  the application (which would be harder to do if the plugin had controller \Controller\Foo and
    *  the app wanted to change Foo a bit it couldn't easily extend \Controller\Foo since the 
@@ -152,7 +156,9 @@ class Select {
    *  returns a full class name if it is a child of {@link $class_interface}
    *  
    *  @since  6-20-11
-   *  @param  string  $class_name a partial class name that will be turned into a full class name   
+   *  @param  string  $class_name a partial class name that will be turned into a full class name, this
+   *                              value would be equivalent to {@link ReflectionClass::getShortName()} and
+   *                              is the name of the class without the namespace         
    *  @return string
    */
   public function getClassName($class_name){
@@ -164,6 +170,7 @@ class Select {
   
     $ret_str = '';
     $reflection = $this->reflection;
+    $tried_class_list = array();
 
     foreach($this->class_namespace_list as $class_namespace){
       
@@ -181,7 +188,33 @@ class Select {
         
       }//if
       
+      $tried_class_list[] = $full_class_name;
+      
     }//foreach
+  
+    // fallback to any controller that matches the name...
+    if(empty($ret_str)){
+    
+      $regex = sprintf('#%s$#i',preg_quote($this->normalizeClass('',$class_name)));
+    
+      $class_list = $reflection->findClassNames($this->class_interface,$tried_class_list);
+      foreach($class_list as $full_class_name){
+      
+        if(preg_match($regex,$full_class_name)){
+        
+          $rclass = new \ReflectionClass($full_class_name);
+          if($rclass->isInstantiable()){
+          
+            $ret_str = $full_class_name;
+            break;
+            
+          }//if
+        
+        }//if
+      
+      }//foreach
+
+    }//if
   
     return $ret_str;
   
@@ -272,7 +305,6 @@ class Select {
   protected function findClass(array $path_list,$fallback_class_name = ''){
 
     $class_name = '';
-    $reflection = $this->reflection;
     $path_bit = reset($path_list);
 
     // see if the controller was passed in from the request string...

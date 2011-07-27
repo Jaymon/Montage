@@ -262,7 +262,7 @@ abstract class Container extends Field implements Containable {
               sprintf(
                 'no suitable value could be found for %s::%s() param "%s"',
                 $rparam->getDeclaringClass()->getName(),
-                $rparam->getName(),
+                $rparam->getDeclaringFunction()->getName(),
                 $field_name
               )
             );

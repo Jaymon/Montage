@@ -9,7 +9,7 @@
  *    because it wraps other classes that do extend it and we don't want method name
  *    clashing  
  *  
- *  @version 0.2
+ *  @version 0.3
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 12-28-09
  *  @package montage
@@ -17,7 +17,7 @@
  ******************************************************************************/
 namespace Montage;
 
-class Escape implements ArrayAccess,Iterator,Countable {
+class Escape implements \ArrayAccess,\Iterator,\Countable {
 
   const TYPE_OBJECT = 1;
   const TYPE_ARRAY = 2;
@@ -53,7 +53,7 @@ class Escape implements ArrayAccess,Iterator,Countable {
   
   /**
    *  since this class can be overloaded, we need to make sure we always create instances
-   *  of the right montage_escape class, so this holds the class name
+   *  of the right class, so this holds the class name
    *  
    *  @var  string
    */
@@ -80,15 +80,15 @@ class Escape implements ArrayAccess,Iterator,Countable {
       $this->type = self::TYPE_OBJECT;
       
       $this->access = self::ACCESS_NONE;
-      if($val instanceof ArrayAccess){
+      if($val instanceof \ArrayAccess){
         $this->access |= self::ACCESS_ARRAY;  
       }//if
       
-      if($val instanceof Traversable){
+      if($val instanceof \Traversable){
         $this->access |= self::ACCESS_ITERATE;  
       }//if
       
-      if($val instanceof Countable){
+      if($val instanceof \Countable){
         $this->access |= self::ACCESS_COUNT;  
       }//if
     
@@ -233,13 +233,12 @@ class Escape implements ArrayAccess,Iterator,Countable {
     if(!$this->assureType(self::TYPE_OBJECT)){
       throw new \LogicException('cannot call a method since the escaped $val is not an object');
     }//if
-  
-    $class_name = $this->class_name;
-    $base_class_name = __CLASS__; // should always be the name of this class
     
     // go through and get the raw values of each of the arguments to pass to the method...
-    foreach($args as $key => $arg){ $args[$key] = $this->assureRawVal($arg); }//method
+    $args = array_map(array($this,'assureRawVal'),$args);
+    ///foreach($args as $key => $arg){ $args[$key] = $this->assureRawVal($arg); }//method
     
+    $class_name = $this->class_name;
     return new $class_name(call_user_func_array(array($this->val,$method),$args));
   
   }//method

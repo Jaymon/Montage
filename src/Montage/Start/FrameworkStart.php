@@ -32,15 +32,19 @@ class FrameworkStart extends Start {
       '\Montage\Config\FrameworkConfig',
       function($container,$instance){
 
+        // the framework config should be our Single Point of Truth from here on
+        // http://teddziuba.com/2011/06/most-important-concept-systems-design.html
         $framework = $container->getInstance('Montage\Framework');
         $instance->setField('env',$framework->getField('env'));
         $instance->setField('debug_level',$framework->getField('debug_level'));
         $instance->setField('app_path',$framework->getField('app_path'));
         $instance->setField('framework_path',$framework->getField('framework_path'));
+        $instance->setField('plugin_paths',$framework->getField('plugin_paths',array()));
+        $instance->setField('cache_path',$framework->getField('cache_path'));
         
       }
     );
-    
+
     $this->framework_config = $container->getInstance('\Montage\Config\FrameworkConfig');
 
     error_reporting($this->framework_config->getErrorLevel());

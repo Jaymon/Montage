@@ -2,6 +2,11 @@
 /**
  *  handle session stuff 
  *
+ *  how I'm imagining assets working: it will go through and compile the list of all assets
+ *  and move them to the web/assets folder and keep them in memory, then there will be a 
+ *  __toString method that will output the js and css at the top of page, so anything can
+ *  be overriden, http assets can be added, etc.
+ *   
  *  @version 0.3
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 2-28-10

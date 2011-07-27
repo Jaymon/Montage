@@ -1,57 +1,28 @@
 <?php
 
-namespace Montage\Test\PHPUnit {
+namespace Montage\PHPUnit {
 
-  require_once('out_class.php');
-  
-  require_once(__DIR__.'/Test.php');
-  require_once(__DIR__.'/../../Field.php');
-  require_once(__DIR__.'/../../Controller/Controllable.php');
-  require_once(__DIR__.'/../../Controller/Controller.php');
-  require_once(__DIR__.'/../../Controller/Forward.php');
-  require_once(__DIR__.'/../../Path.php');
-  
-  require_once(__DIR__.'/../../Dependency/Container.php');
-  require_once(__DIR__.'/../../Dependency/Reflection.php');
-  require_once(__DIR__.'/../../Dependency/Injector.php');
+  require_once(__DIR__.'/../Test.php');
 
   use Montage\Dependency\Reflection;
-  use Montage\Dependency\Container;
-  use out;
+  use Montage\Controller\Select;
   
   class SelectTest extends Test {
   
-    protected $container = null;
+    protected $cselect = null;
   
     public function setUp(){
     
-      ///out::e($this->container);
-    
       $reflection = new Reflection();
-      ///$reflection->addPath(__DIR__.'/../Fixtures/Forward/Controller');
-      $reflection->addPath(__DIR__.'/../../Controller');
       
-      $reflection->addClass('Montage\Dependency\Reflection');
-      $reflection->addClass('Controller\IndexController');
+      $reflection->addFile(__DIR__.'../../../../../src/Montage/Controller/Controllable.php');
+      $reflection->addFile(__DIR__.'../../../../../src/Montage/Controller/Controller.php');
+      $reflection->addFile(__FILE__);
       
-      $this->container = new Container($reflection);
+      $this->cselect = new Select($reflection);
       
-      ///out::e(spl_autoload_functions());
-    
     }//method
     
-    public function tearDown(){
-    
-      if(!empty($this->container)){
-      
-        // we need to unregister the autoloader...
-        $reflection = $this->container->getReflection();
-        $reflection->__destruct();
-        
-      }//if
-    
-    }//method
-  
     public function testFind(){
     
       $test_list = array();
@@ -59,14 +30,13 @@ namespace Montage\Test\PHPUnit {
         'in' => array('','bar/baz',array()),
         'out' => array('Controller\IndexController','handleIndex',array('bar','baz'))
       );
+      $test_list[] = array(
+        'in' => array('','foo',array()),
+        'out' => array('Test\Controller\FooController','handleIndex',array())
+      );
       
-      foreach($test_list as $test_map){
-      
-        $instance = $this->container->getInstance('Montage\Forward');
-        $ret = call_user_func_array(array($instance,'find'),$test_map['in']);
-        $this->assertSame($test_map['out'],$ret);
-        
-      }//foreach
+      $method = 'find';
+      $this->assertCalls($this->cselect,$method,$test_list);
   
     }//method
   
@@ -78,9 +48,21 @@ namespace Test\Controller {
 
   use Montage\Controller\Controller;
   
+  class FooController extends Controller {
+  
+    public function handleIndex(array $params = array()){}//method
+  
+  }//class
+
+}//namespace
+
+namespace Controller {
+
+  use Montage\Controller\Controller;
+  
   class IndexController extends Controller {
   
-    public function handleIndex(){}//method
+    public function handleIndex(array $params = array()){}//method
   
   }//class
 

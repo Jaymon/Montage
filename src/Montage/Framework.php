@@ -281,7 +281,7 @@ class Framework extends Field implements Dependable {
   protected function handleStart(){
   
     $instance_list = array();
-    $env = $this->getConfig()->getEnv();
+    $env = $this->getField('env');
     $container = $this->getContainer();
     $select = $container->getInstance('\Montage\Start\Select');
     
@@ -477,22 +477,41 @@ class Framework extends Field implements Dependable {
         
       }else if($e instanceof \ReflectionException){
         
+        if($old_e = $this->getField('ReflectionException')){
+        
+          throw new \RuntimeException(
+            sprintf(
+              '%s Exception: "%s" already triggered a framework reload and the problem was not fixed',
+              get_class($old_e),
+              $old_e->getMessage()
+            )
+          );
+        
+        }//if
+        
         // this should restart the framework...
         
         // clear all the app cache...
         $cache = $this->getCache();
         $cache->clear();
         
-        // clear all the autoloaders...
+        // clear all the autoloaders but the framework autoloader...
         foreach(spl_autoload_functions() as $callback){
           spl_autoload_unregister($callback);
         }//foreach
         
+        // re-register the framework autoloader...
+        $fal = new FrameworkAutoloader('Montage',realpath(__DIR__.'/..'));
+        $fal->register();
+        
         // start all the objects over again...
         $this->instance_map = array();
         
+        $this->setField('ReflectionException',$e);
+          
         // re-handle the request...
         $ret_mixed = $this->handle();
+        
         
       }else{
         
@@ -526,16 +545,18 @@ class Framework extends Field implements Dependable {
     $max_ir_count = $this->getField('Handler.recursion_max_count',3);
     $ir_field = 'Handler.recursion_count'; 
     $ir_count = $this->getField($ir_field,0);
-    if($ir_count > 10){
-      throw new \RuntimeException(
-        sprintf(
-          'The application has internally redirected more than %s times, something seems to '
-          .'be wrong and the app is bailing to avoid infinite recursion!',
-          $max_ir_count
-        ),
-        $e->getCode(),
-        $e
+    if($ir_count > $max_ir_count){
+
+      $e_msg = sprintf(
+        'Infinite recursion suspected! The error handler has been called more than %s times, last exception (%s): %s',
+        $max_ir_count,
+        get_class($e),
+        $e->getMessage()
       );
+      
+      ///trigger_error($e_msg,E_USER_ERROR);
+      throw new \RuntimeException($e_msg,$e->getCode());
+      
     }else{
     
       $ir_count = $this->bumpField($ir_field,1);
@@ -581,25 +602,6 @@ class Framework extends Field implements Dependable {
   
     return $container;
     
-  }//method
-  
-  /**
-   *  return the framework configuration instance
-   *  
-   *  @since  7-6-11
-   *  @return \Montage\Config\FrameworkConfig
-   */
-  protected function getConfig(){
-  
-    // canary...
-    if(isset($this->instance_map['config'])){ return $this->instance_map['config']; }//if
-  
-    $container = $this->getContainer();
-    
-    $this->instance_map['config'] = $container->getInstance('\Montage\Config\FrameworkConfig');
-    
-    return $this->instance_map['config'];
-  
   }//method
 
   /**
@@ -740,6 +742,7 @@ class Framework extends Field implements Dependable {
     $vendor_path_list = array();
     $assets_path_list = array();
     $plugin_base_path_list = array();
+    $plugins_path_list = array();
     
     $path = new Path($framework_path,'src');
     $reflection_path_list[] = $path;
@@ -770,6 +773,7 @@ class Framework extends Field implements Dependable {
           if($plugin_dir->isDir()){
           
             $plugin_name = $plugin_dir->getBasename();
+            $plugins_path_list[] = $plugin_dir;
           
             $path = new Path($plugin_path,'config');
             if($path->exists()){
@@ -810,6 +814,7 @@ class Framework extends Field implements Dependable {
     $this->setField('view_paths',$view_path_list);
     $this->setField('vendor_paths',$vendor_path_list);
     $this->setField('assets_paths',$assets_path_list);
+    $this->setField('plugin_paths',$plugins_path_list);
   
   }//method
   

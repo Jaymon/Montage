@@ -25,14 +25,6 @@ abstract class Controller extends Field implements Controllable {
   
   protected $url = null;
 
-  public function __construct(Request $request,Response $response,Url $url){
-  
-    $this->request = $request;
-    $this->response = $response;
-    $this->url = $url;
-  
-  }//method
-
   /**
    *  override to allow your controller to do stuff right before any handle method is called
    */
@@ -42,5 +34,29 @@ abstract class Controller extends Field implements Controllable {
    *  override to allow your controller to do stuff right after the handle method is called
    */
   public function postHandle(){}//method
+  
+  /**
+   *  set the request object if it is available
+   *
+   *  @since  7-26-11
+   *  @param  Request $request      
+   */
+  public function setRequest(Request $request){ $this->request = $request; }//method
+  
+  /**
+   *  set the response object if it is available
+   *
+   *  @since  7-26-11
+   *  @param  Response  $response      
+   */
+  public function setResponse(Response $response){ $this->response = $response; }//method
+  
+  /**
+   *  set the Url object if it is available
+   *
+   *  @since  7-26-11
+   *  @param  Url $url      
+   */
+  public function setUrl(Url $url){ $this->url = $url; }//method
   
 }//class

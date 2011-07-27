@@ -126,20 +126,6 @@ class ReflectionContainer extends Container {
         );
         
       }else{
-      
-        // handle on create...
-        // @todo  this should probably be moved to Container::createInstance()
-        if(isset($this->on_create_map[$class_key])){
-        
-          $params = call_user_func($this->on_create_map[$class_key],$this,$params);
-          
-          if(!is_array($params)){
-            throw new \UnexpectedValueException(
-              sprintf('An array should have been returned from on create callback for %s',$class_key)
-            );
-          }//if
-          
-        }//if
 
         if(isset($this->instance_map[$class_key])){
         
@@ -147,16 +133,33 @@ class ReflectionContainer extends Container {
           
         }else{
         
+          // handle on create...
+          // @todo  this should probably be moved to Container::createInstance()
+          // I haven't done that because notice we check $class_key but then use $instance_class_name
+          // to create the instance
+          if(isset($this->on_create_map[$class_key])){
+          
+            $params = call_user_func($this->on_create_map[$class_key],$this,$params);
+            
+            if(!is_array($params)){
+              throw new \UnexpectedValueException(
+                sprintf('An array should have been returned from on create callback for %s',$class_key)
+              );
+            }//if
+            
+          }//if
+        
           $ret_instance = $this->createInstance($instance_class_name,$params);
+          
+          // handle on created...
+          // @todo  this should probably be moved to Container::createInstance()
+          if(isset($this->on_created_map[$class_key])){
+            call_user_func($this->on_created_map[$class_key],$this,$ret_instance);
+          }//if
+          
           $this->setInstance($instance_class_name,$ret_instance);
         
         }//if/else
-        
-        // handle on created...
-        // @todo  this should probably be moved to Container::createInstance()
-        if(isset($this->on_created_map[$class_key])){
-          call_user_func($this->on_created_map[$class_key],$this,$ret_instance);
-        }//if
         
       }//if/else
       
