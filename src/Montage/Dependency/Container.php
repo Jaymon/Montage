@@ -55,6 +55,17 @@ abstract class Container extends Field implements Containable {
     }//if
   
     $class_key = $this->getKey($class_name);
+    
+    if(isset($this->instance_map[$class_key])){
+      trigger_error(
+        sprintf(
+          'An object of %s has already been created, making this %s mostly useless',
+          $class_name,
+          __FUNCTION__
+        ),
+        E_USER_WARNING
+      );
+    }//if
   
     $this->on_create_map[$class_key] = $callback;
   
@@ -78,6 +89,17 @@ abstract class Container extends Field implements Containable {
     }//if
   
     $class_key = $this->getKey($class_name);
+    
+    if(isset($this->instance_map[$class_key])){
+      trigger_error(
+        sprintf(
+          'An object of %s has already been created, making this %s mostly useless',
+          $class_name,
+          __FUNCTION__
+        ),
+        E_USER_WARNING
+      );
+    }//if
   
     $this->on_created_map[$class_key] = $callback;
   

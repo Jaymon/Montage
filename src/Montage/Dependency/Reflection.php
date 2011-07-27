@@ -185,12 +185,24 @@ class Reflection extends ObjectCache implements \Reflector {
       $child_count = count($this->parent_class_map[$key]);
       if($child_count > 1){
       
+        $e_child_list = array();
+        foreach($this->findClassNames($class_name) as $child_class_name){
+        
+          $child_key = $this->normalizeClassName($child_class_name);
+          $e_child_list[] = sprintf(
+            '%s located at "%s"',
+            $child_class_name,
+            $this->class_map[$child_key]['path']
+          );
+        
+        }//foreach
+      
         throw new \LogicException(
           sprintf(
             'the given $class_name (%s) is extended by %s children [%s] so a best class cannot be found',
             $class_name,
             $child_count,
-            join(',',$this->findClassNames($class_name))
+            join(',',$e_child_list)
           )
         );
       
