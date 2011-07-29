@@ -79,12 +79,14 @@ class CliController extends Controller {
    *  @param  mixed $arg,...  any other arguments passed in are assumed to be the format string vars for
    *                          vsprintf                           
    */
-  protected function out($format_msg)
+  protected function out($format_msg = '')
   {
     // sanity...
     if($this->is_quiet){ return; }//if
   
+    $msg = '';
     $args = func_get_args();
+    
     if(!empty($args))
     {
       $format_msg = $args[0];
@@ -112,10 +114,10 @@ class CliController extends Controller {
         
       }//if
       
-      echo $msg;
-      flush();
-      
     }//if
+    
+    echo $msg,PHP_EOL;
+    flush();
   
   }//method
 

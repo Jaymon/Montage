@@ -1,12 +1,11 @@
 <?php
 namespace Montage\PHPUnit;
 
-require_once(__DIR__.'/Test.php');
-
+use PHPUnit\TestCase;
 use Montage\Framework;
 use Montage\Dependency\Container;
 
-class FrameworkTest extends Test {
+class FrameworkTest extends TestCase {
 
   protected $framework = null;
 

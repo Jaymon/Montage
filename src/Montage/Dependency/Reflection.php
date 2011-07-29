@@ -196,7 +196,7 @@ class Reflection extends ObjectCache implements \Reflector {
           );
         
         }//foreach
-      
+
         throw new \LogicException(
           sprintf(
             'the given $class_name (%s) is extended by %s children [%s] so a best class cannot be found',

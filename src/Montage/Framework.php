@@ -86,6 +86,35 @@ class Framework extends Field implements Dependable {
   }//method
   
   /**
+   *  this handles all the initial configuration of the framework
+   *  
+   *  handy for when you want to activate the framework but don't want it to handle the request   
+   *
+   *  old name: handleConfig()
+   *
+   *  @since  7-28-11
+   */
+  public function activate(){
+  
+    // canary...
+    ///if($this->getField('Framework.is_activated',false)){ return true; }//if
+  
+    // first handle any files the rest of the framework might depend on...
+    $this->handleDependencies();
+
+    // start the autoloaders...
+    $this->handleAutoload();
+
+    // start the START classes...
+    $this->handleStart();
+    
+    ///$this->setField('Framework.is_activated',true);
+  
+    return true;
+  
+  }//method
+  
+  /**
    *  call this method to actually handle the request
    *  
    *  once this method is called, everything is taken care of for you
@@ -94,19 +123,9 @@ class Framework extends Field implements Dependable {
    */
   public function handle(){
   
-    $container = $this->getContainer();
-    $controller_response = null;
-  
     try{
     
-      // first handle any files the rest of the handling might be dependant on...
-      $this->handleDependencies();
-
-      // start the autoloaders...
-      $this->handleAutoload();
-
-      // start the START classes...
-      $this->handleStart();
+      $this->activate();
       
       $request = $this->getRequest();
   

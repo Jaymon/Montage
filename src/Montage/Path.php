@@ -296,6 +296,33 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
   }//method
   
   /**
+   *  get the first child matching the $regex
+   *  
+   *  @since  7-28-11
+   *  @param  string  $regex  the PCRE pattern the file needs to match
+   *  @param  integer $depth  use 1 to get just immediate children, defaults to all depths 
+   *  @return string  the matching child path
+   */
+  public function getChild($regex,$depth = -1){
+  
+    $ret_path = '';
+  
+    $map = $this->getChildren($regex,$depth);
+    if(!empty($map['files'])){
+    
+      $ret_path = reset($map['files']);
+      
+    }else if(!empty($map['folders'])){
+      
+      $ret_path = reset($map['folders']);
+      
+    }//if/else if
+  
+    return $ret_path;
+  
+  }//method
+  
+  /**
    *  get children in the given path
    *  
    *  children are all contents of the path N levels deep         
