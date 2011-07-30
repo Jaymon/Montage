@@ -13,6 +13,7 @@
 namespace Montage\Controller;
 
 use Montage\Controller\Controller;
+use Montage\Controller\ReflectionController;
 
 class CliController extends Controller {
 
@@ -48,6 +49,20 @@ class CliController extends Controller {
       }//if
     
     }//if
+  
+  }//method
+  
+  /**
+   *  print out all the different cli commands for this namespace
+   *
+   *  @param  array $params does nothing
+   */
+  public function handleHelp(array $params = array()){
+  
+    $rthis = new ReflectionController($this);
+    echo $rthis;
+    
+    return false;
   
   }//method
   

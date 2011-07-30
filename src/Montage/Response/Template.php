@@ -33,6 +33,13 @@ class Template extends Field {
   protected $template = '';
   
   /**
+   *  the default template extension
+   *
+   *  @var  string   
+   */
+  protected $template_ext = '.php';
+  
+  /**
    *  hold all the paths this instance will use to find the template file
    *  
    *  @var  array
@@ -205,32 +212,20 @@ class Template extends Field {
   }//method
   
   /**
-   *  normalize the template name by making sure it ends in _tmpl.php
+   *  normalize the template name by making sure it ends in {@link $template_ext}
    *  
    *  @param  string  $template the template name
    *  @return string  the normalized template
    */
   protected function normalizeTemplateName($template){
   
-    $ext = '.php';
-    $postfix = '_tmpl';
-  
-    if(preg_match(sprintf('#%s$#i',preg_quote($ext)),$template)){
+    if(!preg_match(sprintf('#%s$#i',preg_quote($this->template_ext)),$template)){
     
-      $ext = $postfix = '';
+      $template .= $this->template_ext;
     
-    }else{
-    
-      $regex = sprintf('#%s$#i',preg_quote($postfix));
-      if(preg_match($regex,$template)){
-      
-        $postfix = '';
-      
-      }//if
-      
     }//if
   
-    return $template.$postfix.$ext;
+    return $template;
   
   }//method
 
