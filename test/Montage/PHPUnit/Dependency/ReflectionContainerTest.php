@@ -1,54 +1,31 @@
 <?php
-namespace Montage\Test\PHPUnit {
+namespace Montage\PHPUnit {
   
+  use PHPUnit\FrameworkTestCase;
   use Montage\Dependency\Reflection;
-  use Montage\Dependency\Container;
-  use out;
+  use Montage\Dependency\ReflectionContainer;
   
-  require_once('out_class.php');
-  
-  require_once(__DIR__.'/../Test.php');
-  require_once(__DIR__.'/../../../Path.php');
-  require_once(__DIR__.'/../../../Fieldable.php');
-  require_once(__DIR__.'/../../../Field.php');
-  
-  require_once(__DIR__.'/../../../Dependency/Container.php');
-  require_once(__DIR__.'/../../../Dependency/Reflection.php');
-  require_once(__DIR__.'/../../../Dependency/ReflectionFile.php');
-  require_once(__DIR__.'/../../../Dependency/Injector.php');
-  
-  class ContainerTest extends Test {
+  class ContainerTest extends FrameworkTestCase {
   
     protected $container = null;
   
     public function setUp(){
     
-      ///out::e($this->container);
-    
       $reflection = new Reflection();
       $reflection->addFile(__FILE__);
-      ///out::i($reflection);
       
-      $this->container = new Container($reflection);
+      $this->container = new ReflectionContainer($reflection);
       
       ///out::e(spl_autoload_functions());
-    
-    }//method
-    
-    public function tearDown(){
-    
-      // we need to unregister the autoloader...
-      $reflection = $this->container->getReflection();
-      $reflection->__destruct();
     
     }//method
     
     /**
      *  make sure the DIC will create class instances for type hinted constructor params
      */
-    public function testFindInstanceNoParams(){
+    public function testgetInstanceNoParams(){
     
-      $instance = $this->container->findInstance('Montage\Test\Fixtures\Dependency\Foo');
+      $instance = $this->container->getInstance('Montage\Test\Fixtures\Dependency\Foo');
       $this->assertTrue($instance instanceof \Montage\Test\Fixtures\Dependency\Bar);
       $this->assertTrue($instance->che instanceof \Che);
     
@@ -58,12 +35,12 @@ namespace Montage\Test\PHPUnit {
      *  make sure you can set fields and those fields will be used for the class's __construct()
      *  params
      */ 
-    public function testFindInstanceFieldParams(){
+    public function testgetInstanceFieldParams(){
     
       $this->container->setField('one',__FUNCTION__);
       $this->container->setField('two',__METHOD__);
     
-      $instance = $this->container->findInstance('Baz');
+      $instance = $this->container->getInstance('Baz');
       $this->assertTrue($instance instanceof \Baz);
       
       $this->assertEquals(__FUNCTION__,$instance->one);
@@ -73,21 +50,14 @@ namespace Montage\Test\PHPUnit {
     }//method
     
     /**
-     *  setter injection should add dependencies if they are there
+     *  setter injection should add dependencies through methods
      *
      *  @since  6-15-11
      */
     public function testSetterInjection(){
     
-      $instance = $this->container->findInstance('Montage\Test\Fixtures\Dependency\FooBar');
+      $instance = $this->container->getInstance('Montage\Test\Fixtures\Dependency\FooBar');
       $this->assertTrue($instance instanceof \Montage\Test\Fixtures\Dependency\FooBar);
-      $this->assertNull($instance->che);
-      
-      // creat che...
-      $che = $this->container->findInstance('Che');
-      
-      // now che should be there if I get a new instance...
-      $instance = $this->container->getNewInstance('Montage\Test\Fixtures\Dependency\FooBar');
       $this->assertTrue($instance->che instanceof \Che);
       
     }//method
@@ -100,7 +70,7 @@ namespace Montage\Test\PHPUnit {
     public function testMultiChoice(){
     
       $this->setExpectedException('\LogicException');
-      $instance = $this->container->findInstance('Montage\Test\Fixtures\Dependency\A');
+      $instance = $this->container->getInstance('Montage\Test\Fixtures\Dependency\A');
     
     }//method
   
@@ -112,7 +82,7 @@ namespace Montage\Test\PHPUnit {
     public function testMultiChoiceDependency(){
     
       $this->setExpectedException('\LogicException');
-      $instance = $this->container->findInstance('Montage\Test\Fixtures\Dependency\AA');
+      $instance = $this->container->getInstance('Montage\Test\Fixtures\Dependency\AA');
     
     }//method
   

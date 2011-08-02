@@ -387,10 +387,10 @@ abstract class Container extends Field implements Containable {
    *  
    *  by default, this class will only inject if the method is of the form:
    *  setName(ClassName $class) and nothing else. And it will only inject the class
-   *  if it has already created it (it won't be created on the fly like with constructor
-   *  injection). This is because if you are using setter injection then it is most
+   *  if it can be created. This is because if you are using setter injection then it is most
    *  likely optional that you want the object instance, if you absolutely must have
-   *  the instance then use constructor injection            
+   *  the instance then use constructor injection (which will halt execution if the instance
+   *  can't be created)       
    *  
    *  @example:
    *    setFoo(Foo $foo);                  
@@ -418,24 +418,26 @@ abstract class Container extends Field implements Containable {
       // only check the method if it is of the form: setNNNN()...
       if(mb_stripos($method_name,'set') === 0){
       
+        // the valid setter syntax is: setName(ClassName $var_name), only methods matching that are set...
         if($rmethod->getNumberOfParameters() === 1){
         
           $rparams = $rmethod->getParameters();
           foreach($rparams as $rparam){
           
-            $prclass = $rparam->getClass();
-            if($prclass !== null){
-          
-              // @todo  this won't account for having a child instance, so might want to "find" the class
-              $class_name = $prclass->getName();
-              if($this->hasInstance($class_name)){
-              
+            try{
+            
+              $prclass = $rparam->getClass();
+              if($prclass !== null){
+            
+                $class_name = $prclass->getName();
                 $instance->{$method_name}($this->getInstance($class_name));
                 $ret_count++;
-              
+                
               }//if
               
-            }//if
+            }catch(\Exception $e){
+              // exceptions aren't fatal, just don't set the dependency
+            }//try/catch
         
           }//foreach
         

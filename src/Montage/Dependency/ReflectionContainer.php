@@ -66,12 +66,36 @@ class ReflectionContainer extends Container {
   
     $reflection = $this->getReflection();
     $instance_name = get_class($instance);
-    $class_map = $reflection->getClass($instance_name);
     
-    $class_list = $class_map['dependencies'];
-    $class_list[] = $instance_name;
+    $class_list = array();
+    
+    if($reflection->hasClass($instance_name)){
+    
+      $class_map = $reflection->getClass($instance_name);
+      $class_list = $class_map['dependencies'];
+      $class_list[] = $instance_name;
+    
+    }else{
+    
+      // since the internal reflection object doesn't know about this instance, we'll have to build
+      // the dependency list the old fashioned way
+    
+      $class = $instance_name;
+      
+      // add all parent classes...
+      for($class_list[] = $class; $class = get_parent_class($class); $class_list[] = $class);
+      
+      // add all interfaces...
+      if($interface_list = class_implements($instance_name)){
+        $class_list = array_merge($class_list,$interface_list);
+      }//if
+      
+    }//if/else
+    
+    // add the class name key...
     if(!empty($class_name)){ $class_list[] = $class_name; }//if
     
+    // save the instance in every found key...
     foreach($class_list as $cn){
       
       $class_key = $this->getKey($cn);

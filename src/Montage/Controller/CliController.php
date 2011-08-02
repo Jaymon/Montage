@@ -74,7 +74,7 @@ class CliController extends Controller {
    */
   protected function trace()
   {
-    if(empty($this->is_trace)){ return null; }//if
+    if(empty($this->is_trace)){ return; }//if
     
     $args = func_get_args();
     return call_user_func_array(array($this,'out'),$args);

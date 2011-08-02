@@ -370,6 +370,7 @@ class Reflection extends ObjectCache implements \Reflector {
     $class_key = $this->normalizeClassName($class_name);
     // canary...
     if(!isset($this->class_map[$class_key])){
+      // @todo  I think an exception might be too dramatic, just return array()?
       throw new \InvalidArgumentException(sprintf('$class_name (%s) is not known',$class_name));
     }//if
     if($this->isChangedClass($class_key)){

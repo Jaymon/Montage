@@ -140,7 +140,7 @@ class PHPUnitController extends CliController {
   
     $ret_path = '';
     $test_name = $this->normalizeTestName($test_name);
-    $test_regex = sprintf('#%s$#i',$test_name);
+    $test_regex = sprintf('#%s$#i',preg_quote($test_name));
   
     // first, check the main test dir...
     $test_dir = $this->getMainTestDir();
@@ -183,24 +183,28 @@ class PHPUnitController extends CliController {
   /**
    *  Converts something like 'User' to 'UserTest.php'
    *  
+   *  @example
+   *    in: User  out: UserTest.php
+   *    in: Foo\namespace\User  out: Foo/namespace/UserTest.php            
+   *  
    *  @param  string  $test_name
    *  @return string  the $test_name standardized
    */
   protected function normalizeTestName($test_name){
   
     // make sure it ends with .php...
-    if(!preg_match('#\.php$#i',$test_name))
-    {
+    if(!preg_match('#\.php$#i',$test_name)){
+    
       // add Test before the .php if it isn't there...
-      if(!preg_match('#Test$#i',$test_name))
-      {
-        $test_name .= 'Test';
-      }//if
+      if(!preg_match('#Test$#i',$test_name)){ $test_name .= 'Test'; }//if
       
       // final name should be <NAME>Test.php
       $test_name .= '.php';
       
     }//if
+    
+    // convert any namespace to dir separator...
+    $test_name = str_replace('\\',DIRECTORY_SEPARATOR,$test_name);
   
     return $test_name;
   

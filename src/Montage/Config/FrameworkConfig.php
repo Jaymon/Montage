@@ -11,6 +11,7 @@
 namespace Montage\Config;
 
 use Montage\Config\Config;
+use Montage\Path;
 
 class FrameworkConfig extends Config {
 
@@ -58,6 +59,15 @@ class FrameworkConfig extends Config {
    *  @return string   
    */
   public function getAppPath(){ return $this->getField('app_path',''); }//method
+  
+  /**
+   *  get the application's data path
+   *  
+   *  tha data path is where application data should go      
+   *
+   *  @return string   
+   */
+  public function getDataPath(){ return new Path($this->getField('app_path'),'data'); }//method
 
   /**
    *  get the framework path
