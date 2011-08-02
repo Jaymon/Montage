@@ -20,7 +20,7 @@
  ******************************************************************************/
 namespace Montage;
 
-use Montage\Cache\Cache;
+use Montage\Cache\PHPCache; ///use Montage\Cache\Cache;
 use Montage\Path;
 use Montage\Field\Field;
 
@@ -683,7 +683,7 @@ class Framework extends Field implements Dependable {
     if(isset($this->instance_map['cache'])){ return $this->instance_map['cache']; }//if
   
     // create the caching object...
-    $cache = new Cache();
+    $cache = new PHPCache(); ///$cache = new Cache();
     $cache->setPath($this->getField('cache_path'));
     $cache->setNamespace($this->getField('env'));
     $this->instance_map['cache'] = $cache;

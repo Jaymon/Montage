@@ -415,8 +415,12 @@ abstract class Container extends Field implements Containable {
     
       $method_name = $rmethod->getName();
     
+      $is_setter = (($method_name[0] === 's') || ($method_name[0] === 'S'))
+        && (($method_name[1] === 'e') || ($method_name[1] === 'E'))
+        && (($method_name[2] === 't') || ($method_name[2] === 'T'));
+    
       // only check the method if it is of the form: setNNNN()...
-      if(mb_stripos($method_name,'set') === 0){
+      if($is_setter){
       
         // the valid setter syntax is: setName(ClassName $var_name), only methods matching that are set...
         if($rmethod->getNumberOfParameters() === 1){

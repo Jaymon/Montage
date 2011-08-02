@@ -1,10 +1,9 @@
 <?php
-
 /**
  *  handle caching
  *  
  *  @version 0.1
- *  @author Jay Marcyes {@link http://marcyes.com}
+ *  @author Jay Marcyes
  *  @since 2-22-10
  *  @package montage 
  ******************************************************************************/
@@ -79,7 +78,7 @@ class Cache {
 
     $bytes = file_put_contents(
       $path,
-      serialize($val),
+      $this->encodeStr($val),
       LOCK_EX
     );
     
@@ -96,7 +95,7 @@ class Cache {
   public function get($key){
   
     $path = $this->getPath($key);
-    return $path->exists() ? unserialize(file_get_contents($path)) : null;
+    return $path->exists() ? $this->decodeStr(file_get_contents($path)) : null;
     
   }//method
   
@@ -197,5 +196,23 @@ class Cache {
     return $path;
     
   }//method
+  
+  /**
+   *  encode the string to the format that it is going to be cached in
+   *  
+   *  @since  8-2-11      
+   *  @param  mixed $val
+   *  @return string   
+   */
+  protected function encodeStr($val){ return serialize($val); }//method
+  
+  /**
+   *  decode the string to the original format
+   *  
+   *  @since  8-2-11      
+   *  @param  string $val
+   *  @return mixed   
+   */
+  protected function decodeStr($val){ return unserialize($val); }//method
 
 }//class     
