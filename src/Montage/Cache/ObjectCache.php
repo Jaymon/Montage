@@ -1,6 +1,6 @@
 <?php
 /**
- *  any class can implement this interface and then be able to cache itself
+ *  any class can extend this class and instantly have the ability to cache itself
  *  
  *  @version 0.1
  *  @author Jay Marcyes {@link http://marcyes.com}

@@ -328,6 +328,7 @@ class Framework extends Field implements Dependable {
     $container = $this->getContainer();
     
     $controller = $container->getInstance($class_name);
+    
     $rmethod = new \ReflectionMethod($controller,$method);
     $rmethod_params = $this->normalizeControllerParams($rmethod,$params);
     
@@ -363,6 +364,8 @@ class Framework extends Field implements Dependable {
         // if any param is an array, then it will take all the remainder passed in $params...
         // quick/nice way to do a catch-all...
         if($rparam->isArray()){
+        
+          out::e($rparam);
         
           $rfunc_params[$index] = array();
         

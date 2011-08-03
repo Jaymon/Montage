@@ -40,6 +40,11 @@ class PHPCache extends Cache {
   }//method
   
   /**
+   *  @see  parent::getKey()
+   */
+  protected function getKey($val){ return parent::getKey($val).'.php'; }//method
+  
+  /**
    *  @see  parent::encodeStr()
    */
   protected function encodeStr($val){

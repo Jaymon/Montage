@@ -15,7 +15,6 @@ namespace Montage\Dependency;
 use Montage\Dependency\Containable;
 use ReflectionObject, ReflectionClass, ReflectionMethod, ReflectionParameter;
 use Montage\Field\Field;
-use out;
 
 abstract class Container extends Field implements Containable {
 

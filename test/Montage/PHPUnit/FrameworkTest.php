@@ -93,6 +93,16 @@ class FrameworkTest extends TestCase {
     $normalized_params = $this->framework->normalizeControllerParams($rfunc,$rfunc_params);
     $this->assertEquals($expected_params,$normalized_params);
     
+    // bug fix...
+    $func = function(array $catchall = array('rurl' => '')){};
+    $rfunc = new \ReflectionFunction($func);
+    
+    $rfunc_params = array();
+    $expected_params = array(array('rurl' => ''));
+    
+    $normalized_params = $this->framework->normalizeControllerParams($rfunc,$rfunc_params);
+    $this->assertEquals($expected_params,$normalized_params);
+    
   }//method
   
 }//class
