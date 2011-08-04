@@ -13,6 +13,7 @@ namespace PHPUnit;
 
 use PHPUnit\TestCase;
 use Montage\Framework;
+use PHPUnit\FrameworkBrowser;
 
 abstract class FrameworkTestCase extends TestCase {
   
@@ -23,5 +24,11 @@ abstract class FrameworkTestCase extends TestCase {
   }//method
   
   public function getFramework(){ return self::$framework; }//method
+
+  public function getBrowser(){
+  
+    return new FrameworkBrowser($this->getFramework());
+  
+  }//method
 
 }//class

@@ -56,7 +56,10 @@ abstract class Container extends Field implements Containable {
     $class_key = $this->getKey($class_name);
     
     if(isset($this->instance_map[$class_key])){
-      trigger_error(
+      \out::e($this->instance_map);
+    }//if
+    
+    /*   trigger_error(
         sprintf(
           'An object of %s has already been created, making this %s mostly useless',
           $class_name,
@@ -64,7 +67,7 @@ abstract class Container extends Field implements Containable {
         ),
         E_USER_WARNING
       );
-    }//if
+    }//if */
   
     $this->on_create_map[$class_key] = $callback;
   
@@ -89,7 +92,7 @@ abstract class Container extends Field implements Containable {
   
     $class_key = $this->getKey($class_name);
     
-    if(isset($this->instance_map[$class_key])){
+    /* if(isset($this->instance_map[$class_key])){
       trigger_error(
         sprintf(
           'An object of %s has already been created, making this %s mostly useless',
@@ -98,7 +101,7 @@ abstract class Container extends Field implements Containable {
         ),
         E_USER_WARNING
       );
-    }//if
+    }//if */
   
     $this->on_created_map[$class_key] = $callback;
   
@@ -131,30 +134,85 @@ abstract class Container extends Field implements Containable {
   }//method
   
   /**
+   *  find the absolute descendant of the class(es) you pass in
+   *
+   *  @param  string  $class_name the name of the class you are looking for
+   *  @param  array $params any params you want to pass into the constructor of the instance      
+   */
+  public function getInstance($class_name,$params = array()){
+  
+    $class_key = $this->getKey($class_name);
+    $ret_instance = null;
+  
+    // check to see if there is already an instance before creating one...
+    if(isset($this->instance_map[$class_key])){
+    
+      $ret_instance = $this->instance_map[$class_key];
+    
+    }else{
+    
+      $instance_class_name = $this->getClassName($class_name);
+      $instance_class_key = $this->getKey($instance_class_name);
+      
+      // I'm not sold on this being here, I'm thinking this might be better being just implemented
+      // in a child class since this seems really ad-hoc... 
+      if(isset($this->instance_map[$instance_class_key])){
+    
+        $ret_instance = $this->instance_map[$instance_class_key];
+      
+      }else{
+    
+        // $class_name is passed so createInstance will check the right on create and on created
+        // events...
+        $ret_instance = $this->createInstance($class_name,$params);
+        $this->setInstance($class_name,$ret_instance);
+        
+      }//if/else
+      
+    }//if/else
+    
+    return $ret_instance;
+  
+  }//method
+  
+  /**
    *  create and return an instance of $class_name with the given $construct_args
    *  
    *  @param  string  $class_name the name of the class to instantiate
    *  @param  array $construct_args similar to call_user_func_array, if the $class_name's
    *                                __construct() method takes 2 arguments (eg, __construct($one,$two)
-   *                                then you would pass in array(1,2) and $one = 1, $two = 2               
+   *                                then you would pass in array(1,2) and $one would equal 1, and
+   *                                $two would equal 2, likewise you could pass in array('one' => 1,'two' => 2)               
    *  @return object
    */
   public function createInstance($class_name,$params = array()){
   
     // canary...
-    if(empty($class_name)){
-      throw new \InvalidArgumentException('empty $class_name');
+    if(empty($class_name)){ throw new \InvalidArgumentException('empty $class_name'); }//if
+  
+    $class_key = $this->getKey($class_name);
+  
+    // handle on create...
+    if(isset($this->on_create_map[$class_key])){
+    
+      $params = call_user_func($this->on_create_map[$class_key],$this,$params);
+      
+      if(!is_array($params)){
+        throw new \UnexpectedValueException(
+          sprintf('An array should have been returned from on create callback for %s',$class_key)
+        );
+      }//if
+      
     }//if
   
-    $ret_instance = null;
-    $instance_params = array();
-    
+    $instance_class_name = $this->getClassName($class_name);
     $params = (array)$params;
+    $instance_params = array();
 
     // get around absolute namespace reflection bug
     // absolute namespaced classes like \foo\bar cause all the autoloaders to fire where
     // foo\bar doesn't. This is a bug in php...
-    $rclass_name = $class_name;
+    $rclass_name = $instance_class_name;
     if($rclass_name[0] === '\\'){ $rclass_name = mb_substr($rclass_name,1); }//if
     $rclass = new ReflectionClass($rclass_name);
     
@@ -184,18 +242,15 @@ abstract class Container extends Field implements Containable {
     
     }//if/else
     
-    if(empty($instance_params)){
-    
-      $ret_instance = new $class_name();
-    
-    }else{
-    
-      // http://www.php.net/manual/en/reflectionclass.newinstanceargs.php#95137
-      $ret_instance = $rclass->newInstanceArgs($instance_params);
-    
-    }//if/else
-    
+    // actually create the class
+    // http://www.php.net/manual/en/reflectionclass.newinstanceargs.php#95137
+    $ret_instance = empty($instance_params) ? new $class_name() : $rclass->newInstanceArgs($instance_params);
     $ret_instance = $this->injectSetters($ret_instance,$rclass);
+    
+    // handle on created...
+    if(isset($this->on_created_map[$class_key])){
+      call_user_func($this->on_created_map[$class_key],$this,$ret_instance);
+    }//if
   
     return $ret_instance;
   
@@ -371,6 +426,15 @@ abstract class Container extends Field implements Containable {
     return $ret_params;
   
   }//method
+  
+  /**
+   *  find the class name that will be used to create the instance
+   *
+   *  @since  8-3-11   
+   *  @param  string  $class_name the name of the class you are looking for
+   *  @return string  the class name that will be used to create the instance      
+   */
+  abstract protected function getClassName($class_name);
   
   /**
    *  get the key the instance will use for the instance map

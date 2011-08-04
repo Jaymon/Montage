@@ -13,8 +13,6 @@
 include_once('<?php echo $framework_path; ?>');
 <?php endforeach; ?>
 
-include("E:\Projects\sandbox\montage\RSS\_active\web\out_class.php");
-
 // create and activate the framework...
 $framework = new <?php echo $this->getField('framework_class_name'); ?>(
   'test',

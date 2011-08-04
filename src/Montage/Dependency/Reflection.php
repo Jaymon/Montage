@@ -188,8 +188,6 @@ class Reflection extends ObjectCache implements \Reflector {
         $e_child_list = array();
         foreach($this->findClassNames($class_name) as $child_class_name){
         
-          \out::e($this->class_map[$child_key]['path']);
-        
           $child_key = $this->normalizeClassName($child_class_name);
           $e_child_list[] = sprintf(
             '%s located at "%s"',
@@ -479,6 +477,7 @@ class Reflection extends ObjectCache implements \Reflector {
   
     $this->class_map = array();
     $this->parent_class_map = array();
+    $this->children_class_map = array();
     $this->path_map = array('files' => array(),'folders' => array());
     
     foreach($folder_list as $folder){

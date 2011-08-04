@@ -39,6 +39,7 @@ use Montage\Dependency\Dependable;
 use Montage\AutoLoad\ReflectionAutoloader;
 use Montage\AutoLoad\FrameworkAutoloader;
 
+use Montage\Request\Requestable;
 use Montage\Response\Response;
 use Montage\Response\Template;
 
@@ -111,6 +112,27 @@ class Framework extends Field implements Dependable {
     ///$this->setField('Framework.is_activated',true);
   
     return true;
+  
+  }//method
+  
+  /**
+   *  restore the framework more or less to the state it was in right after being created
+   *
+   *  @since  8-3-11
+   */
+  public function reset(){
+    
+    // clear all the autoloaders but the framework autoloader...
+    foreach(spl_autoload_functions() as $callback){
+      spl_autoload_unregister($callback);
+    }//foreach
+    
+    // re-register the framework autoloader...
+    $fal = new FrameworkAutoloader('Montage',realpath(__DIR__.'/..'));
+    $fal->register();
+    
+    // start all the objects over again...
+    $this->instance_map = array();
   
   }//method
   
@@ -255,6 +277,8 @@ class Framework extends Field implements Dependable {
       $template->handle(Template::OUT_STD);
       
     }//if
+    
+    return $response;
   
   }//method
 
@@ -364,8 +388,6 @@ class Framework extends Field implements Dependable {
         // if any param is an array, then it will take all the remainder passed in $params...
         // quick/nice way to do a catch-all...
         if($rparam->isArray()){
-        
-          out::e($rparam);
         
           $rfunc_params[$index] = array();
         
@@ -511,23 +533,12 @@ class Framework extends Field implements Dependable {
         
         }//if
         
-        // this should restart the framework...
-        
         // clear all the app cache...
         $cache = $this->getCache();
         $cache->clear();
         
-        // clear all the autoloaders but the framework autoloader...
-        foreach(spl_autoload_functions() as $callback){
-          spl_autoload_unregister($callback);
-        }//foreach
-        
-        // re-register the framework autoloader...
-        $fal = new FrameworkAutoloader('Montage',realpath(__DIR__.'/..'));
-        $fal->register();
-        
-        // start all the objects over again...
-        $this->instance_map = array();
+        // this should restart the framework...
+        $this->reset();
         
         $this->setField('ReflectionException',$e);
           
@@ -659,6 +670,15 @@ class Framework extends Field implements Dependable {
     
     return $this->instance_map['request'];
   
+  }//method
+  
+  /**
+   *  allow Request to be set externally
+   *  
+   *  @param  \Montage\Request\Requestable  $request      
+   */
+  public function setRequest(Requestable $request){
+    $this->instance_map['request'] = $request;
   }//method
   
   /**
