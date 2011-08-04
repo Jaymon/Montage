@@ -47,6 +47,9 @@ class FrameworkBrowser extends Client {
    */
   protected function filterRequest(BrowserKitRequest $request){
   
+    this is where I am working
+    $httpRequest = Request::create($request->getUri(), $request->getMethod(), $request->getParameters(), $request->getCookies(), $request->getFiles(), $request->getServer(), $request->getContent());
+  
     $params = array(
       'cli' => array(),
       'query' => array(),
