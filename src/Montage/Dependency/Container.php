@@ -428,15 +428,6 @@ abstract class Container extends Field implements Containable {
   }//method
   
   /**
-   *  find the class name that will be used to create the instance
-   *
-   *  @since  8-3-11   
-   *  @param  string  $class_name the name of the class you are looking for
-   *  @return string  the class name that will be used to create the instance      
-   */
-  abstract protected function getClassName($class_name);
-  
-  /**
    *  get the key the instance will use for the instance map
    *
    *  @since  6-13-11

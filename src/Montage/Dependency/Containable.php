@@ -53,9 +53,18 @@ interface Containable {
   public function setInstance($class_name,$instance);
   
   /**
+   *  find the class name that will be used to create the instance
+   *
+   *  @since  8-3-11   
+   *  @param  string  $class_name the key/name of the class you are looking for
+   *  @return string  the class name that will be used to create the instance      
+   */
+  public protected function getClassName($class_name);
+  
+  /**
    *  when you know what class you specifically want, use this method over {@link findInstance()}
    *
-   *  @param  string  $class_name the name of the class you are looking for
+   *  @param  string  $class_name the key/name of the class you are looking for
    *  @param  array $params any params you want to pass into the constructor of the instance      
    */
   public function getInstance($class_name,$params = array());

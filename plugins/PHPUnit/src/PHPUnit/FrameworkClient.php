@@ -17,7 +17,7 @@ use Symfony\Component\BrowserKit\Response as BrowserKitResponse;
 
 use Montage\Framework;
 
-class FrameworkBrowser extends Client {
+class FrameworkClient extends Client {
   
   protected $framework = null;
   

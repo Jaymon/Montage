@@ -95,7 +95,7 @@ class ReflectionContainer extends Container {
    *  @param  string  $class_name the name of the class you are looking for
    *  @return string  the class name that will be used to create the instance      
    */
-  protected function getClassName($class_name){
+  public function getClassName($class_name){
 
     $ret_class_name = '';
     $reflection = $this->getReflection();
