@@ -1,7 +1,6 @@
 <?php
 /**
- *  if used with the bootstrap file in config/ then this will have a static
- *  framework instance set so you can get access to everything in the framework 
+ *  allows you to mimic a framework http request 
  *  
  *  @version 0.1
  *  @author Jay Marcyes
@@ -47,9 +46,24 @@ class FrameworkClient extends Client {
    */
   protected function filterRequest(BrowserKitRequest $request){
   
-    this is where I am working
-    $httpRequest = Request::create($request->getUri(), $request->getMethod(), $request->getParameters(), $request->getCookies(), $request->getFiles(), $request->getServer(), $request->getContent());
+    out::x();
   
+    // create a Montage compatible Request instance...
+    $container = $this->framework->getContainer();
+    $framework_request_class_name = $container->getClassName('montage\Request\Requestable');
+    
+    $framework_request = call_user_func(
+      array($framework_request_class_name,'create'),
+      $request->getUri(), 
+      $request->getMethod(), 
+      $request->getParameters(), 
+      $request->getCookies(), 
+      $request->getFiles(), 
+      $request->getServer(), 
+      $request->getContent()
+    );
+  
+    /*
     $params = array(
       'cli' => array(),
       'query' => array(),
@@ -64,6 +78,9 @@ class FrameworkClient extends Client {
     // create a Montage compatible Request instance...
     $container = $this->framework->getContainer();
     $framework_request = $container->createInstance('montage\Request\Requestable',$params);
+    */
+    
+    \out::i($framework_request); out::x();
     
     return $framework_request;
   

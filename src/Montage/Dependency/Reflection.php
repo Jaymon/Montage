@@ -180,63 +180,72 @@ class Reflection extends ObjectCache implements \Reflector {
     $key = $this->normalizeClassName($class_name);
     $ret_str = '';
   
-    if(isset($this->parent_class_map[$key])){
+    // we wrap in a try/catch so we can try to reload the class if an error state is found...
+    try{
     
-      $child_count = count($this->parent_class_map[$key]);
-      if($child_count > 1){
+      if(isset($this->parent_class_map[$key])){
       
-        $e_child_list = array();
-        foreach($this->findClassNames($class_name) as $child_class_name){
-        
-          $child_key = $this->normalizeClassName($child_class_name);
-          $e_child_list[] = sprintf(
-            '%s located at "%s"',
-            $child_class_name,
-            $this->class_map[$child_key]['path']
+        $child_count = count($this->parent_class_map[$key]);
+        if($child_count > 1){
+          
+          $e_child_list = array();
+          foreach($this->findClassNames($class_name) as $child_class_name){
+          
+            $child_key = $this->normalizeClassName($child_class_name);
+            $e_child_list[] = sprintf(
+              '%s located at "%s"',
+              $child_class_name,
+              $this->class_map[$child_key]['path']
+            );
+          
+          }//foreach
+  
+          throw new \LogicException(
+            sprintf(
+              'the given $class_name (%s) is extended by %s children [%s] so a best class cannot be found, definitions were %s',
+              $class_name,
+              $child_count,
+              join(',',$e_child_list),
+              $this->reloaded ? 'RELOADED' : 'NOT RELOADED'
+            )
           );
+            
+        }else{
         
-        }//foreach
-
-        throw new \LogicException(
-          sprintf(
-            'the given $class_name (%s) is extended by %s children [%s] so a best class cannot be found',
-            $class_name,
-            $child_count,
-            join(',',$e_child_list)
-          )
-        );
+          $child_class_name = reset($this->parent_class_map[$key]); // get first row
+          $ret_str = $this->findClassName($child_class_name); // recurse through the list
+        
+        }//if/else
       
       }else{
       
-        $child_class_name = reset($this->parent_class_map[$key]); // get first row
-        $ret_str = $this->findClassName($child_class_name); // recurse through the list
+        if(!empty($this->class_map[$key]['class'])){
       
-      }//if/else
-    
-
-    }else{
-    
-      if(isset($this->class_map[$key])){
-    
-        $ret_str = $this->class_map[$key]['class'];
+          $ret_str = $this->class_map[$key]['class'];
+          
+        }else{
         
+          throw new \UnexpectedValueException(sprintf('no class %s was found',$class_name));
+        
+        }//if/else
+        
+      }//if/else
+      
+    }catch(\Exception $e){
+    
+      if($this->reload() > 0){
+          
+        $ret_str = $this->findClassName($class_name);
+      
       }else{
       
-        if($this->reload() > 0){
-        
-          $ret_str = $this->findClassName($class_name);
-        
-        }//if
+        throw $e;
       
       }//if/else
-      
-    }//if/else
     
-    if(empty($ret_str)){
-      throw new \UnexpectedValueException(sprintf('no class %s was found',$class_name));
-    }//if
+    }//try/catch
 
-    // thought about caching this also, but didn't really save the average 
+    // thought about caching the $ret_str also, but didn't really improve the average runtime
     return $ret_str;
     
   }//method

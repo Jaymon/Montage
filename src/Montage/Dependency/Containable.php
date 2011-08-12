@@ -59,7 +59,7 @@ interface Containable {
    *  @param  string  $class_name the key/name of the class you are looking for
    *  @return string  the class name that will be used to create the instance      
    */
-  public protected function getClassName($class_name);
+  public function getClassName($class_name);
   
   /**
    *  when you know what class you specifically want, use this method over {@link findInstance()}

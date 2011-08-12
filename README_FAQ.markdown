@@ -84,3 +84,7 @@ But that has the same problem if your child class `DevStart` also needs to use t
     public function setGreen(Green $green){ $this->green = $green; }//method
   
 This allows you to free up the `handle()` and `__construct()` methods while still allowing you to have dependencies. The only problem is, dependencies using the set*(ClassName $var_name) syntax are treated as optional, so if the DI Container cannot resolve the dependency it will just ignore it.
+
+## Why did you write Montage when there are so many other awesome frameworks?
+
+Montage started with me wanting to get better at writing code that follows [Misko Hevery's Google code reviewers guide]:(http://misko.hevery.com/code-reviewers-guide/). Then I got another idea, and another, and another. And wouldn't it be awesome if Montage did this... and pretty soon it was a near full framework.
