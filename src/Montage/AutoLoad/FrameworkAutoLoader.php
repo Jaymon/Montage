@@ -13,9 +13,9 @@
  ******************************************************************************/
 namespace Montage\AutoLoad;
 
-use Montage\Autoload\AutoLoader;
+use Montage\AutoLoad\AutoLoader;
 
-class FrameworkAutoLoader extends Autoloader {
+class FrameworkAutoLoader extends AutoLoader {
 
   /**
    *  the name of the framework

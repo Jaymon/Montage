@@ -60,6 +60,15 @@ class Framework extends Field implements Dependable {
    *  @var  array
    */
   protected $instance_map = array();
+  
+  /**
+   *  true if instance is ready to {@link handle()} a request
+   * 
+   *  @since  8-15-11    
+   *  @see  preHandle()
+   *  @var  boolean
+   */
+  protected $is_ready = false;
 
   /**
    *  create this object
@@ -78,9 +87,7 @@ class Framework extends Field implements Dependable {
       throw new \InvalidArgumentException('$app_path was empty, please set it to the root path of your app');
     }//if
     
-    // collect all the paths we're going to use...
-    $this->compilePaths($app_path);
-    
+    $this->setField('app_path',$app_path);
     $this->setField('env',$env);
     $this->setField('debug_level',$debug_level);
     
@@ -89,16 +96,26 @@ class Framework extends Field implements Dependable {
   /**
    *  this handles all the initial configuration of the framework
    *  
-   *  handy for when you want to activate the framework but don't want it to handle the request   
+   *  handy for when you want to activate the framework but don't want to call
+   *  {@link handle()} to actually handle the request   
    *
    *  old name: handleConfig()
    *
    *  @since  7-28-11
    */
-  public function activate(){
+  public function preHandle(){
   
     // canary...
-    ///if($this->getField('Framework.is_activated',false)){ return true; }//if
+    ///if($this->getField('Framework.preHandle',false)){ return true; }//if
+    if($this->is_ready){ return true; }//if
+  
+    // this needs to be the first thing done otherwise preHandle() will keep getting
+    // called again and again...
+    ///$this->setField('Framework.preHandle',true);
+    $this->is_ready = true;
+  
+    // collect all the paths we're going to use...
+    $this->compilePaths();
   
     // first handle any files the rest of the framework might depend on...
     $this->handleDependencies();
@@ -108,8 +125,6 @@ class Framework extends Field implements Dependable {
 
     // start the START classes...
     $this->handleStart();
-    
-    ///$this->setField('Framework.is_activated',true);
   
     return true;
   
@@ -123,13 +138,21 @@ class Framework extends Field implements Dependable {
   public function reset(){
     
     // clear all the autoloaders but the framework autoloader...
-    foreach(spl_autoload_functions() as $callback){
+    /* foreach(spl_autoload_functions() as $callback){
       spl_autoload_unregister($callback);
-    }//foreach
+    }//foreach */
     
     // re-register the framework autoloader...
-    $fal = new FrameworkAutoloader('Montage',realpath(__DIR__.'/..'));
-    $fal->register();
+    ///$fal = new FrameworkAutoloader('Montage',realpath(__DIR__.'/..'));
+    ///$fal->register();
+    
+    // de-register all the autoloaders this instance started...
+    foreach($this->getField('autoload.instances',array()) as $instance){
+      $instance->unregister();
+    }//foreach
+    
+    ///$this->setField('Framework.preHandle',false);
+    $this->is_ready = false;
     
     // start all the objects over again...
     $this->instance_map = array();
@@ -147,7 +170,7 @@ class Framework extends Field implements Dependable {
   
     try{
     
-      $this->activate();
+      $this->preHandle();
       
       $request = $this->getRequest();
   
@@ -283,7 +306,7 @@ class Framework extends Field implements Dependable {
   }//method
 
   /**
-   *  start all the known \Montage\Start\Startable classes
+   *  start all the known \Montage\AutoLoad\AutoLoadable classes
    *  
    *  a Start class is a class that will do configuration stuff
    */
@@ -292,26 +315,29 @@ class Framework extends Field implements Dependable {
     $container = $this->getContainer();
     
     // create the reflection autoloader...
-    $ral = $container->getInstance('\Montage\AutoLoad\ReflectionAutoloader');
+    $ral = $container->getInstance('\Montage\AutoLoad\ReflectionAutoLoader');
     $ral->register(true);
     
     // create the standard autoloader...
-    // we can't use find here because people might extend the StandardAutoloader (like I did)...
-    $sal = $container->getInstance('\Montage\Autoload\StdAutoloader');
+    $sal = $container->getInstance('\Montage\AutoLoad\StdAutoLoader');
     $sal->addPaths($this->getField('vendor_paths',array()));
     $sal->register();
     
     // create any other autoloader classes...
-    $select = $container->getInstance('\Montage\Autoload\Select');
+    $select = $container->getInstance('\Montage\AutoLoad\Select');
     $class_list = $select->find();
+    
+    $instances = new \SplObjectStorage();
     
     foreach($class_list as $class_name){
     
       $instance = $container->getInstance($class_name);
       $instance->register();
+      $instances->attach($instance);
       
     }//foreach
     
+    $this->setField('autoload.instances',$instances);
     ///out::e(spl_autoload_functions());
      
   }//method
@@ -534,8 +560,7 @@ class Framework extends Field implements Dependable {
         }//if
         
         // clear all the app cache...
-        $cache = $this->getCache();
-        $cache->clear();
+        if($cache = $this->getCache()){ $cache->clear(); }//if
         
         // this should restart the framework...
         $this->reset();
@@ -575,8 +600,8 @@ class Framework extends Field implements Dependable {
    */
   protected function handleRecursion(\Exception $e){
   
-    $max_ir_count = $this->getField('Handler.recursion_max_count',3);
-    $ir_field = 'Handler.recursion_count'; 
+    $max_ir_count = $this->getField('Framework.recursion_max_count',3);
+    $ir_field = 'Framework.recursion_count'; 
     $ir_count = $this->getField($ir_field,0);
     if($ir_count > $max_ir_count){
 
@@ -623,6 +648,7 @@ class Framework extends Field implements Dependable {
     // canary...
     if(isset($this->instance_map['container'])){ return $this->instance_map['container']; }//if
   
+    $this->preHandle();
     $reflection = $this->getReflection();
     $container_class_name = $reflection->findClassName('Montage\Dependency\ReflectionContainer');
     $container = new $container_class_name($reflection);
@@ -687,7 +713,7 @@ class Framework extends Field implements Dependable {
    *  @since  6-29-11
    *  @return Montage\Response\Response
    */
-  protected function getResponse(){
+  public function getResponse(){
   
     $container = $this->getContainer();
     return $container->getInstance('\Montage\Response\Response');
@@ -766,11 +792,16 @@ class Framework extends Field implements Dependable {
    *  compile all the important framework paths
    *
    *  @since  6-27-11
-   *  @param  string  $app_path the application path   
    */
-  protected function compilePaths($app_path){
+  protected function compilePaths(){
   
-    $this->setField('app_path',$app_path);
+    // canary...
+    $app_path = $this->getField('app_path');
+    if(empty($app_path)){
+      throw new \UnexpectedValueException('->getField("app_path") failed');
+    }//if
+    
+    ///$this->setField('app_path',$app_path);
     
     $framework_path = new Path(__DIR__,'..','..');
     $this->setField('framework_path',$framework_path);
@@ -783,7 +814,6 @@ class Framework extends Field implements Dependable {
     $view_path_list = array();
     $vendor_path_list = array();
     $assets_path_list = array();
-    $plugin_base_path_list = array();
     $plugins_path_list = array();
     
     $path = new Path($framework_path,'src');
@@ -804,6 +834,7 @@ class Framework extends Field implements Dependable {
     if($path->exists()){ $assets_path_list[] = $path; }//if
     
     // add the plugin paths...
+    $plugin_base_path_list = array();
     $plugin_base_path_list[] = new Path($framework_path,'plugins');
     $plugin_base_path_list[] = new Path($app_path,'plugins');
     foreach($plugin_base_path_list as $plugin_base_path){
