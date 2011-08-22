@@ -24,9 +24,40 @@ class PHPCacheTest extends FrameworkTestCase {
       'baz' => 'this is a string'
     );
     
-    $c->set(__CLASS__,$arr);
+    $c->set(__METHOD__,$arr);
     
-    $ret_arr = $c->get(__CLASS__);
+    $ret_arr = $c->get(__METHOD__);
+    $this->assertSame($arr,$ret_arr);
+  
+  }//method
+  
+  /**
+   *  test to make sure an object can be cached and read back using php code cache
+   *
+   *  @since  8-22-11
+   */
+  public function testObjectCache(){
+  
+    $c = new PHPCache();
+    $c->setPath(sys_get_temp_dir());
+    
+    $obj = new \StdClass();
+    $obj->foo = 'bar';
+    $obj->bar = 'foo';
+    
+    $arr = array(
+      'obj' => $obj
+    );
+    
+    $c->set(__METHOD__,$arr);
+    
+    $ret_arr = $c->get(__METHOD__);
+    ///\out::e($ret_arr);
+    
+    $this->assertArrayHasKey('obj',$ret_arr);
+    $this->assertInstanceOf('StdClass',$ret_arr['obj']);
+    $this->assertEquals('bar',$ret_arr['obj']->foo);
+    $this->assertEquals('foo',$ret_arr['obj']->bar);
   
   }//method
 

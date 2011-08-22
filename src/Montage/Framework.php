@@ -20,15 +20,9 @@
  ******************************************************************************/
 namespace Montage;
 
-use Montage\Cache\PHPCache; ///use Montage\Cache\Cache;
+use Montage\Cache\PHPCache;
 use Montage\Path;
 use Montage\Field\Field;
-
-use Montage\Exception\NotFoundException;
-use Montage\Exception\InternalRedirectException;
-use Montage\Exception\RedirectException;
-use Montage\Exception\StopException;
-use Exception;
 
 use out;
 
@@ -43,7 +37,8 @@ use Montage\Request\Requestable;
 use Montage\Response\Response;
 use Montage\Response\Template;
 
-// load the Framework autoloader, this will handle all other dependencies to load this class...
+// load the Framework autoloader, this will handle all other dependencies to load this class
+// so I don't have to have a ton of includes() right here...
 require_once(__DIR__.'/AutoLoad/AutoLoadable.php');
 require_once(__DIR__.'/AutoLoad/AutoLoader.php');
 require_once(__DIR__.'/AutoLoad/FrameworkAutoloader.php');
@@ -504,7 +499,7 @@ class Framework extends Field implements Dependable {
   
     try{
 
-      if($e instanceof InternalRedirectException){
+      if($e instanceof \Montage\Exception\InternalRedirectException){
       
         list($controller_class,$controller_method,$controller_method_params) = $this->getControllerSelect()->find(
           $request->getHost(),
@@ -514,7 +509,7 @@ class Framework extends Field implements Dependable {
         $controller_response = $this->handleController($controller_class,$controller_method,$controller_method_params);
         $ret_mixed = $this->handleResponse($controller_response);
       
-      }else if($e instanceof RedirectException){
+      }else if($e instanceof \Montage\Exception\RedirectException){
       
         $response = $this->getResponse();
         $redirect_url = $e->getUrl();
@@ -540,7 +535,7 @@ class Framework extends Field implements Dependable {
       
         $ret_mixed = $this->handleResponse(null);
       
-      }else if($e instanceof StopException){
+      }else if($e instanceof Montage\Exception\StopException){
         
         // don't do anything, we're done
         $ret_mixed = $this->handleResponse(true);

@@ -85,9 +85,11 @@ class PHPCache extends Cache {
     
     }else if(is_object($val)){
     
-      throw new \UnexpectedValueException(
-        sprintf('cannot cache objects using %s class',get_class($this))
-      );
+      // we are kind of hacky here to let objects be stored in cache, basically, the objects
+      // will be serialized into a string that is wrapped in unserialize. I got this from Symfony 2.0
+      // Client::getScript() methods
+    
+      $ret_str = sprintf("unserialize('%s')",serialize($val));
     
     }else{
     

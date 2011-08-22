@@ -46,8 +46,6 @@ class FrameworkClient extends Client {
    */
   protected function filterRequest(BrowserKitRequest $request){
   
-    out::x();
-  
     // create a Montage compatible Request instance...
     $container = $this->framework->getContainer();
     $framework_request_class_name = $container->getClassName('montage\Request\Requestable');
@@ -56,11 +54,11 @@ class FrameworkClient extends Client {
       array($framework_request_class_name,'create'),
       $request->getUri(), 
       $request->getMethod(), 
-      $request->getParameters(), 
-      $request->getCookies(), 
-      $request->getFiles(), 
-      $request->getServer(), 
-      $request->getContent()
+      (array)$request->getParameters(), 
+      (array)$request->getCookies(),
+      (array)$request->getFiles(),
+      (array)$request->getServer(),
+      (array)$request->getContent()
     );
   
     /*
@@ -80,7 +78,7 @@ class FrameworkClient extends Client {
     $framework_request = $container->createInstance('montage\Request\Requestable',$params);
     */
     
-    \out::i($framework_request); out::x();
+    ///\out::i($framework_request); \out::x();
     
     return $framework_request;
   
@@ -103,7 +101,6 @@ class FrameworkClient extends Client {
       }
       $headers['Set-Cookie'] = implode(', ', $cookies);
     }//if
-  
   
     $bk_response = new BrowserKitResponse(
       $response->getContent(),
@@ -141,11 +138,12 @@ class FrameworkClient extends Client {
     
     ob_start();
     
-      $response = $this->framework->handle();
+      $this->framework->handle();
       $output = ob_get_contents();
     
     ob_end_clean();
     
+    $response = $this->framework->getResponse();
     $response->setContent($output);
     
     return $response;
