@@ -2,6 +2,8 @@
 /**
  *  allows you to mimic a framework http request 
  *  
+ *  @link http://symfony.com/doc/current/book/testing.html
+ *  
  *  @version 0.1
  *  @author Jay Marcyes
  *  @since 7-28-11
@@ -60,25 +62,10 @@ class FrameworkClient extends Client {
       (array)$request->getServer(),
       (array)$request->getContent()
     );
-  
-    /*
-    $params = array(
-      'cli' => array(),
-      'query' => array(),
-      'request' => $request->getParameters(),
-      'attributes' => array(),
-      'cookies' => $request->getCookies(),
-      'files' => $request->getFiles(),
-      'server' => $request->getServer(),
-      'content' => $request->getContent()
-    );
-    
-    // create a Montage compatible Request instance...
-    $container = $this->framework->getContainer();
-    $framework_request = $container->createInstance('montage\Request\Requestable',$params);
-    */
     
     ///\out::i($framework_request); \out::x();
+    
+    ///\out::e($framework_request->getUrl(),$framework_request->getBase()); \out::x();
     
     return $framework_request;
   
@@ -132,10 +119,15 @@ class FrameworkClient extends Client {
       
     }//if/else */
     
+    $container = $this->framework->getContainer();
+    $container->reset();
     $this->framework->reset();
 
-    $this->framework->setRequest($request);
+    $container->setInstance('request',$request);
+    $this->framework->setContainer($container);
     
+    $this->framework->preHandle();
+
     ob_start();
     
       $this->framework->handle();

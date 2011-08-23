@@ -128,7 +128,16 @@ class TestFramework extends Framework {
 class TestContainer extends Container {
 
   /**
-   *  when you know what class you specifically want, use this method over {@link findInstance()}
+   *  find the class name that will be used to create the instance
+   *
+   *  @since  8-3-11   
+   *  @param  string  $class_name the key/name of the class you are looking for
+   *  @return string  the class name that will be used to create the instance      
+   */
+  public function getClassName($class_name){ return ''; }//method
+
+  /**
+   *  get an instance
    *
    *  @param  string  $class_name the name of the class you are looking for
    *  @param  array $params any params you want to pass into the constructor of the instance      

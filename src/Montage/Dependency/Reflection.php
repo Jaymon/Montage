@@ -259,13 +259,14 @@ class Reflection extends ObjectCache implements \Reflector {
    */
   public function addFile($file){
   
-    // canary...
-    if($this->hasPath(new Path($file))){ return 1; }//if
-  
     $ret_count = $this->setFile($file);
+    $this->path_map['files'][$file] = $ret_count;
   
-    $this->path_map['files'][$file] = 1;
-    $this->exportCache();
+    if($ret_count > 0){
+    
+      $this->exportCache();
+      
+    }//if
       
     return $ret_count;
   
@@ -539,12 +540,13 @@ class Reflection extends ObjectCache implements \Reflector {
   protected function setFile($file){
   
     // canary...
-    if($this->hasPath(new Path($file))){ return true; }//if
+    if($this->hasPath(new Path($file))){ return 0; }//if
   
     $ret_count = 0;
     $rfile = new ReflectionFile($file);
     
     $class_list = $rfile->getClasses();
+    
     foreach($class_list as $class_map){
     
       if($this->setClass($class_map['class'],$file,$class_map['extends'],$class_map['implements'])){
@@ -573,7 +575,7 @@ class Reflection extends ObjectCache implements \Reflector {
     
     $parent_list = array_merge($extend_list,$implement_list);
     
-    $dependency_list = array();
+    $dependency_list = $parent_list;
     
     // add class as child to all its parent classes...
     foreach($parent_list as $parent_class){
@@ -586,7 +588,7 @@ class Reflection extends ObjectCache implements \Reflector {
         
       }//if
     
-      if(isset($this->class_map[$parent_key]['dependencies'])){
+      if(!empty($this->class_map[$parent_key]['dependencies'])){
       
         $dependency_list = array_merge($dependency_list,$this->class_map[$parent_key]['dependencies']);
         $dependency_list[] = $parent_class;

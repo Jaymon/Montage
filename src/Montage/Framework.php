@@ -92,21 +92,21 @@ class Framework extends Field implements Dependable {
    *  this handles all the initial configuration of the framework
    *  
    *  handy for when you want to activate the framework but don't want to call
-   *  {@link handle()} to actually handle the request   
+   *  {@link handle()} to actually handle the request (ie, you want stuff like configuration
+   *  and the autoloaders to be loaded, but you don't want the response to be generated yet)      
    *
-   *  old name: handleConfig()
+   *  old name: activate()
    *
    *  @since  7-28-11
    */
   public function preHandle(){
   
     // canary...
-    ///if($this->getField('Framework.preHandle',false)){ return true; }//if
     if($this->is_ready){ return true; }//if
   
     // this needs to be the first thing done otherwise preHandle() will keep getting
-    // called again and again...
-    ///$this->setField('Framework.preHandle',true);
+    // called again and again as other methods call this method to make sure everything
+    // is ready...
     $this->is_ready = true;
   
     // collect all the paths we're going to use...
@@ -132,21 +132,11 @@ class Framework extends Field implements Dependable {
    */
   public function reset(){
     
-    // clear all the autoloaders but the framework autoloader...
-    /* foreach(spl_autoload_functions() as $callback){
-      spl_autoload_unregister($callback);
-    }//foreach */
-    
-    // re-register the framework autoloader...
-    ///$fal = new FrameworkAutoloader('Montage',realpath(__DIR__.'/..'));
-    ///$fal->register();
-    
     // de-register all the autoloaders this instance started...
     foreach($this->getField('autoload.instances',array()) as $instance){
       $instance->unregister();
     }//foreach
     
-    ///$this->setField('Framework.preHandle',false);
     $this->is_ready = false;
     
     // start all the objects over again...
@@ -174,6 +164,9 @@ class Framework extends Field implements Dependable {
         $request->getHost(),
         $request->getPath()
       );
+      
+      ///\out::e($request->getHost(),$request->getPath());
+      ///\out::e($controller_class,$controller_method,$controller_method_params);
 
       $controller_response = $this->handleController($controller_class,$controller_method,$controller_method_params);
       $ret_mixed = $this->handleResponse($controller_response);
@@ -308,32 +301,35 @@ class Framework extends Field implements Dependable {
   protected function handleAutoload(){
   
     $container = $this->getContainer();
+    $instances = new \SplObjectStorage();
     
     // create the reflection autoloader...
-    $ral = $container->getInstance('\Montage\AutoLoad\ReflectionAutoLoader');
-    $ral->register(true);
+    if($ral = $container->getInstance('\Montage\AutoLoad\ReflectionAutoLoader')){
+      $ral->register(true);
+      $instances->attach($ral);
+    }//if
     
     // create the standard autoloader...
-    $sal = $container->getInstance('\Montage\AutoLoad\StdAutoLoader');
-    $sal->addPaths($this->getField('vendor_paths',array()));
-    $sal->register();
+    if($sal = $container->getInstance('\Montage\AutoLoad\StdAutoLoader')){
+      $sal->addPaths($this->getField('vendor_paths',array()));
+      $sal->register();
+      $instances->attach($sal);
+    }//if
     
     // create any other autoloader classes...
     $select = $container->getInstance('\Montage\AutoLoad\Select');
     $class_list = $select->find();
     
-    $instances = new \SplObjectStorage();
-    
     foreach($class_list as $class_name){
     
       $instance = $container->getInstance($class_name);
+      
       $instance->register();
       $instances->attach($instance);
       
     }//foreach
     
     $this->setField('autoload.instances',$instances);
-    ///out::e(spl_autoload_functions());
      
   }//method
 
@@ -451,7 +447,7 @@ class Framework extends Field implements Dependable {
         );
       
       }//try/catch
-    
+
       if(is_object($rfunc_params[$index])){
       
         // populate a form object if there are passed in values...
@@ -492,7 +488,7 @@ class Framework extends Field implements Dependable {
    *  @return boolean $use_template
    */
   protected function handleException(\Exception $e){
-  
+
     $this->handleRecursion($e);
   
     $ret_mixed = null;
@@ -630,7 +626,13 @@ class Framework extends Field implements Dependable {
    *  @param  Montage\Dependency\Container  $container
    */
   public function setContainer(\Montage\Dependency\Containable $container){
+  
     $this->instance_map['container'] = $container;
+    
+    // just in case, container should know about this instance for circular-dependency goodness...
+    $container->setInstance('framework',$this);
+    $container->setInstance('cache',$this->getCache());
+    
   }//method
   
   /**
@@ -641,16 +643,15 @@ class Framework extends Field implements Dependable {
   public function getContainer(){
   
     // canary...
-    if(isset($this->instance_map['container'])){ return $this->instance_map['container']; }//if
+    if(isset($this->instance_map['container'])){
+      ///\out::e(spl_object_hash($this->instance_map['container']));
+      return $this->instance_map['container'];
+    }//if
   
     $this->preHandle();
     $reflection = $this->getReflection();
     $container_class_name = $reflection->findClassName('Montage\Dependency\ReflectionContainer');
     $container = new $container_class_name($reflection);
-    
-    // just in case, container should know about this instance for circular-dependency goodness...
-    $container->setInstance('',$this);
-    $container->setInstance('',$this->getCache());
     
     $this->setContainer($container);
   
@@ -691,15 +692,6 @@ class Framework extends Field implements Dependable {
     
     return $this->instance_map['request'];
   
-  }//method
-  
-  /**
-   *  allow Request to be set externally
-   *  
-   *  @param  \Montage\Request\Requestable  $request      
-   */
-  public function setRequest(Requestable $request){
-    $this->instance_map['request'] = $request;
   }//method
   
   /**
@@ -906,5 +898,7 @@ class Framework extends Field implements Dependable {
     return $path_list;
   
   }//method
+  
+  ///public function __destruct(){ \out::h(); }//method
 
 }//method

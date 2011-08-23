@@ -79,13 +79,13 @@ class FrameworkStart extends Start {
       
         // set the values for the url instance on creation...
         $ret_map = array(
-          'cli' => empty($_SERVER['argv']) ? array() : $_SERVER['argv'],
           'query' => $_GET,
           'request' => $_POST,
           'attributes' => array(),
           'cookies' => $_COOKIE,
           'files' => $_FILES,
-          'server' => $_SERVER
+          'server' => $_SERVER,
+          'cli' => empty($_SERVER['argv']) ? array() : $_SERVER['argv']
         );
         
         return array_merge($ret_map,$params);

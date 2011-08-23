@@ -10,20 +10,22 @@
 namespace Montage\Request;
 
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
-use Montage\Request\Requestable as MontageRequest;
+use Montage\Request\Requestable;
 use Montage\Field\GetFieldable;
 
-class Request extends SymfonyRequest implements MontageRequest,GetFieldable {
+class Request extends SymfonyRequest implements Requestable,GetFieldable {
 
   /**
    *  create instance
    *
    *  @since  7-25-11
-   *  @param  array $cli  the argv params passed in from the command line
+   *  @param  array $cli  the argv params passed in from the command line, this is at the end to ensure
+   *                      compatibility with \Symfony\Component\HttpFoundation\Request::create() (it uses static::
+   *                      and so the vars have to be in the right place      
    *  @see  parent::__construct for all the other params      
    */
-  public function __construct(array $cli = array(), array $query = array(), array $request = array(), array $attributes = array(), array $cookies = array(), array $files = array(), array $server = array(), $content = null)
-  {
+  public function __construct(array $query = array(), array $request = array(), array $attributes = array(), array $cookies = array(), array $files = array(), array $server = array(), $content = null, array $cli = array()){
+  
     $cli_query = array();
   
     if(!empty($cli)){

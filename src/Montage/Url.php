@@ -38,6 +38,8 @@ class Url extends Field {
    */
   public function __construct($current_url = '',$base_url = ''){
   
+    ///\out::e($current_url,$base_url);
+  
     $this->setCurrent($current_url);
     $this->setBase($base_url);
     

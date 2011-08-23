@@ -2,25 +2,13 @@
 namespace Montage\Test\PHPUnit {
 
   use Montage\Dependency\Reflection;
-  use out;
+  use PHPUnit\TestCase;
   
-  require_once('out_class.php');
-    
-  require_once(__DIR__.'/../Test.php');
-  require_once(__DIR__.'/../../../Path.php');
-  
-  require_once(__DIR__.'/../../../Cache/Cacheable.php');
-  require_once(__DIR__.'/../../../Cache/ObjectCache.php');
-  require_once(__DIR__.'/../../../Dependency/Reflection.php');
-  require_once(__DIR__.'/../../../Dependency/ReflectionFile.php');
-  
-  class ReflectionTest extends Test {
+  class ReflectionTest extends TestCase {
   
     protected $instance = null;
     
     public function setUp(){
-    
-      ///out::e($this->container);
     
       $this->instance = new Reflection();
       $this->instance->addFile(__FILE__);
@@ -67,6 +55,25 @@ namespace Montage\Test\PHPUnit {
       $this->assertCalls($this->instance,'findClassName',$test_list);
     
     }//method
+    
+    /**
+     *  test to make sure dependencies get set correctly
+     *  
+     *  @since  8-22-11
+     */   
+    public function testDependencies(){
+    
+      $reflection = $this->instance;
+      ///\out::e($reflection->getClass('iA'));
+      
+      $reflection->addFile("C:\Projects\Sandbox\Montage\_active\src\Montage\Request\Request.php");
+      \out::e($reflection->getClass('Montage\Request\Request'));
+      
+      // @todo  I think there is an issue with the reflection where if it loads the child
+      // class file before the parent class file then all the dependencies won't exist, this should
+      // be tested and fixed
+    
+    }//method
   
   }//class
 
@@ -82,5 +89,9 @@ namespace {
   class b {}//class
   class bb extends b {}//class
   class cc extends bb {}//class
+  
+  interface iDependenciesA {}//interface
+  interface iDependenciesB {}//interface
+  class iA extends b implements iDependenciesA,iDependenciesB {}//class
 
 }//namespace

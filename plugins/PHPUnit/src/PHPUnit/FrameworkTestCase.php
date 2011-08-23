@@ -26,6 +26,12 @@ abstract class FrameworkTestCase extends TestCase {
   
   public function getFramework(){ return self::$framework; }//method
 
+  /**
+   *  get a client that is capable of making web requests for functional tests
+   *
+   *  @link http://symfony.com/doc/current/book/testing.html
+   *  @return \PHPUnit\FrameworkClient
+   */
   public function getClient(){
   
     // get a copy of the already running framework...

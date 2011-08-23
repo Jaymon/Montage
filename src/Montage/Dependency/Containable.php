@@ -120,5 +120,12 @@ interface Containable {
    *  @return array the params ready to be passed to the method using something like call_user_func_array
    */
   public function normalizeParams(\ReflectionFunctionAbstract $rfunc,array $params = array());
+  
+  /**
+   *  reset the container to its virgin state
+   *     
+   *  @since  8-22-11         
+   */
+  public function reset();
 
 }//class

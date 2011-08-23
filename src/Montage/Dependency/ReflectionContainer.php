@@ -141,5 +141,18 @@ class ReflectionContainer extends Container {
    *  @return Montage\Dependency\Reflection
    */
   protected function getReflection(){ return $this->reflection; }//method
+  
+  /**
+   *  reset the container to its virgin state
+   *     
+   *  @since  8-22-11         
+   */
+  public function reset(){
+  
+    parent::reset();
+    $this->setInstance('',$this->reflection);
+    $this->setInstance('',$this); // we want to be able to inject this also
+  
+  }//method
 
 }//class
