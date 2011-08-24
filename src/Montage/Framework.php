@@ -537,6 +537,12 @@ class Framework extends Field implements Dependable {
         $ret_mixed = $this->handleResponse(true);
         
       }else if($e instanceof \ReflectionException){
+      
+        // @todo this works great unless someone calls preHandle() before handle() and encounters
+        // a ReflectionException in the preHandle, the solution would be basically to do this same thing
+        // in preHandle but then have it call preHandle() at the end instead of handle() like this one, the
+        // easiest way to combine shared functionality would probably be to have a handleRecoverableException()
+        // method that does everything up to the handle() call (the following ~20 LOC)
         
         if($old_e = $this->getField('ReflectionException')){
         

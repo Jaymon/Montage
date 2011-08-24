@@ -32,8 +32,9 @@ class ReflectionContainer extends Container {
   public function __construct(Reflection $reflection){
   
     $this->reflection = $reflection;
-    $this->setInstance('',$reflection);
-    $this->setInstance('',$this); // we want to be able to inject this also
+    $this->setInstance('reflection',$reflection);
+    
+    parent::__construct();
     
   }//method
   

@@ -3,9 +3,12 @@
  *  the Dependancy Injection Container is like a service locator. 
  *  
  *  This is the base container for any custom containers. Though this could be entirely
- *  side-stepped in favor of a completely custom container that implements Containable 
+ *  side-stepped in favor of a completely custom container that implements Containable
+ *  (that's more theory than practice because I haven't tried to use a different container, and
+ *  if I did, Montage\Framework still uses class names as the keys, so that would have to be
+ *  dealt with)   
  *     
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 7-22-11
  *  @package montage
@@ -35,6 +38,13 @@ abstract class Container extends Field implements Containable {
    *  @var  array   
    */
   protected $on_created_map = array();
+  
+  public function __construct(){
+  
+    // we want to be able to inject this also...
+    $this->setInstance('container',$this);
+  
+  }//method
   
   /**
    *  the callback will be triggered when the instance is about to be created
@@ -77,18 +87,6 @@ abstract class Container extends Field implements Containable {
     }//if
   
     $class_key = $this->getKey($class_name);
-    
-    /* if(isset($this->instance_map[$class_key])){
-      trigger_error(
-        sprintf(
-          'An object of %s has already been created, making this %s mostly useless',
-          $class_name,
-          __FUNCTION__
-        ),
-        E_USER_WARNING
-      );
-    }//if */
-  
     $this->on_created_map[$class_key] = $callback;
   
   }//method
@@ -140,8 +138,9 @@ abstract class Container extends Field implements Containable {
       $instance_class_name = $this->getClassName($class_name);
       $instance_class_key = $this->getKey($instance_class_name);
       
-      // I'm not sold on this being here, I'm thinking this might be better being just implemented
-      // in a child class since this seems really ad-hoc... 
+      // I'm not sold on a second check here (first for $class_key, this for $instance_class_key),
+      // I'm thinking this might be better being just implemented in a child class since 
+      // this seems really ad-hoc... 
       if(isset($this->instance_map[$instance_class_key])){
     
         $ret_instance = $this->instance_map[$instance_class_key];

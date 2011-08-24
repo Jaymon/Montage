@@ -4,7 +4,7 @@
  *  
  *  @link http://symfony.com/doc/current/book/testing.html
  *  
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes
  *  @since 7-28-11
  *  @package test
@@ -16,6 +16,7 @@ use Symfony\Component\BrowserKit\Client;
 use Symfony\Component\BrowserKit\Request as BrowserKitRequest;
 use Symfony\Component\BrowserKit\Response as BrowserKitResponse;
 
+use PHPUnit\FrameworkCrawler;
 use Montage\Framework;
 
 class FrameworkClient extends Client {
@@ -23,6 +24,8 @@ class FrameworkClient extends Client {
   protected $framework = null;
   
   protected $has_requested = false;
+  
+  protected $redirect_list = array();
   
   /**
    * Constructor.
@@ -37,6 +40,47 @@ class FrameworkClient extends Client {
     $this->framework = $framework;
     parent::__construct($server,$history,$cookieJar);
     
+  }//method
+  
+  public function getRedirectHistory(){
+  
+    return $this->redirect_list;
+  
+  }//method
+  
+  /**
+   *  override to allow redirect history recording
+   *     
+   *  @see  parent::followRedirect
+   */
+  public function followRedirect(){
+  
+    if(!empty($this->redirect)){
+    
+      $this->redirect_list[] = $this->redirect;
+    
+    }//if
+  
+    return parent::followRedirect();
+  
+  }//method
+  
+  /**
+   * Creates a crawler.
+   *
+   * @param string $uri A uri
+   * @param string $content Content for the crawler to use
+   * @param string $type Content type
+   *
+   * @return Crawler
+   */
+  protected function createCrawlerFromContent($uri,$content,$type){
+
+    $crawler = new FrameworkCrawler(null, $uri);
+    $crawler->addContent($content, $type);
+
+    return $crawler;
+      
   }//method
   
   /**
@@ -63,10 +107,6 @@ class FrameworkClient extends Client {
       (array)$request->getContent()
     );
     
-    ///\out::i($framework_request); \out::x();
-    
-    ///\out::e($framework_request->getUrl(),$framework_request->getBase()); \out::x();
-    
     return $framework_request;
   
   }//method
@@ -81,12 +121,26 @@ class FrameworkClient extends Client {
   protected function filterResponse($response)
   {
     $headers = $response->headers->all();
-    if ($response->headers->getCookies()) {
+    
+    if($response->headers->getCookies()){
+      
       $cookies = array();
-      foreach ($response->headers->getCookies() as $cookie) {
-          $cookies[] = new DomCookie($cookie->getName(), $cookie->getValue(), $cookie->getExpiresTime(), $cookie->getPath(), $cookie->getDomain(), $cookie->isSecure(), $cookie->isHttpOnly());
-      }
+      foreach($response->headers->getCookies() as $cookie){
+          
+          $cookies[] = new DomCookie(
+            $cookie->getName(),
+            $cookie->getValue(),
+            $cookie->getExpiresTime(),
+            $cookie->getPath(),
+            $cookie->getDomain(),
+            $cookie->isSecure(),
+            $cookie->isHttpOnly()
+          );
+          
+      }//foreach
+      
       $headers['Set-Cookie'] = implode(', ', $cookies);
+      
     }//if
   
     $bk_response = new BrowserKitResponse(
@@ -106,28 +160,18 @@ class FrameworkClient extends Client {
    *  @return Response A Response instance
    */
   protected function doRequest($request){
-  
-    // avoid shutting down the Kernel if no request has been performed yet
-    // WebTestCase::createClient() boots the Kernel but do not handle a request
-    /* if($this->has_requested){
     
-      $this->framework->reset();
-      
-    }else{
-    
-      $this->has_requested = true;
-      
-    }//if/else */
-    
+    // re-use the container and the framework, but convert them back to their virgin state...
     $container = $this->framework->getContainer();
     $container->reset();
     $this->framework->reset();
 
+    // let's use our passed in "fake" request and then tell the framework about the container again
+    // since it no longer remembers it...
     $container->setInstance('request',$request);
     $this->framework->setContainer($container);
     
-    $this->framework->preHandle();
-
+    // actually handle the request, capture the output since handle usually echoes to the screen...
     ob_start();
     
       $this->framework->handle();
@@ -135,6 +179,7 @@ class FrameworkClient extends Client {
     
     ob_end_clean();
     
+    // set the captured content into the response object...
     $response = $this->framework->getResponse();
     $response->setContent($output);
     
