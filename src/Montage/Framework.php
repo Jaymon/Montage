@@ -104,24 +104,37 @@ class Framework extends Field implements Dependable {
     // canary...
     if($this->is_ready){ return true; }//if
   
-    // this needs to be the first thing done otherwise preHandle() will keep getting
-    // called again and again as other methods call this method to make sure everything
-    // is ready...
-    $this->is_ready = true;
+    $ret_mixed = true;
   
-    // collect all the paths we're going to use...
-    $this->compilePaths();
+    try{
+    
+      // this needs to be the first thing done otherwise preHandle() will keep getting
+      // called again and again as other methods call this method to make sure everything
+      // is ready...
+      $this->is_ready = true;
+    
+      // collect all the paths we're going to use...
+      $this->compilePaths();
+    
+      // first handle any files the rest of the framework might depend on...
+      $this->handleDependencies();
   
-    // first handle any files the rest of the framework might depend on...
-    $this->handleDependencies();
-
-    // start the autoloaders...
-    $this->handleAutoload();
-
-    // start the START classes...
-    $this->handleStart();
+      // start the autoloaders...
+      $this->handleAutoload();
   
-    return true;
+      // start the START classes...
+      $this->handleStart();
+      
+    }catch(\ReflectionException $e){
+      
+      $this->handleRecovery($e);
+      
+      // re-handle the request...
+      $ret_mixed = $this->preHandle();
+      
+    }//try/catch
+  
+    return $ret_mixed;
   
   }//method
   
@@ -358,6 +371,46 @@ class Framework extends Field implements Dependable {
   }//method
 
   /**
+   *  handle potential recovery of the framework
+   *  
+   *  basically, place the framework completely back into a virgin state, even more
+   *  so than {@link reset()} because it will clear cache and stuff also
+   *  
+   *  @param  Exception $e  the exception that triggered the recovery
+   *  @return boolean   
+   */
+  protected function handleRecovery(\Exception $e){
+  
+    $e_class_name = get_class($e);
+    $e_key = sprintf('exception.%s',$e_class_name);
+  
+    if($old_e = $this->getField($e_key)){
+        
+      throw new \RuntimeException(
+        sprintf(
+          '%s Exception: "%s" already triggered a framework recovery and the problem was not fixed',
+          $e_class_name,
+          $old_e->getMessage()
+        )
+      );
+    
+    }else{
+    
+      $this->setField($e_key,$e);
+    
+    }//if/else
+    
+    // clear all the app cache...
+    if($cache = $this->getCache()){ $cache->clear(); }//if
+    
+    // this should restart the framework...
+    $this->reset();
+    
+    return true;
+    
+  }//method
+
+  /**
    *  create a controller instance and call that instance's $method to handle the request
    *  
    *  @param  string  $class_name the controller class name
@@ -538,35 +591,10 @@ class Framework extends Field implements Dependable {
         
       }else if($e instanceof \ReflectionException){
       
-        // @todo this works great unless someone calls preHandle() before handle() and encounters
-        // a ReflectionException in the preHandle, the solution would be basically to do this same thing
-        // in preHandle but then have it call preHandle() at the end instead of handle() like this one, the
-        // easiest way to combine shared functionality would probably be to have a handleRecoverableException()
-        // method that does everything up to the handle() call (the following ~20 LOC)
+        $this->handleRecovery($e);
         
-        if($old_e = $this->getField('ReflectionException')){
-        
-          throw new \RuntimeException(
-            sprintf(
-              '%s Exception: "%s" already triggered a framework reload and the problem was not fixed',
-              get_class($old_e),
-              $old_e->getMessage()
-            )
-          );
-        
-        }//if
-        
-        // clear all the app cache...
-        if($cache = $this->getCache()){ $cache->clear(); }//if
-        
-        // this should restart the framework...
-        $this->reset();
-        
-        $this->setField('ReflectionException',$e);
-          
         // re-handle the request...
         $ret_mixed = $this->handle();
-        
         
       }else{
         

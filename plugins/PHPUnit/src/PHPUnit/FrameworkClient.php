@@ -21,10 +21,18 @@ use Montage\Framework;
 
 class FrameworkClient extends Client {
   
+  /**
+   *  holds the Montage framework instance this client will use
+   *
+   *  @var  \Montage\Framework   
+   */
   protected $framework = null;
   
-  protected $has_requested = false;
-  
+  /**
+   *  hold any followed redirects
+   *  
+   *  @var  array
+   */
   protected $redirect_list = array();
   
   /**
@@ -42,6 +50,12 @@ class FrameworkClient extends Client {
     
   }//method
   
+  /**
+   *  get the redirect history of this client
+   *  
+   *  @since  8-23-11      
+   *  @return array
+   */
   public function getRedirectHistory(){
   
     return $this->redirect_list;

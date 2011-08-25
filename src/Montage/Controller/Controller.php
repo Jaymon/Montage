@@ -49,7 +49,7 @@ abstract class Controller extends Field implements Controllable {
    *  @since  7-26-11
    *  @param  Response  $response      
    */
-  public function setResponse(Response $response){ $this->response = $response; }//method
+  public function injectResponse(Response $response){ $this->response = $response; }//method
   
   /**
    *  set the Url object if it is available
@@ -57,6 +57,6 @@ abstract class Controller extends Field implements Controllable {
    *  @since  7-26-11
    *  @param  Url $url      
    */
-  public function setUrl(Url $url){ $this->url = $url; }//method
+  public function injectUrl(Url $url){ $this->url = $url; }//method
   
 }//class

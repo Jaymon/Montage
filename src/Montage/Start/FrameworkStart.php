@@ -85,7 +85,9 @@ class FrameworkStart extends Start {
           'cookies' => $_COOKIE,
           'files' => $_FILES,
           'server' => $_SERVER,
-          'cli' => empty($_SERVER['argv']) ? array() : $_SERVER['argv']
+          // in a real cli request, the 0 will be the script, in a http request, 0 will be the query string
+          // but we only care about argv if it has more than the first item...
+          'cli' => empty($_SERVER['argv'][1]) ? array() : $_SERVER['argv']
         );
         
         return array_merge($ret_map,$params);

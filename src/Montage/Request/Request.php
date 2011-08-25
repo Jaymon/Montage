@@ -46,6 +46,7 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
     // treat any cli vals as the path...
     if(!empty($cli_query['list'])){
     
+      // this overrides automagic path finding...
       $this->pathInfo = join('/',$cli_query['list']);
     
     }//if
@@ -111,8 +112,9 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
    *  gets just the request path
    *  
    *  @example
-   *    http://example.com/var/web/foo/bar return foo/bar         
+   *    http://example.com/var/web/foo/bar return foo/bar because /var/web is the root
    *    http://example.com/foo/bar return foo/bar
+   *    http://example.com/foo/bar?che=baz return foo/bar   
    *       
    *  @return string  just the request path without the root path
    */
@@ -123,7 +125,7 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
    *  
    *  @return boolean
    */
-  function isCli(){ return (strncasecmp(PHP_SAPI, 'cli', 3) === 0); }//method
+  function isCli(){ return (strncasecmp(PHP_SAPI, 'cli', 3) === 0) || !isset($_SERVER['HTTP_HOST']); }//method
   
   /**
    *  check if $key exists and is non-empty

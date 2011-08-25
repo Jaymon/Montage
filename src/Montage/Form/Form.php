@@ -78,6 +78,14 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
   abstract protected function populate();
 
   /**
+   *  returns true if form contains valid values
+   *
+   *  @since  8-1-11   
+   *  @return boolean   
+   */
+  public function isValid(){ return true; }//method
+
+  /**
    *  get the form's name, this is basically the namespace the form is using
    *  
    *  @return string

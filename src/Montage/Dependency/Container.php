@@ -228,9 +228,19 @@ abstract class Container extends Field implements Containable {
     }//if/else
     
     // actually create the class
-    // http://www.php.net/manual/en/reflectionclass.newinstanceargs.php#95137
-    $ret_instance = empty($instance_params) ? new $class_name() : $rclass->newInstanceArgs($instance_params);
-    $ret_instance = $this->injectSetters($ret_instance,$rclass);
+    if($rclass->IsInstantiable()){
+      
+      // http://www.php.net/manual/en/reflectionclass.newinstanceargs.php#95137
+      $ret_instance = empty($instance_params) ? new $class_name() : $rclass->newInstanceArgs($instance_params);
+      $ret_instance = $this->inject($ret_instance,$rclass);
+      
+    }else{
+    
+      throw new \UnexpectedValueException(
+        sprintf('tried to create an unstantiable class %s',$class_name)
+      );
+    
+    }//if/else
     
     // handle on created...
     if(isset($this->on_created_map[$class_key])){
@@ -425,21 +435,21 @@ abstract class Container extends Field implements Containable {
    *  inject dependencies via setter methods
    *  
    *  by default, this class will only inject if the method is of the form:
-   *  setName(ClassName $class) and nothing else. And it will only inject the class
+   *  injectName(ClassName $class) and nothing else. And it will only inject the class
    *  if it can be created. This is because if you are using setter injection then it is most
    *  likely optional that you want the object instance, if you absolutely must have
    *  the instance then use constructor injection (which will halt execution if the instance
    *  can't be created)       
    *  
    *  @example:
-   *    setFoo(Foo $foo);                  
+   *    injectFoo(Foo $foo);                  
    *
    *  @since  6-14-11   
    *  @param  object  $instance the object instance to be injected
    *  @param  ReflectionClass $rclass the reflection object of the given $instance      
    *  @return object  $instance with its setters injected
    */
-  protected function injectSetters($instance,\ReflectionClass $rclass = null){
+  protected function inject($instance,\ReflectionClass $rclass = null){
   
     // canary...
     if(empty($instance)){ throw new \InvalidArgumentException('$instance was empty'); }//if
@@ -452,40 +462,70 @@ abstract class Container extends Field implements Containable {
     $rmethod_list = $rclass->getMethods(ReflectionMethod::IS_PUBLIC);
     foreach($rmethod_list as $rmethod){
     
-      $method_name = $rmethod->getName();
-    
-      $is_setter = (($method_name[0] === 's') || ($method_name[0] === 'S'))
-        && (($method_name[1] === 'e') || ($method_name[1] === 'E'))
-        && (($method_name[2] === 't') || ($method_name[2] === 'T'));
-    
-      // only check the method if it is of the form: setNNNN()...
-      if($is_setter){
+      // only check the method if it is the right form...
+      if($rmethod->getNumberOfParameters() === 1){
       
-        // the valid setter syntax is: setName(ClassName $var_name), only methods matching that are set...
-        if($rmethod->getNumberOfParameters() === 1){
+        $method_name = $rmethod->getName();
         
+        $is_inject = (($method_name[0] === 'i') || ($method_name[0] === 'I'))
+          && (($method_name[1] === 'n') || ($method_name[1] === 'N'))
+          && (($method_name[2] === 'j') || ($method_name[2] === 'J'));
+          && (($method_name[3] === 'e') || ($method_name[3] === 'E'));
+          && (($method_name[4] === 'c') || ($method_name[4] === 'C'));
+          && (($method_name[5] === 't') || ($method_name[5] === 'T'));
+        
+        $is_set = (($method_name[0] === 's') || ($method_name[0] === 'S'))
+          && (($method_name[1] === 'e') || ($method_name[1] === 'E'))
+          && (($method_name[2] === 't') || ($method_name[2] === 'T'));
+
+        if($is_inject || $is_set){
+
           $rparams = $rmethod->getParameters();
           foreach($rparams as $rparam){
-          
-            try{
+            
+            if($is_inject || $is_set){
             
               $prclass = $rparam->getClass();
               if($prclass !== null){
             
                 $class_name = $prclass->getName();
-                $instance->{$method_name}($this->getInstance($class_name));
-                $ret_count++;
+            
+                try{
+                
+                  if($is_inject){
+                  
+                    // the valid setter syntax is: injectName(ClassName $var_name), only methods matching that are forced injected...  
+                    
+                    $class_name = $prclass->getName();
+                    $instance->{$method_name}($this->getInstance($class_name));
+                    $ret_count++;
+                      
+                  }else if($is_set){
+                  
+                    // the valid setter syntax is: setName(ClassName $var_name), only methods matching that are set...
+                  
+                    $class_name = $prclass->getName();
+                    if($this->hasInstance($class_name)){
+                      
+                      $instance->{$method_name}($this->getInstance($class_name));
+                      $ret_count++;
+                      
+                    }//if
+                      
+                  }//if/else if
+                  
+                }catch(\Exception $e){
+                  // exceptions aren't fatal, just don't set the dependency
+                }//try/catch
                 
               }//if
               
-            }catch(\Exception $e){
-              // exceptions aren't fatal, just don't set the dependency
-            }//try/catch
+            }//if
         
           }//foreach
         
         }//if
-      
+        
       }//if
     
     }//foreach
