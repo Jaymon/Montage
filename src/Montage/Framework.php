@@ -180,6 +180,7 @@ class Framework extends Field implements Dependable {
       
       ///\out::e($request->getHost(),$request->getPath());
       ///\out::e($controller_class,$controller_method,$controller_method_params);
+      ///\out::x();
 
       $controller_response = $this->handleController($controller_class,$controller_method,$controller_method_params);
       $ret_mixed = $this->handleResponse($controller_response);
@@ -376,6 +377,7 @@ class Framework extends Field implements Dependable {
    *  basically, place the framework completely back into a virgin state, even more
    *  so than {@link reset()} because it will clear cache and stuff also
    *  
+   *  @since  8-24-11   
    *  @param  Exception $e  the exception that triggered the recovery
    *  @return boolean   
    */
@@ -722,6 +724,7 @@ class Framework extends Field implements Dependable {
     if(isset($this->instance_map['request'])){ return $this->instance_map['request']; }//if
   
     $container = $this->getContainer();
+    
     $this->instance_map['request'] = $container->getInstance('Montage\Request\Requestable');
     
     return $this->instance_map['request'];
@@ -803,7 +806,7 @@ class Framework extends Field implements Dependable {
     
     // update template with response values...
     $template->setTemplate($response->getTemplate());
-    $template->setFields($response->getFields());
+    $template->addFields($response->getFields());
     
     return $template;
     

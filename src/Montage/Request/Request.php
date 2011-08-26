@@ -16,6 +16,14 @@ use Montage\Field\GetFieldable;
 class Request extends SymfonyRequest implements Requestable,GetFieldable {
 
   /**
+   *  holds the base url for this request
+   *  
+   *  @see  getBase(), setBase()
+   *  @var  string   
+   */
+  protected $base = '';
+
+  /**
    *  create instance
    *
    *  @since  7-25-11
@@ -43,7 +51,7 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
   
     parent::__construct($query,$request,$attributes,$cookies,$files,$server,$content);
     
-    // treat any cli vals as the path...
+    // treat any cli vals as appendages to the path...
     if(!empty($cli_query['list'])){
     
       // this overrides automagic path finding...
@@ -106,7 +114,31 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
    *  @since  6-29-11         
    *  @return string
    */
-  public function getBase(){ return $this->getScheme().'://'.$this->getHttpHost().$this->getBaseUrl(); }//method
+  public function getBase(){
+  
+    // canary...
+    if(!empty($this->base)){ return $this->base; }//if
+    /* if($this->isCli()){
+    
+      throw new \UnexpectedValueException(
+        'You have tried to retrieve the base url in a CLI script so it cannot be autodiscovered. '
+        .'You should correct this by setting the host explicitely using ->setBase()'
+      );
+    }//if */
+  
+    $this->base = $this->getScheme().'://'.$this->getHttpHost().$this->getBaseUrl();
+    return $this->base;
+    
+  }//method
+
+  /**
+   *  allow external setting of the http host, super handy for CLI scripts that won't know what
+   *  host they are to run on
+   *  
+   *  @since  8-24-11   
+   *  @param  string  $base_url the host:port/path where the :port and /path are optional
+   */
+  public function setBase($base_url){ $this->base = $base_url; }//method
 
   /**
    *  gets just the request path

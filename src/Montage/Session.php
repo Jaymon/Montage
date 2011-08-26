@@ -47,7 +47,7 @@ class Session extends SymfonySession implements Fieldable {
    *  @param  string  $key   
    *  @return  boolean
    */
-  public function hasField($key){ return !empty($this->attributes[$name]); }//method
+  public function hasField($key){ return !empty($this->attributes[$key]); }//method
   
   /**
    *  check if $key exists

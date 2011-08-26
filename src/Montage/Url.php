@@ -682,6 +682,7 @@ class Url extends Field {
     $ret_str = '';
     
     $base_bits = parse_url($url);
+    if($base_bits === false){ \out::h(); }//if
     
     $ret_str .= empty($base_bits['scheme']) ? '' : $base_bits['scheme'].'://';
     

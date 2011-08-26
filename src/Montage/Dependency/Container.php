@@ -434,15 +434,22 @@ abstract class Container extends Field implements Containable {
   /**
    *  inject dependencies via setter methods
    *  
-   *  by default, this class will only inject if the method is of the form:
-   *  injectName(ClassName $class) and nothing else. And it will only inject the class
-   *  if it can be created. This is because if you are using setter injection then it is most
+   *  This method will inject via 2 methods with the form:
+   *    1 - setXXXX(ClassName $instance); - only will set $instance if it already exists
+   *        in the container, if it doesn't exist than the instance will not be injected.
+   *               
+   *    2 - injectXXXX(ClassName $instance); - just like with constructor injection, the instance
+   *        will created if it doesn't already exist, however, unlike with constructor injection, if
+   *        the creation of the instance fails in any way, then it won't be injected      
+   *    
+   *  injection is optional, this is because if you are using setter injection then it is most
    *  likely optional that you want the object instance, if you absolutely must have
    *  the instance then use constructor injection (which will halt execution if the instance
    *  can't be created)       
    *  
    *  @example:
-   *    injectFoo(Foo $foo);                  
+   *    injectFoo(Foo $foo);
+   *    setFoo(Foo $foo);                   
    *
    *  @since  6-14-11   
    *  @param  object  $instance the object instance to be injected
@@ -469,9 +476,9 @@ abstract class Container extends Field implements Containable {
         
         $is_inject = (($method_name[0] === 'i') || ($method_name[0] === 'I'))
           && (($method_name[1] === 'n') || ($method_name[1] === 'N'))
-          && (($method_name[2] === 'j') || ($method_name[2] === 'J'));
-          && (($method_name[3] === 'e') || ($method_name[3] === 'E'));
-          && (($method_name[4] === 'c') || ($method_name[4] === 'C'));
+          && (($method_name[2] === 'j') || ($method_name[2] === 'J'))
+          && (($method_name[3] === 'e') || ($method_name[3] === 'E'))
+          && (($method_name[4] === 'c') || ($method_name[4] === 'C'))
           && (($method_name[5] === 't') || ($method_name[5] === 'T'));
         
         $is_set = (($method_name[0] === 's') || ($method_name[0] === 'S'))

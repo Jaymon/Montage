@@ -58,7 +58,8 @@ namespace Montage\PHPUnit {
     
       $instance = $this->container->getInstance('Montage\Test\Fixtures\Dependency\FooBar');
       $this->assertTrue($instance instanceof \Montage\Test\Fixtures\Dependency\FooBar);
-      $this->assertTrue($instance->che instanceof \Che);
+      $this->assertFalse($instance->che instanceof \Che);
+      $this->assertTrue($instance->bong instanceof \Bong);
       
     }//method
     
@@ -113,8 +114,10 @@ namespace Montage\Test\Fixtures\Dependency {
   class FooBar {
   
     public $che = null;
+    public $bong = null;
   
     public function setChe(\Che $che){ $this->che = $che; }//method
+    public function injectBong(\Bong $bong){ $this->bong = $bong; }//method
   
   }//class
   
@@ -148,6 +151,12 @@ namespace {
   }//class
   
   class Che {
+  
+    public function __construct(){}//method
+  
+  }//class
+  
+  class Bong {
   
     public function __construct(){}//method
   
