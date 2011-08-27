@@ -175,23 +175,12 @@ abstract class Container extends Field implements Containable {
     // canary...
     if(empty($class_name)){ throw new \InvalidArgumentException('empty $class_name'); }//if
   
-    $class_key = $this->getKey($class_name);
+    $params = (array)$params;
   
-    // handle on create...
-    if(isset($this->on_create_map[$class_key])){
-    
-      $params = call_user_func($this->on_create_map[$class_key],$this,$params);
-      
-      if(!is_array($params)){
-        throw new \UnexpectedValueException(
-          sprintf('An array should have been returned from on create callback for %s',$class_key)
-        );
-      }//if
-      
-    }//if
+    $class_key = $this->getKey($class_name);
+    $params = $this->handleOnCreate($class_key,$params);
   
     $instance_class_name = $this->getClassName($class_name);
-    $params = (array)$params;
     $instance_params = array();
 
     // get around absolute namespace reflection bug
@@ -242,10 +231,7 @@ abstract class Container extends Field implements Containable {
     
     }//if/else
     
-    // handle on created...
-    if(isset($this->on_created_map[$class_key])){
-      call_user_func($this->on_created_map[$class_key],$this,$ret_instance);
-    }//if
+    $this->handleOnCreated($class_key,$ret_instance);
   
     return $ret_instance;
   
@@ -423,6 +409,49 @@ abstract class Container extends Field implements Containable {
   }//method
   
   /**
+   *  handle actually running the onCreate callback
+   *  
+   *  @since  8-25-11
+   *  @param  string  $class_key
+   *  @param  array $params            
+   *  @return array the same $params filtered through the callback
+   */
+  protected function handleOnCreate($class_key,array $params){
+  
+    // handle on create...
+    if(isset($this->on_create_map[$class_key])){
+    
+      $params = call_user_func($this->on_create_map[$class_key],$this,$params);
+      
+      if(!is_array($params)){
+        throw new \UnexpectedValueException(
+          sprintf('An array should have been returned from on create callback for %s',$class_key)
+        );
+      }//if
+      
+    }//if
+    
+    return $params;
+  
+  }//method
+  
+  /**
+   *  handle actually running the onCreated callback
+   *  
+   *  @since  8-25-11
+   *  @param  string  $class_key
+   *  @param  object  $instance the newly created instance   
+   */
+  protected function handleOnCreated($class_key,$instance){
+    
+    // handle on created...
+    if(isset($this->on_created_map[$class_key])){
+      call_user_func($this->on_created_map[$class_key],$this,$instance);
+    }//if
+    
+  }//method
+  
+  /**
    *  get the key the instance will use for the instance map
    *
    *  @since  6-13-11
@@ -434,22 +463,15 @@ abstract class Container extends Field implements Containable {
   /**
    *  inject dependencies via setter methods
    *  
-   *  This method will inject via 2 methods with the form:
-   *    1 - setXXXX(ClassName $instance); - only will set $instance if it already exists
-   *        in the container, if it doesn't exist than the instance will not be injected.
-   *               
-   *    2 - injectXXXX(ClassName $instance); - just like with constructor injection, the instance
-   *        will created if it doesn't already exist, however, unlike with constructor injection, if
-   *        the creation of the instance fails in any way, then it won't be injected      
-   *    
-   *  injection is optional, this is because if you are using setter injection then it is most
+   *  by default, this class will only inject if the method is of the form:
+   *  injectName(ClassName $class) and nothing else. And it will only inject the class
+   *  if it can be created. This is because if you are using setter injection then it is most
    *  likely optional that you want the object instance, if you absolutely must have
    *  the instance then use constructor injection (which will halt execution if the instance
    *  can't be created)       
    *  
    *  @example:
-   *    injectFoo(Foo $foo);
-   *    setFoo(Foo $foo);                   
+   *    injectFoo(Foo $foo);                  
    *
    *  @since  6-14-11   
    *  @param  object  $instance the object instance to be injected
@@ -552,6 +574,7 @@ abstract class Container extends Field implements Containable {
     $this->instance_map = array();
     $this->on_create_map = array();
     $this->on_created_map = array();
+    $this->setInstance('container',$this);
   
   }//method
 

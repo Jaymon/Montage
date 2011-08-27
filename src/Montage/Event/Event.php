@@ -54,6 +54,13 @@ class Event extends Field {
   protected $persist = false;
   
   /**
+   *  holds how many times this event instance has been notified
+   *
+   *  @var  integer   
+   */
+  protected $notify_count = 0;
+  
+  /**
    *  create a new Event
    *  
    *  @param  string  $event_name the event name      
@@ -72,5 +79,9 @@ class Event extends Field {
   public function getName(){ return $this->event_name; }//method
   
   public function isPersistent(){ return $this->persist; }//method
+  
+  public function bumpNotifyCount(){ $this->notify_count++; }//method
+  
+  public function getNotifyCount(){ return $this->notify_count; }//method
 
 }//class

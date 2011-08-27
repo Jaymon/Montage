@@ -78,10 +78,7 @@ class Dispatch {
     // clear any backlog...
     if(isset($this->persistent_map[$event_name])){
       
-      foreach($this->persistent_map[$event_name] as $info_map){
-        $this->broadcast($event_name,$info_map,false);
-      }//foreach
-      
+      foreach($this->persistent_map[$event_name] as $event){ $this->broadcast($event); }//foreach
       unset($this->persistent_map[$event_name]);
       
     }//if
@@ -119,15 +116,7 @@ class Dispatch {
   
     }else{
     
-      if($event->isPersistent()){
-        
-        if(!isset($this->persistent_map[$event_name])){
-          $this->persistent_map[$event_name] = array();
-        }//if
-        
-        $this->persistent_map[$event_name][] = $event;
-      
-      }//if
+      if($event->isPersistent()){ $this->persist($event); }//if
     
     }//if/else
     
@@ -149,6 +138,7 @@ class Dispatch {
     foreach($callback_list as $callback){
       
       $bool = call_user_func($callback,$event);
+      $event->bumpNotifyCount();
       $ret_count++;
       if($bool === true){ break; }//if
       
@@ -157,6 +147,40 @@ class Dispatch {
     return $ret_count;
   
   }//method
+  
+  /**
+   *  persist the event until an event handler is listening
+   *  
+   *  @since  8-25-11
+   *  @param  Event $event
+   */
+  protected function persist(Event $event){
+  
+    $event_name = $event->getName();
+  
+    if(!isset($this->persistent_map[$event_name])){
+      $this->persistent_map[$event_name] = array();
+    }//if
+    
+    $this->persistent_map[$event_name][] = $event;
+    
+    // keep lists no bigger than 25...
+    if(isset($this->persistent_map[$event_name][25])){
+    
+      array_shift($this->persistent_map[$event_name]);
+    
+    }//if
+  
+  }//method
+  
+  /**
+   *  return true if listeners for $event_name events exist
+   *  
+   *  @since  8-26-11
+   *  @param  string  $event_name   
+   *  @return boolean
+   */
+  public function has($event_name){ return !empty($this->event_map[$event_name]); }//method
   
   /**
    *  return event information
@@ -197,59 +221,56 @@ class Dispatch {
   public function kill($event_name,$callback = null){
   
     // canary...
-    if(empty($event_name)){ throw new UnexpectedValueException('$event_name cannot be empty'); }//if
+    if(empty($event_name)){ throw new \InvalidArgumentException('$event_name cannot be empty'); }//if
+    if(!isset($this->event_map[$event_name])){ return true; }//if
     
-    if(isset($this->event_map[$event_name])){
+    if(empty($callback)){
     
-      if(empty($callback)){
+      unset($this->event_map[$event_name]);
+    
+    }else{
+    
+      foreach($this->event_map[$event_name] as $event_index => $event_callback){
       
-        unset($this->event_map[$event_name]);
-      
-      }else{
-      
-        foreach($this->event_map[$event_name] as $event_index => $event_callback){
+        if(is_array($event_callback)){
         
-          if(is_array($event_callback)){
+          if(is_array($callback)){
           
-            if(is_array($callback)){
-            
-              $event_callback_class = $callback_class = '';
-            
-              if(is_object($event_callback[0])){
-                $event_callback_class = get_class($event_callback[0]);
-              }//if
-              
-              if(is_object($callback[0])){
-                $callback_class = get_class($callback[0]);
-              }//if
-              
-              if($callback_class == $event_callback_class){
-              
-                $event_callback_method = mb_strtolower($event_callback[1]); 
-                $callback_method = mb_strtolower($callback[1]);
-                
-                if($callback_method == $event_callback_method){
-                  unset($this->event_map[$key][$event_index]);
-                }//if
-              
-              }//if
-              
+            $event_callback_class = $callback_class = '';
+          
+            if(is_object($event_callback[0])){
+              $event_callback_class = get_class($event_callback[0]);
             }//if
-          
-          }else if(is_string($event_callback)){
-          
-            if($callback == $event_callback){
-              unset($this->event_map[$event_name][$event_index]);
+            
+            if(is_object($callback[0])){
+              $callback_class = get_class($callback[0]);
             }//if
-          
-          }//if/else if   
+            
+            if($callback_class == $event_callback_class){
+            
+              $event_callback_method = mb_strtolower($event_callback[1]); 
+              $callback_method = mb_strtolower($callback[1]);
+              
+              if($callback_method == $event_callback_method){
+                unset($this->event_map[$key][$event_index]);
+              }//if
+            
+            }//if
+            
+          }//if
         
-        }//foreach
+        }else{
+        
+          if($callback === $event_callback){
+            unset($this->event_map[$event_name][$event_index]);
+          }//if
+        
+        }//if/else if   
       
-      }//if/else
-      
-    }//if
+      }//foreach
     
+    }//if/else
+
     return true;
   
   }//method

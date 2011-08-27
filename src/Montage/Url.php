@@ -132,7 +132,7 @@ class Url extends Field {
     $args = func_get_args();
     // get the base url...
     $current_url = $this->getField('Url.current_url',null);
-    if($current_url === null){
+    if(empty($current_url)){
       $current_url = $this->getField('Url.base_url','');
     }//if
     
@@ -682,7 +682,6 @@ class Url extends Field {
     $ret_str = '';
     
     $base_bits = parse_url($url);
-    if($base_bits === false){ \out::h(); }//if
     
     $ret_str .= empty($base_bits['scheme']) ? '' : $base_bits['scheme'].'://';
     

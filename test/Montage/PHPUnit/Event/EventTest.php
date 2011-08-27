@@ -18,7 +18,7 @@ class EventTest extends FrameworkTestCase {
   }//method
   
   /**
-   *  when create() is used, make sure that uri and method params override any actual values
+   *  test that an event can be listened for and notified
    */
   public function testListen(){
   
@@ -43,6 +43,9 @@ class EventTest extends FrameworkTestCase {
   
   }//method
   
+  /**
+   *  test adding and removing a closure
+   */
   public function testClosure(){
   
     $closure = function(Event $event){ $event->setField('event',1); };
@@ -52,10 +55,31 @@ class EventTest extends FrameworkTestCase {
     $this->dispatch->listen($event_name,$closure);
     $this->assertTrue($this->dispatch->has($event_name));
     
+    $this->assertGreaterThan(0,count($this->dispatch->get($event_name)));
+    
+    $this->assertTrue($this->dispatch->kill($event_name));
   
+    $this->assertFalse($this->dispatch->has($event_name));
+    $this->assertEmpty($this->dispatch->get($event_name));
   
+  }//method
   
+  /**
+   *  make sure persist works as expected
+   */
+  public function testPersist(){
   
+    $closure = function(Event $event){ $event->setField('event',1); };
+    $event_name = __METHOD__;
+  
+    $event = new Event($event_name,array(),true);
+    $event = $this->dispatch->broadcast($event);
+  
+    $this->assertFalse($event->hasField('event'));
+    
+    $this->dispatch->listen($event_name,$closure);
+  
+    $this->assertEquals(1,$event->getField('event'));
   
   }//method
   

@@ -144,6 +144,55 @@ class ReflectionContainer extends Container {
   protected function getReflection(){ return $this->reflection; }//method
   
   /**
+   *  handle actually running the onCreate callback
+   *  
+   *  @since  8-25-11
+   *  @param  string  $class_key
+   *  @param  array $params            
+   *  @return array the same $params filtered through the callback
+   */
+  protected function handleOnCreate($class_key,array $params){
+  
+    $reflection = $this->getReflection();
+    $class_map = $reflection->getClass($class_key);
+    $cb_class_list = $class_map['dependencies'];
+    $cb_class_list[] = $class_key;
+    
+    foreach($cb_class_list as $cb_class_name){
+    
+      $cb_class_key = $this->getKey($cb_class_name);
+      $params = parent::handleOnCreate($cb_class_key,$params);
+    
+    }//foreach
+  
+    return $params;
+  
+  }//method
+  
+  /**
+   *  handle actually running the onCreated callback
+   *  
+   *  @since  8-25-11
+   *  @param  string  $class_key
+   *  @param  object  $instance the newly created instance   
+   */
+  protected function handleOnCreated($class_key,$instance){
+    
+    $reflection = $this->getReflection();
+    $class_map = $reflection->getClass($class_key);
+    $cb_class_list = $class_map['dependencies'];
+    $cb_class_list[] = $class_key;
+    
+    foreach($cb_class_list as $cb_class_name){
+    
+      $cb_class_key = $this->getKey($cb_class_name);
+      $params = parent::handleOnCreated($cb_class_key,$instance);
+    
+    }//foreach
+    
+  }//method
+  
+  /**
    *  reset the container to its virgin state
    *     
    *  @since  8-22-11         
@@ -151,8 +200,7 @@ class ReflectionContainer extends Container {
   public function reset(){
   
     parent::reset();
-    $this->setInstance('',$this->reflection);
-    $this->setInstance('',$this); // we want to be able to inject this also
+    $this->setInstance('reflection',$this->reflection);
   
   }//method
 

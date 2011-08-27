@@ -24,8 +24,6 @@ use Montage\Cache\PHPCache;
 use Montage\Path;
 use Montage\Field\Field;
 
-use out;
-
 use Montage\Dependency\Reflection;
 use Montage\Dependency\Container;
 use Montage\Dependency\Dependable;
@@ -36,6 +34,9 @@ use Montage\AutoLoad\FrameworkAutoloader;
 use Montage\Request\Requestable;
 use Montage\Response\Response;
 use Montage\Response\Template;
+
+use Montage\Event\Event;
+use Montage\Event\InfoEvent;
 
 // load the Framework autoloader, this will handle all other dependencies to load this class
 // so I don't have to have a ton of includes() right here...
@@ -121,9 +122,15 @@ class Framework extends Field implements Dependable {
   
       // start the autoloaders...
       $this->handleAutoload();
+      
+      // start the EVENT classes...
+      $this->handleEvent();
   
       // start the START classes...
       $this->handleStart();
+      
+      $event = new Event('framework.pre_handle');
+      $this->broadcastEvent($event);
       
     }catch(\ReflectionException $e){
       
@@ -144,6 +151,9 @@ class Framework extends Field implements Dependable {
    *  @since  8-3-11
    */
   public function reset(){
+    
+    $event = new InfoEvent('Framework reset');
+    $this->broadcastEvent($event);
     
     // de-register all the autoloaders this instance started...
     foreach($this->getField('autoload.instances',array()) as $instance){
@@ -178,9 +188,21 @@ class Framework extends Field implements Dependable {
         $request->getPath()
       );
       
+      $event = new InfoEvent(
+        sprintf(
+          'Controller: %s::%s from host: %s, and path: %s',
+          $controller_class,$controller_method,
+          $request->getHost(),
+          $request->getPath()
+        )
+      );
+      $this->broadcastEvent($event);
+      
       ///\out::e($request->getHost(),$request->getPath());
       ///\out::e($controller_class,$controller_method,$controller_method_params);
-      ///\out::x();
+      
+      $event = new Event('framework.handle');
+      $this->broadcastEvent($event);
 
       $controller_response = $this->handleController($controller_class,$controller_method,$controller_method_params);
       $ret_mixed = $this->handleResponse($controller_response);
@@ -234,6 +256,16 @@ class Framework extends Field implements Dependable {
     $container = $this->getContainer();
     $template = null;
     $response = $this->getResponse();
+  
+    $event = new Event(
+      'framework.filter_response',
+      array(
+        'response' => $response,
+        'controller_response' => $controller_response
+      )
+    );
+    $event = $this->broadcastEvent($event);
+    $controller_response = $event->getField('controller_response');
   
     if(is_string($controller_response)){
     
@@ -298,6 +330,14 @@ class Framework extends Field implements Dependable {
     
     if(!empty($template)){
     
+      $event = new Event(
+        'framework.filter_template',
+        array(
+          'template' => $template
+        )
+      );
+      $event = $this->broadcastEvent($event);
+    
       // output the template response to the screen...
       $template->handle(Template::OUT_STD);
       
@@ -348,6 +388,33 @@ class Framework extends Field implements Dependable {
   }//method
 
   /**
+   *  start all the known \Montage\Event\Subable classes
+   *     
+   *  an Event Subable class is a class that automatically can subscribe to an event
+   *  
+   *  @since  8-25-11      
+   */
+  protected function handleEvent(){
+  
+    $instance_list = array();
+    $container = $this->getContainer();
+    $dispatch = $this->getEventDispatch();
+    
+    // create the event sub selector...
+    $select = $container->getInstance('\Montage\Event\Select');
+    
+    $class_list = $select->find();
+
+    foreach($class_list as $i => $class_name){
+    
+      $instance_list[$i] = $container->getInstance($class_name);
+      $instance_list[$i]->register();
+      
+    }//foreach
+     
+  }//method
+
+  /**
    *  start all the known \Montage\Start\Startable classes
    *  
    *  a Start class is a class that will do configuration stuff
@@ -359,10 +426,16 @@ class Framework extends Field implements Dependable {
     $container = $this->getContainer();
     $select = $container->getInstance('\Montage\Start\Select');
     
+    $event = new InfoEvent(sprintf('Using Start class selector: %s',get_class($select)));
+    $this->broadcastEvent($event);
+    
     $start_class_list = $select->find($env);
     $method_name = $select->getMethod();
 
     foreach($start_class_list as $i => $class_name){
+    
+      $event = new InfoEvent(sprintf('Starting: %s',$class_name));
+      $this->broadcastEvent($event);
     
       $instance_list[$i] = $container->getInstance($class_name);
       $container->callMethod($instance_list[$i],$method_name);
@@ -377,7 +450,6 @@ class Framework extends Field implements Dependable {
    *  basically, place the framework completely back into a virgin state, even more
    *  so than {@link reset()} because it will clear cache and stuff also
    *  
-   *  @since  8-24-11   
    *  @param  Exception $e  the exception that triggered the recovery
    *  @return boolean   
    */
@@ -422,6 +494,21 @@ class Framework extends Field implements Dependable {
   protected function handleController($class_name,$method,array $params = array()){
   
     $container = $this->getContainer();
+    
+    // allow filtering of the controller info...
+    $event = new Event(
+      'framework.filter_controller',
+      array(
+        'controller' => $class_name,
+        'method' => $method,
+        'params' => $params
+      )
+    );
+    $event = $this->broadcastEvent($event);
+    
+    $class_name = $event->getField('controller');
+    $method = $event->getField('method');
+    $params = $event->getField('params');
     
     $controller = $container->getInstance($class_name);
     
@@ -545,6 +632,9 @@ class Framework extends Field implements Dependable {
   protected function handleException(\Exception $e){
 
     $this->handleRecursion($e);
+    
+    $event = new InfoEvent('Handling Exception',array('e' => $e));
+    $this->broadcastEvent($event);
   
     $ret_mixed = null;
   
@@ -601,6 +691,11 @@ class Framework extends Field implements Dependable {
       }else{
         
         list($controller_class,$controller_method,$controller_method_params) = $this->getControllerSelect()->findException($e);
+        
+        $event = new InfoEvent(
+          sprintf('Exception Controller: %s::%s',$controller_class,$controller_method)
+        );
+        $this->broadcastEvent($event);
         
         $controller_response = $this->handleController($controller_class,$controller_method,$controller_method_params);
         $ret_mixed = $this->handleResponse($controller_response);
@@ -724,7 +819,6 @@ class Framework extends Field implements Dependable {
     if(isset($this->instance_map['request'])){ return $this->instance_map['request']; }//if
   
     $container = $this->getContainer();
-    
     $this->instance_map['request'] = $container->getInstance('Montage\Request\Requestable');
     
     return $this->instance_map['request'];
@@ -741,6 +835,24 @@ class Framework extends Field implements Dependable {
   
     $container = $this->getContainer();
     return $container->getInstance('\Montage\Response\Response');
+  
+  }//method
+  
+  /**
+   *  get the event dispatcher
+   *  
+   *  @since  8-25-11
+   *  @return \Montage\Event\Dispatch
+   */
+  protected function getEventDispatch(){
+  
+    // canary...
+    if(isset($this->instance_map['event_dispatch'])){ return $this->instance_map['event_dispatch']; }//if
+  
+    $container = $this->getContainer();
+    $this->instance_map['event_dispatch'] = $container->getInstance('\Montage\Event\Dispatch');
+     
+    return $this->instance_map['event_dispatch'];
   
   }//method
   
@@ -806,7 +918,7 @@ class Framework extends Field implements Dependable {
     
     // update template with response values...
     $template->setTemplate($response->getTemplate());
-    $template->addFields($response->getFields());
+    $template->setFields($response->getFields());
     
     return $template;
     
@@ -933,6 +1045,20 @@ class Framework extends Field implements Dependable {
     ); */
   
     return $path_list;
+  
+  }//method
+  
+  /**
+   *  just to make it a little easier to broadcast the event, and to also be able to 
+   *  easily override event broadcast for this entire class
+   *  
+   *  @since  8-25-11            
+   *  @return Event
+   */
+  protected function broadcastEvent(Event $event){
+  
+    $dispatch = $this->getEventDispatch();
+    return $dispatch->broadcast($event);
   
   }//method
   
