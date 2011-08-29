@@ -18,24 +18,29 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
   /**
    *  create instance
    *
-   *  @since  7-25-11
-   *  @param  array $cli  the argv params passed in from the command line, this is at the end to ensure
-   *                      compatibility with \Symfony\Component\HttpFoundation\Request::create() (it uses static::
-   *                      and so the vars have to be in the right place      
-   *  @see  parent::__construct for all the other params      
+   *  @since  7-25-11      
+   *  @see  parent::__construct for params      
    */
-  public function __construct(array $query = array(), array $request = array(), array $attributes = array(), array $cookies = array(), array $files = array(), array $server = array(), $content = null, array $cli = array()){
+  public function __construct(array $query = array(), array $request = array(), array $attributes = array(), array $cookies = array(), array $files = array(), array $server = array(), $content = null){
   
-    $cli_query = array();
-  
+    $cli_query = array();    
+    $cli = $server->get('argv');
+
     if(!empty($cli)){
     
-      $cli_query = $this->parseArgv($cli);
-
-      // treat all the key/vals as query vars...
-      if(!empty($cli_query['map'])){
+      // in a real cli request, the 0 will be the script, in a http request, 0 will be the query string
+      // but we only care about argv if it has more than the first item...
+    
+      if(isset($cli[1])){
       
-        $query = array_merge($query,$cli_query['map']);
+        $cli_query = $this->parseArgv($cli);
+  
+        // treat all the key/vals as query vars...
+        if(!empty($cli_query['map'])){
+        
+          $query = array_merge($query,$cli_query['map']);
+        
+        }//if
       
       }//if
       
@@ -132,7 +137,12 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
    *  
    *  @return boolean
    */
-  function isCli(){ return (strncasecmp(PHP_SAPI, 'cli', 3) === 0) || !isset($_SERVER['HTTP_HOST']); }//method
+  function isCli(){
+    return $this->server->has('HTTP_HOST');
+    // @note  we can't use the PHP_SAPI because of testing, using the test browser would report a cli request
+    // when in actuality it should be treated as a normal http request
+    ///return (strncasecmp(PHP_SAPI, 'cli', 3) === 0) || !isset($_SERVER['HTTP_HOST']);
+  }//method
   
   /**
    *  check if $key exists and is non-empty
