@@ -37,7 +37,7 @@ class Event extends Field {
    *  original calling key instead of the value of this key (ie, if you bind method "foo"
    *  to this key and event "bar" was broadcast, the callback would be: foo('bar',$info_map))            
    */
-  const NAME_ALL = 'framework.all';
+  const NAME_ALL = 'all';
 
   /**
    *  the name of the event

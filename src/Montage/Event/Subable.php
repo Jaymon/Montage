@@ -31,14 +31,14 @@ interface Subable {
    *
    *  @Param  Dispatch  $dispatch   
    */
-  public function setDispatch(Dispatch $dispatch);
+  public function setEventDispatch(Dispatch $dispatch);
   
   /**
    *  get the event dispatcher
    *
    *  @return Dispatch   
    */
-  public function getDispatch();
+  public function getEventDispatch();
   
   /**
    *  register for the event

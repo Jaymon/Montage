@@ -25,21 +25,21 @@ abstract class Sub implements Subable {
    *
    *  @Param  Dispatch  $dispatch   
    */
-  public function setDispatch(Dispatch $dispatch){ $this->dispatch = $dispatch; }//method
+  public function setEventDispatch(Dispatch $dispatch){ $this->dispatch = $dispatch; }//method
   
   /**
    *  get the event dispatcher
    *
    *  @return Dispatch   
    */
-  public function getDispatch(){ return $this->dispatch; }//method
+  public function getEventDispatch(){ return $this->dispatch; }//method
   
   /**
    *  register for the event
    */
   public function register(){
   
-    $dispatch = $this->getDispatch();
+    $dispatch = $this->getEventDispatch();
     $callback = array($this,'handle');
     
     $event_name_list = (array)$this->getEventName();
@@ -54,7 +54,7 @@ abstract class Sub implements Subable {
    */
   public function unregister(){
   
-    $dispatch = $this->getDispatch();
+    $dispatch = $this->getEventDispatch();
     $callback = array($this,'handle');
     
     $event_name_list = (array)$this->getEventName();

@@ -34,15 +34,6 @@ interface Requestable {
   public function getBase();
 
   /**
-   *  allow external setting of the http host, super handy for CLI scripts that won't know what
-   *  host they are to run on
-   *  
-   *  @since  8-24-11   
-   *  @param  string  $base_url the host:port/path where the :port and /path are optional
-   */
-  public function setBase($base_url);
-
-  /**
    *  get the host that this request was made from
    *  
    *  @return string      

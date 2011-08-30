@@ -86,6 +86,48 @@ namespace Montage\PHPUnit {
       $instance = $this->container->getInstance('Montage\Test\Fixtures\Dependency\AA');
     
     }//method
+    
+    /**
+     *  test to make sure the correct class is returned through multiple inheritance
+     *
+     *  @since  5-29-11     
+     */
+    public function testCorrectChoice(){
+    
+      ///\out::i($this->container->getInstance('MONTAGE\DEPENDENCY\REFLECTION'));
+    
+      $class_name = $this->container->getClassName('\B');
+      $this->assertEquals('AA',$class_name);
+      
+      $class_name = $this->container->getClassName('\A');
+      $this->assertEquals('AA',$class_name);
+      
+      $class_name = $this->container->getClassName('\C');
+      $this->assertEquals('AA',$class_name);
+      
+      $class_name = $this->container->getClassName('\AA');
+      $this->assertEquals('AA',$class_name);
+    
+    }//method
+    
+    public function testOnCreate(){
+    
+      $this->container->onCreate(
+        '\A',
+        function($container,array $params = array()){
+        
+          $params['bar'] = 2;
+          return $params;
+        
+        }
+      );
+      
+      $instance = $this->container->getInstance('\B',array('foo' => 1));
+      $this->assertType('\AA',$instance);
+      $this->assertSame(1,$instance->foo);
+      $this->assertSame(2,$instance->bar);
+    
+    }//method
   
   }//class
   
@@ -161,5 +203,23 @@ namespace {
     public function __construct(){}//method
   
   }//class
+  
+  class A {}//method
+  class B extends A {}//method
+  class C extends B {}//method
+  
+  class AA extends C {
+  
+    public $foo = 0;
+    public $bar = 0;
+  
+    public function __construct($foo,$bar){
+    
+      $this->foo = $foo;
+      $this->bar = $bar;
+    
+    }//method
+    
+  }//method
   
 }//namespace

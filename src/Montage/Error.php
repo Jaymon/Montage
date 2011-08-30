@@ -10,7 +10,19 @@
  ******************************************************************************/
 namespace Montage;
 
-class Error {
+use Montage\Event\Dispatch;
+use Montage\Event\Eventable;
+use Montage\Event\Event;
+
+class Error implements Eventable {
+
+  /**
+   *  the event dispatcher
+   *
+   *  @see  setDispatch(), getDispatch()
+   *  @var  Dispatch      
+   */
+  protected $dispatch = null;
 
   /**
    *  these are the errors that are handled with {@link handleRuntime()}.
@@ -56,6 +68,33 @@ class Error {
   }//method
   
   /**
+   *  get the event dispatcher
+   *
+   *  @Param  Dispatch  $dispatch   
+   */
+  public function setEventDispatch(\Montage\Event\Dispatch $dispatch){ $this->dispatch = $dispatch; }//method
+  
+  /**
+   *  get the event dispatcher
+   *
+   *  @return Dispatch   
+   */
+  public function getEventDispatch(){ return $this->dispatch; }//method
+  
+  /**
+   *  @see  Eventable interface
+   */
+  public function broadcastEvent(\Montage\Event\Event $event){
+  
+    if($dispatch = $this->getEventDispatch()){
+    
+      $dispatch->broadcast($event);
+    
+    }//if
+  
+  }//method
+  
+  /**
    *  handles runtime errors, basically the warnings, and the E_USER_* stuff
    *  
    *  http://us2.php.net/manual/en/function.set_error_handler      
@@ -68,9 +107,9 @@ class Error {
    */        
   public function handleRuntime($errno,$errstr,$errfile,$errline){
   
-    \out::b($this->getName($errno));
-    \out::e($errstr,$errfile,$errline);
-    \out::b();
+    ///\out::b($this->getName($errno));
+    ///\out::e($errstr,$errfile,$errline);
+    ///\out::b();
   
     // canary...
     if($errno === E_RECOVERABLE_ERROR){
@@ -85,7 +124,8 @@ class Error {
     $error_map['name'] = $this->getName($error_map['type']);
     
     // broadcast the error to anyone that is listening...
-    ///montage::getEvent()->broadcast(montage_event::KEY_ERROR,$error_map);
+    $event = new Event('framework.error',$error_map);
+    $this->broadcastEvent($event);
     
     // still pass the errors through, change to true if you want to block errors...
     return false;
@@ -110,7 +150,8 @@ class Error {
         $error_map['name'] = $this->getName($error_map['type']);
       
         // broadcast the error to anyone that is listening...
-        ///montage::getEvent()->broadcast(montage_event::KEY_ERROR,$error_map);
+        $event = new Event('framework.error',$error_map);
+        $this->broadcastEvent($event);
         
       }//if
       

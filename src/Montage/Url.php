@@ -675,7 +675,7 @@ class Url extends Field {
    */
   protected function build($url,array $path,array $query = array()){
     
-    // sanity...
+    // canary...
     if(empty($url)){ throw new \InvalidArgumentException('$url was empty'); }//if
     if(empty($path) && empty($query)){ return $url; }//if
     

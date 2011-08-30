@@ -14,19 +14,20 @@ use Montage\Request\Requestable;
 use Montage\Field\GetFieldable;
 
 class Request extends SymfonyRequest implements Requestable,GetFieldable {
-
-  /**
-   *  create instance
-   *
-   *  @since  7-25-11      
-   *  @see  parent::__construct for params      
-   */
-  public function __construct(array $query = array(), array $request = array(), array $attributes = array(), array $cookies = array(), array $files = array(), array $server = array(), $content = null){
   
+  /**
+   *  do custom initialization stuff
+   *
+   *  @since  7-25-11
+   *  @see  parent::initialize for params      
+   */
+  public function initialize(array $query = array(), array $request = array(), array $attributes = array(), array $cookies = array(), array $files = array(), array $server = array(), $content = null){
+    
     $cli_query = array();    
-    $cli = $server->get('argv');
 
-    if(!empty($cli)){
+    if(!empty($server['argv'])){
+    
+      $cli = $server['argv'];
     
       // in a real cli request, the 0 will be the script, in a http request, 0 will be the query string
       // but we only care about argv if it has more than the first item...
@@ -45,8 +46,10 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
       }//if
       
     }//if
-  
-    parent::__construct($query,$request,$attributes,$cookies,$files,$server,$content);
+    
+    ///\out::e($query, $request, $attributes, $cookies, $files, $server, $content);
+    
+    parent::initialize($query, $request, $attributes, $cookies, $files, $server, $content);
     
     // treat any cli vals as appendages to the path...
     if(!empty($cli_query['list'])){
@@ -138,7 +141,7 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
    *  @return boolean
    */
   function isCli(){
-    return $this->server->has('HTTP_HOST');
+    return !$this->server->has('HTTP_HOST');
     // @note  we can't use the PHP_SAPI because of testing, using the test browser would report a cli request
     // when in actuality it should be treated as a normal http request
     ///return (strncasecmp(PHP_SAPI, 'cli', 3) === 0) || !isset($_SERVER['HTTP_HOST']);
@@ -249,7 +252,7 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
    *  @return array array has 2 indexes: 'list' and 'map' where list contains all args that weren't in
    *                the form --name=val (ie, they are in the form val) and map contains all --name=val   
    */
-  public static function parseArgv($argv,$required_argv_map = array())
+  public function parseArgv($argv,$required_argv_map = array())
   {
     // canary...
     if(empty($argv)){ return array(); }//if

@@ -37,6 +37,7 @@ use Montage\Response\Template;
 
 use Montage\Event\Event;
 use Montage\Event\InfoEvent;
+use Montage\Event\Eventable;
 
 // load the Framework autoloader, this will handle all other dependencies to load this class
 // so I don't have to have a ton of includes() right here...
@@ -46,7 +47,7 @@ require_once(__DIR__.'/AutoLoad/FrameworkAutoloader.php');
 $fal = new FrameworkAutoloader('Montage',realpath(__DIR__.'/..'));
 $fal->register();
 
-class Framework extends Field implements Dependable {
+class Framework extends Field implements Dependable,Eventable {
 
 
   /**
@@ -269,9 +270,15 @@ class Framework extends Field implements Dependable {
   
     if(is_string($controller_response)){
     
+      $event = new InfoEvent('Controller Response was a string, so returning that raw');
+      $this->broadcastEvent($event);
+    
       $response->setContent($controller_response);
     
     }else if(is_array($controller_response)){
+    
+      $event = new InfoEvent('Controller Response was an array, so returning that as json');
+      $this->broadcastEvent($event);
     
       $response->setContentType(Response::CONTENT_JSON);
       $response->setContent(json_encode($controller_response));
@@ -279,6 +286,9 @@ class Framework extends Field implements Dependable {
     }else if(is_object($controller_response)){
     
       if(method_exists($controller_response,'__toString')){
+      
+        $event = new InfoEvent('Controller Response was an object, returning __toString() value');
+        $this->broadcastEvent($event);
       
         $response->setContent((string)$controller_response);
       
@@ -296,7 +306,10 @@ class Framework extends Field implements Dependable {
     }else{
     
       // wipe the rendering if the controller returned false... 
-      if(is_bool($controller_response) && empty($controller_response)){
+      if($controller_response === false){
+      
+        $event = new InfoEvent('Controller Response was false, not using template');
+        $this->broadcastEvent($event);
       
         $response->killTemplate();
         $response->setContent('');
@@ -337,7 +350,10 @@ class Framework extends Field implements Dependable {
         )
       );
       $event = $this->broadcastEvent($event);
-    
+      
+      $event = new InfoEvent(sprintf('Using template: %s',$template->getTemplate()));
+      $this->broadcastEvent($event);
+      
       // output the template response to the screen...
       $template->handle(Template::OUT_STD);
       
@@ -583,8 +599,14 @@ class Framework extends Field implements Dependable {
         
       }catch(\Exception $e){
       
-        throw new NotFoundException(
-          sprintf('wrapped %s exception: %s',get_class($e),$e->getMessage()),
+        throw new \Montage\Exception\NotFoundException(
+          sprintf(
+            'wrapped %s exception: "%s" from %s:%s',
+            get_class($e),
+            $e->getMessage(),
+            $e->getFile(),
+            $e->getLine()
+          ),
           $e->getCode()
         );
       
@@ -840,11 +862,22 @@ class Framework extends Field implements Dependable {
   
   /**
    *  get the event dispatcher
+   *
+   *  @Param  Dispatch  $dispatch   
+   */
+  public function setEventDispatch(\Montage\Event\Dispatch $dispatch){
+  
+    $this->instance_map['event_dispatch'] = $dispatch;
+  
+  }//method
+  
+  /**
+   *  get the event dispatcher
    *  
    *  @since  8-25-11
    *  @return \Montage\Event\Dispatch
    */
-  protected function getEventDispatch(){
+  public function getEventDispatch(){
   
     // canary...
     if(isset($this->instance_map['event_dispatch'])){ return $this->instance_map['event_dispatch']; }//if
@@ -853,6 +886,20 @@ class Framework extends Field implements Dependable {
     $this->instance_map['event_dispatch'] = $container->getInstance('\Montage\Event\Dispatch');
      
     return $this->instance_map['event_dispatch'];
+  
+  }//method
+  
+  /**
+   *  just to make it a little easier to broadcast the event, and to also be able to 
+   *  easily override event broadcast for this entire class
+   *  
+   *  @since  8-25-11            
+   *  @return Event
+   */
+  public function broadcastEvent(Event $event){
+  
+    $dispatch = $this->getEventDispatch();
+    return $dispatch->broadcast($event);
   
   }//method
   
@@ -914,11 +961,12 @@ class Framework extends Field implements Dependable {
     if(!$response->hasTemplate()){ return null; }//if
     
     $container = $this->getContainer();
+    
     $template = $container->getInstance('\Montage\Response\Template');
     
     // update template with response values...
     $template->setTemplate($response->getTemplate());
-    $template->setFields($response->getFields());
+    $template->addFields($response->getFields());
     
     return $template;
     
@@ -1045,20 +1093,6 @@ class Framework extends Field implements Dependable {
     ); */
   
     return $path_list;
-  
-  }//method
-  
-  /**
-   *  just to make it a little easier to broadcast the event, and to also be able to 
-   *  easily override event broadcast for this entire class
-   *  
-   *  @since  8-25-11            
-   *  @return Event
-   */
-  protected function broadcastEvent(Event $event){
-  
-    $dispatch = $this->getEventDispatch();
-    return $dispatch->broadcast($event);
   
   }//method
   

@@ -138,9 +138,9 @@ abstract class Container extends Field implements Containable {
       $instance_class_name = $this->getClassName($class_name);
       $instance_class_key = $this->getKey($instance_class_name);
       
-      // I'm not sold on a second check here (first for $class_key, this for $instance_class_key),
+      // I'm not sold on a second check here (first check for $class_key, this check for $instance_class_key),
       // I'm thinking this might be better being just implemented in a child class since 
-      // this seems really ad-hoc... 
+      // this seems really ad-hoc...
       if(isset($this->instance_map[$instance_class_key])){
     
         $ret_instance = $this->instance_map[$instance_class_key];
