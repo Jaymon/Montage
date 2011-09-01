@@ -122,6 +122,62 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
   }//method
   
   /**
+   *  move up either one directory or until the directory that matches $folder_regex is found
+   *
+   *  @example
+   *    // internal path: /foo/bar/baz/che
+   *    $this->getParent('#bar#'); // /foo/bar
+   *    $this->getParent(); // /foo/bar/baz         
+   *      
+   *  @since  8-30-11
+   *  @param  string  $folder_regex  a regex to match with a parent directory
+   *  @return Path  null if moving up isn't possible, otherwise a new instance with the new path in it      
+   */
+  public function getParent($folder_regex = ''){
+  
+    $ret_path = null;
+    $path_bits = explode(DIRECTORY_SEPARATOR,(string)$this);
+  
+    if(empty($folder_regex)){ // just move up one if not folder specified
+      
+      // slice off one if dir or 2 (filename and dirname if file)...
+      $slice_length = $this->isFile() ? -2 : -1;
+      $path_bits = array_slice($path_bits,0,-1); // get rid of the last 
+      
+      if(!empty($path_bits)){
+        
+        $class_name = get_class($this);
+        $ret_path = new $class_name($path_bits);
+        
+      }//if
+    
+    }else{
+    
+      // move up the path until the $folder_regex is found in a folder's name
+      while(!empty($path_bits)){
+      
+        end($path_bits);
+        $last_bit = current($path_bits);
+        
+        if(preg_match($folder_regex,$last_bit)){
+          
+          $class_name = get_class($this);
+          $ret_path = new $class_name($path_bits);
+          break;
+          
+        }//if
+        
+        $path_bits = array_slice($path_bits,0,-1); // remove the last bit
+      
+      }//while
+    
+    }//if/else
+  
+    return $ret_path;
+  
+  }//method
+  
+  /**
    *  true if the internal path is an ancestor of all of the passed in paths
    *  
    *  @example

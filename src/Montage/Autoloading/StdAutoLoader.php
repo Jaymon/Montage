@@ -12,12 +12,13 @@
  *  @package montage
  *  @subpackage Autoload 
  ******************************************************************************/
-namespace Montage\AutoLoad;
+namespace Montage\Autoload;
 
-use Montage\Autoload\AutoLoader;
+use Montage\Autoload\Autoloader;
 use Montage\Path;
+use Montage\Cacheable
 
-class StdAutoLoader extends Autoloader {
+class StdAutoLoader extends Autoloader implements Cacheable {
 
   /**
    *  holds the user submitted paths

@@ -1,21 +1,52 @@
 <?php
 namespace Montage\Test\PHPUnit;
 
-require_once('out_class.php');
-require_once(__DIR__.'/Test.php');
-require_once(__DIR__.'/../../Path.php');
-
+use PHPUnit\TestCase;
 use ReflectionClass;
 use Montage\Path;
 
-class PathTest extends Test {
+class PathTest extends TestCase {
+
+  /**
+   *  make sure ->getParent() works
+   *
+   *  @since  8-30-11   
+   */
+  public function testGetParent(){
+  
+    $test_list = array();
+    $test_list[] = array(
+      'create' => 'foo/bar/baz/che',
+      'in' => '#bar#',
+      'out' => join(DIRECTORY_SEPARATOR,array('foo','bar'))
+    );
+    $test_list[] = array(
+      'create' => 'foo/bar/baz/che',
+      'in' => '',
+      'out' => join(DIRECTORY_SEPARATOR,array('foo','bar','baz'))
+    );
+    $test_list[] = array(
+      'create' => '#foo#',
+      'in' => '',
+      'out' => ''
+    );
+    
+    foreach($test_list as $key => $test_map){
+    
+      $instance = new Path($test_map['create']);
+      $ret_instance = $instance->getParent($test_map['in']);
+      $this->assertEquals($test_map['out'],(string)$ret_instance,$key);
+    
+    }//foreach
+  
+  }//method
 
   /**
    *  tests creating Path objects passing in different random bits   
    */
   public function testCreation(){
   
-    $base = $this->getFixture();
+    $base = $this->getFixturePath();
     
     $test_list = array();
     $test_list[] = array(
@@ -63,7 +94,7 @@ class PathTest extends Test {
    */
   public function testGetChildren(){
   
-    $base = $this->getFixture('Path');
+    $base = $this->getFixturePath('Path');
     $instance = new Path($base);
     
     $test_list = array();
@@ -141,10 +172,10 @@ class PathTest extends Test {
       )
     );
     
-    foreach($test_list as $test_map){
+    foreach($test_list as $key => $test_map){
     
       $actual = call_user_func_array(array($instance,'getChildren'),$test_map['in']);
-      $this->assertEquals($test_map['out'],$actual);
+      $this->assertEquals($test_map['out'],$actual,$key);
     
     }//foreach
   
@@ -323,20 +354,6 @@ class PathTest extends Test {
     $ret_count = $path_list[0]->kill();
     $this->assertEquals(($total_count + 1),$ret_count);
     $this->assertFalse($path_list[0]->exists());
-  
-  }//method
-  
-  public function xtestCreateAndClear(){
-  
-    $base = $this->getClassFixtureBase();
-    
-    // if no error gets thrown, then the folder was created successfully...
-    $instance = new montage_path($base,'montage_path',md5(microtime(true)));
-    
-    $path = $instance->__toString();
-    
-    // now get rid of the path...
-    $instance->kill();
   
   }//method
 
