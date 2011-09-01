@@ -2,6 +2,10 @@
 /**
  *  handle caching
  *  
+ *
+ *  this object does the actual caching, if you want your object to be cacheable then
+ *  you would implement Cacheable or extend ObjectCache
+ *  
  *  @version 0.1
  *  @author Jay Marcyes
  *  @since 2-22-10

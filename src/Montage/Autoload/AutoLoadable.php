@@ -16,7 +16,7 @@
  *  @package montage
  *  @subpackage Autoload 
  ******************************************************************************/
-namespace Montage\AutoLoad;
+namespace Montage\Autoload;
 
 interface Autoloadable {
 

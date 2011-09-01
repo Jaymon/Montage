@@ -6,6 +6,19 @@
  *  implements the portable autoloader requirements:
  *  http://groups.google.com/group/php-standards/web/psr-0-final-proposal  
  *  
+ *  @todo I still want to add a namespace/folder map, so you could do something like:
+ *  
+ *  $this->addNamespace($namespace,$dir); 
+ *  $this->addNamespace('\Foo\Bar','che/baz');
+ *  
+ *  then, when you tried to create a class with the \Foo\Bar namespace:
+ *  
+ *  $instance = new \Foo\Bar\Happy\Blah();
+ *  
+ *  it would end up trying to include:
+ *  
+ *  che/baz/Happy/Blah.php     
+ *  
  *  @version 0.3
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 6-27-11
@@ -16,9 +29,16 @@ namespace Montage\Autoload;
 
 use Montage\Autoload\Autoloader;
 use Montage\Path;
-use Montage\Cacheable
+use Montage\Cache\Cacheable;
 
-class StdAutoLoader extends Autoloader implements Cacheable {
+class StdAutoloader extends Autoloader implements Cacheable {
+
+  /**
+   *  holds the cache object
+   *  
+   *  @var  Montage\Cache\Cache
+   */
+  protected $cache = null;
 
   /**
    *  holds the user submitted paths
@@ -26,6 +46,16 @@ class StdAutoLoader extends Autoloader implements Cacheable {
    *  @var  array
    */
   protected $path_list = array();
+  
+  /**
+   *  holds the found classes and the paths where they exist
+   *  
+   *  this is the array that is cached
+   *      
+   *  @since  9-1-11   
+   *  @var  array
+   */
+  protected $class_map = array();
   
   /**
    *  get all the user submitted paths
@@ -53,7 +83,7 @@ class StdAutoLoader extends Autoloader implements Cacheable {
    */
   public function addPath($path){
   
-    $path = new Path($path);
+    $path = new Path($path); // this normalizes the path
     $this->path_list[] = $path;
   
   }//method
@@ -64,28 +94,112 @@ class StdAutoLoader extends Autoloader implements Cacheable {
    *  @param  string  $class_name
    */
   public function handle($class_name){
-  
-    $ret_bool = false;
+
     $file_name = $this->normalizeClassName($class_name);
     
-    foreach($this->getPaths() as $path){
+    // first check cache...
+    $ret_bool = $this->handleCache($file_name);
     
-      $ret_bool = $this->req($path,$file_name);
-      if($ret_bool){ break; }//if
-    
-    }//foreach
-    
+    // check instance paths...
     if($ret_bool === false){
-      
-      foreach($this->getIncludePaths() as $path){
-      
-        $ret_bool = $this->req($path,$file_name);
-        if($ret_bool){ break; }//if
-      
-      }//foreach
+    
+      $ret_bool = $this->handlePaths($file_name);
     
     }//if
     
+    if($ret_bool === false){
+    
+      // check include paths...
+      $ret_bool = $this->handleIncludePaths($file_name);
+      
+    }//if
+  
+  }//method
+  
+  /**
+   *  handle checking $file_name against all the default php include paths
+   *  
+   *  @since  9-1-11   
+   *  @param  string  $file_name  the normalized class file name      
+   *  @return boolean
+   */ 
+  protected function handleIncludePaths($file_name){
+  
+    $ret_bool = false;
+  
+    // check include paths...  
+    foreach($this->getIncludePaths() as $path){
+    
+      if($classpath = $this->req($path,$file_name)){
+      
+        $this->class_map[$file_name] = $classpath;
+        $ret_bool = true;
+        break;
+    
+      }//if
+    
+    }//foreach
+  
+    return $ret_bool;
+  
+  }//method
+  
+  /**
+   *  handle checking $file_name against all the paths defined with {@link addPath()}
+   *  
+   *  @since  9-1-11   
+   *  @param  string  $file_name  the normalized class file name      
+   *  @return boolean
+   */
+  protected function handlePaths($file_name){
+  
+    $ret_bool = false;
+  
+    // check user defined paths...
+    foreach($this->getPaths() as $path){
+    
+      if($classpath = $this->req($path,$file_name)){
+    
+        $this->class_map[$file_name] = $classpath;
+        $ret_bool = true;
+        break;
+      
+      }//if
+    
+    }//foreach
+    
+    return $ret_bool;
+  
+  }//method
+  
+  /**
+   *  handle checking $file_name against the internal object cache
+   *  
+   *  @since  9-1-11
+   *  @param  string  $file_name  the normalized class file name      
+   *  @return boolean
+   */
+  protected function handleCache($file_name){
+  
+    $ret_bool = false;
+  
+    if(isset($this->class_map[$file_name])){
+    
+      // include will return false and emit E_WARNING if the file doesn't exist, that's ok
+      // because that will trigger the method to try and find the file again and update the
+      // cache...
+      if((include($this->class_map[$file_name])) !== false){
+      
+        $ret_bool = true;
+      
+      }else{
+      
+        unset($this->class_map[$file_name]);
+      
+      }//if/else
+    
+    }//if
+  
     return $ret_bool;
   
   }//method
@@ -96,21 +210,23 @@ class StdAutoLoader extends Autoloader implements Cacheable {
    *  @since  7-22-11
    *  @param  string  $path the base path without a trailing slash
    *  @param  string  $file_name  the file that will be appended to the path      
-   *  @return boolean true if the file was included
+   *  @return string  the path that was required
    */
   protected function req($path,$file_name){
-    
-    $ret_bool = false;
+
     $file = $path.DIRECTORY_SEPARATOR.$file_name;
 
     if(is_file($file)){
       
       require($file);
-      $ret_bool = true;
       
-    }//if
+    }else{
     
-    return $ret_bool;
+      $file = '';
+    
+    }//if/else
+    
+    return $file;
 
   }//method
   
@@ -126,6 +242,99 @@ class StdAutoLoader extends Autoloader implements Cacheable {
   protected function getIncludePaths(){
   
     return explode(PATH_SEPARATOR,get_include_path());
+  
+  }//method
+  
+  /**
+   *  set the object that will do the caching for any class that implements this interface
+   *  
+   *  @param  Montage\Cache $cache  the Cache instance
+   */
+  public function setCache(\Montage\Cache\Cache $cache = null){
+    
+    $this->cache = $cache;
+    ///if($cache !== null){ $this->importCache(); }//if
+    
+  }//method
+  
+  /**
+   *  get the caching object
+   *  
+   *  @return Montage\Cache\Cache
+   */
+  public function getCache(){ return $this->cache; }//method
+
+  /**
+   *  get the name of the cache
+   *
+   *  @return string    
+   */
+  public function cacheName(){ return get_class($this); }//method
+  
+  /**
+   *  get the name of the params that should be cached
+   *
+   *  @return array an array of the param names that should be cached    
+   */
+  public function cacheParams(){ return array('class_map'); }//method
+
+  /**
+   *  using the Cache instance from {@link getCache()} cache the params with names
+   *  returned from {@link cacheParams()}   
+   *
+   *  @return boolean   
+   */
+  public function exportCache(){
+  
+    $cache = $this->getCache();
+  
+    // canary, if no cache then don't try and persist...
+    if(empty($cache)){ return false; }//if
+  
+    return ($cache->set($this->cacheName(),$this->class_map) > 0) ? true : false;
+    
+  }//method
+  
+  /**
+   *  import the cached params and re-populate the params of the object instance
+   *  with the param values that were cached
+   *  
+   *  @return boolean      
+   */
+  public function importCache(){
+  
+    $cache = $this->getCache();
+  
+    // canary, if no cache then don't try and persist...
+    if(empty($cache)){ return false; }//if
+
+    if($cache_map = $cache->get($this->cacheName())){
+    
+      $this->class_map = $cache_map;
+    
+    }//if
+  
+    return true;
+  
+  }//method
+  
+  /**
+   *  delete the stored cache
+   *  
+   *  @return boolean      
+   */
+  public function killCache(){
+  
+    $cache = $this->getCache();
+    if(empty($cache)){ return false; }//if
+  
+    return $cache->kill($this->cacheName());
+  
+  }//method
+  
+  public function __destruct(){
+  
+    $this->exportCache();
   
   }//method
 

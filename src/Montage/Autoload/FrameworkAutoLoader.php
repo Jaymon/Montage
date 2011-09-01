@@ -11,11 +11,11 @@
  *  @package montage
  *  @subpackage Autoload 
  ******************************************************************************/
-namespace Montage\AutoLoad;
+namespace Montage\Autoload;
 
-use Montage\AutoLoad\AutoLoader;
+use Montage\Autoload\Autoloader;
 
-class FrameworkAutoLoader extends AutoLoader {
+class FrameworkAutoloader extends Autoloader {
 
   /**
    *  the name of the framework

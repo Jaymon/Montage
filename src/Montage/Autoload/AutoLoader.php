@@ -9,11 +9,11 @@
  *  @package montage
  *  @subpackage Autoload 
  ******************************************************************************/
-namespace Montage\AutoLoad;
+namespace Montage\Autoload;
 
-use Montage\Autoload\AutoLoadable;
+use Montage\Autoload\Autoloadable;
 
-abstract class AutoLoader implements AutoLoadable {
+abstract class Autoloader implements Autoloadable {
 
   /**
    *  register this class as an autoloader
