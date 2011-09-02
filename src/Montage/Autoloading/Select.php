@@ -20,7 +20,7 @@ class Select {
    *  
    *  @var  string
    */
-  protected $class_interface = '\Montage\AutoLoad\AutoLoadable';
+  protected $class_interface = '\Montage\Autoload\Autoloadable';
   
   /**
    *  holds the information about what classes exist in the system
