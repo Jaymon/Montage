@@ -19,6 +19,10 @@
  *  
  *  che/baz/Happy/Blah.php     
  *  
+ *  @todo another thing that could be done is fallback to just searching for the classname
+ *  (eg, calling filename()) and then getting and including any files that match just the class's
+ *  short name. Then checking class_exists after each one, then if found, cache the result. 
+ *  
  *  @version 0.3
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 6-27-11
