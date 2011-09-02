@@ -11,8 +11,52 @@
 namespace PHPUnit;
 
 use PHPUnit_Framework_TestCase;
+use Montage\Path;
 
 abstract class TestCase extends PHPUnit_Framework_TestCase {
+  
+  /**
+   *  holds the fixture directory name
+   *
+   *  @since  8-30-11
+   *  @var  string      
+   */
+  protected $fixture_dir = 'fixtures';
+  
+  /**
+   *  returns the closest fixture path to this class
+   *
+   *  @since  8-30-11
+   *  @param  string  $path,... one or more path bits to append to the found path
+   *  @return string  the full path      
+   */
+  protected function getFixturePath($path = ''){
+  
+    $ret_str = '';
+    $path_bits = func_get_args();
+  
+    // get the directory the class is located in...
+    $rclass = new \ReflectionClass($this);
+    $class_filename = $rclass->getFileName();
+    $class_path = dirname($class_filename);
+    
+    // now move backward until you find the "test directory"
+    $path = new Path($class_path);
+    if($test_path = $path->getParent('#test#')){
+    
+      $ret_path = new Path($test_path,$this->fixture_dir,$path_bits);
+    
+    }else{
+    
+      throw new \UnexpectedValueException(
+        sprintf('The class "%s" does not reside in a test directory',$class_filename)
+      );
+    
+    }//if
+    
+    return (string)$ret_path;
+  
+  }//method
   
   /**
    *  I noticed that I was spending a lot of time setting tests like this up, so I thought
