@@ -28,8 +28,8 @@ use Montage\Dependency\Reflection;
 use Montage\Dependency\Container;
 use Montage\Dependency\Dependable;
 
-use Montage\AutoLoad\ReflectionAutoloader;
-use Montage\AutoLoad\FrameworkAutoloader;
+use Montage\Autoload\ReflectionAutoloader;
+use Montage\Autoload\FrameworkAutoloader;
 
 use Montage\Request\Requestable;
 use Montage\Response\Response;
@@ -41,9 +41,9 @@ use Montage\Event\Eventable;
 
 // load the Framework autoloader, this will handle all other dependencies to load this class
 // so I don't have to have a ton of includes() right here...
-require_once(__DIR__.'/AutoLoad/AutoLoadable.php');
-require_once(__DIR__.'/AutoLoad/AutoLoader.php');
-require_once(__DIR__.'/AutoLoad/FrameworkAutoloader.php');
+require_once(__DIR__.'/Autoload/Autoloadable.php');
+require_once(__DIR__.'/Autoload/Autoloader.php');
+require_once(__DIR__.'/Autoload/FrameworkAutoloader.php');
 $fal = new FrameworkAutoloader('Montage',realpath(__DIR__.'/..'));
 $fal->register();
 
@@ -364,7 +364,7 @@ class Framework extends Field implements Dependable,Eventable {
   }//method
 
   /**
-   *  start all the known \Montage\AutoLoad\AutoLoadable classes
+   *  start all the known \Montage\Autoload\Autoloadable classes
    *  
    *  a Start class is a class that will do configuration stuff
    */
@@ -373,21 +373,22 @@ class Framework extends Field implements Dependable,Eventable {
     $container = $this->getContainer();
     $instances = new \SplObjectStorage();
     
-    // create the reflection autoloader...
-    if($ral = $container->getInstance('\Montage\AutoLoad\ReflectionAutoLoader')){
-      $ral->register(true);
-      $instances->attach($ral);
-    }//if
-    
     // create the standard autoloader...
-    if($sal = $container->getInstance('\Montage\AutoLoad\StdAutoLoader')){
+    if($sal = $container->getInstance('\Montage\Autoload\StdAutoloader')){
+    
+      $sal->addPaths($this->getField('reflection_paths',array()));
       $sal->addPaths($this->getField('vendor_paths',array()));
+      
+      $sal->setCache($this->getCache());
+      $sal->importCache();
+      
       $sal->register();
       $instances->attach($sal);
+      
     }//if
     
     // create any other autoloader classes...
-    $select = $container->getInstance('\Montage\AutoLoad\Select');
+    $select = $container->getInstance('\Montage\Autoload\Select');
     $class_list = $select->find();
     
     foreach($class_list as $class_name){

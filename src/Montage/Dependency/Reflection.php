@@ -1,5 +1,7 @@
 <?php
 /**
+ *  this class keeps class relationship of classes found in any path  
+ *
  *  I almost named this class Polymorphism
  *  http://en.wikipedia.org/wiki/Polymorphism_in_object-oriented_programming
  *  http://en.wikipedia.org/wiki/Polymorphism_%28computer_science%29  
@@ -9,19 +11,14 @@
  *  you to get detailed info about whether a class is related to another class and to
  *  be able to find things like absolute descnendents of classes   
  *  
- *  this class handles all the discovering and auto-loading of classes that it knows
+ *  this class handles all the discovering of relationships between classes that it knows
  *  about, it also has methods to let the developer easily get class information 
- *  and class relationships of its internal class structure  
+ *  and class relationships of its internal class structure
  *  
  *  this class can be mostly left alone unless you want to set more class paths 
  *  (use {@link addPath()}) than what are used by default
  *  
- *  @todo this can be renamed ReflectionRelationship
- *  
- *  @note the cache reloading will fail when a new class is added and nothing else is
- *  touched (eg, Request is extended so findClassName() will return the now parent class
- *  as the Request, I'm not sure how to get around this and still be quick, the only thing
- *  I can think of is to count all the files and reload if there are more than expected     
+ *  @todo this can be renamed ReflectionRelationship     
  *
  *  @version 0.6
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -177,56 +174,63 @@ class Reflection extends ObjectCache implements \Reflector {
    */
   public function findClassName($class_name){
 
-    $key = $this->normalizeClassName($class_name);
     $ret_str = '';
   
     // we wrap in a try/catch so we can try to reload the class if an error state is found...
     try{
     
-      if(isset($this->parent_class_map[$key])){
+      // first check cache...
+      $class_map = $this->getClass($class_name);
+      $key = $class_map['key'];
       
-        $child_count = count($this->parent_class_map[$key]);
-        if($child_count > 1){
-          
-          $e_child_list = array();
-          foreach($this->findClassNames($class_name) as $child_class_name){
-          
-            $child_key = $this->normalizeClassName($child_class_name);
-            $e_child_list[] = sprintf(
-              '%s located at "%s"',
-              $child_class_name,
-              $this->class_map[$child_key]['path']
-            );
-          
-          }//foreach
-  
-          throw new \LogicException(
-            sprintf(
-              'the given $class_name (%s) is extended by %s children [%s] so a best class cannot be found, definitions were %s',
-              $class_name,
-              $child_count,
-              join(',',$e_child_list),
-              $this->reloaded ? 'RELOADED' : 'NOT RELOADED'
-            )
-          );
-            
-        }else{
-        
-          $child_class_name = reset($this->parent_class_map[$key]); // get first row
-          $ret_str = $this->findClassName($child_class_name); // recurse through the list
-        
-        }//if/else
+      if(isset($class_map['class_found'])){
+      
+        $ret_str = $class_map['class_found'];
       
       }else{
       
-        if(!empty($this->class_map[$key]['class'])){
-      
-          $ret_str = $this->class_map[$key]['class'];
+        if(isset($this->parent_class_map[$key])){
+        
+          $child_count = count($this->parent_class_map[$key]);
+          if($child_count > 1){
+            
+            $e_child_list = array();
+            foreach($this->findClassNames($class_name) as $child_class_name){
+            
+              $child_key = $this->normalizeClassName($child_class_name);
+              $e_child_list[] = sprintf(
+                '%s located at "%s"',
+                $child_class_name,
+                $this->class_map[$child_key]['path']
+              );
+            
+            }//foreach
+    
+            throw new \LogicException(
+              sprintf(
+                'the given $class_name (%s) is extended by %s children [%s] so a best class cannot be found, definitions were %s',
+                $class_name,
+                $child_count,
+                join(',',$e_child_list),
+                $this->reloaded ? 'RELOADED' : 'NOT RELOADED'
+              )
+            );
+              
+          }else{
           
+            $child_class_name = reset($this->parent_class_map[$key]); // get first row
+            $ret_str = $this->findClassName($child_class_name); // recurse through the list
+            
+            // write out cache...
+            $this->class_map[$key]['class_found'] = $ret_str;
+            $this->exportCache(); 
+          
+          }//if/else
+        
         }else{
         
-          throw new \UnexpectedValueException(sprintf('no class %s was found',$class_name));
-        
+          $ret_str = $this->class_map[$key]['class'];
+          
         }//if/else
         
       }//if/else
@@ -245,7 +249,6 @@ class Reflection extends ObjectCache implements \Reflector {
     
     }//try/catch
 
-    // thought about caching the $ret_str also, but didn't really improve the average runtime
     return $ret_str;
     
   }//method
@@ -568,6 +571,8 @@ class Reflection extends ObjectCache implements \Reflector {
     $class_map = array();
     $key = $this->normalizeClassName($class_name);
     $class_map['class'] = $this->qualifyClassName($class_name);
+    $class_map['key'] = $key;
+    
     ///$class_map['last_modified'] = filemtime($class_file); // use MD5 instead?
     $class_map['hash'] = md5_file($class_file);
     
