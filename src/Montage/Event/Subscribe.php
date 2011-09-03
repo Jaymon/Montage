@@ -10,7 +10,7 @@
  ******************************************************************************/
 namespace Montage\Event;
 
-abstract class Sub implements Subable {
+abstract class Subscribe implements Subscribeable {
 
   /**
    *  the event dispatcher

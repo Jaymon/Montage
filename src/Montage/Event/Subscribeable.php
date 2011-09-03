@@ -10,7 +10,7 @@
  ******************************************************************************/
 namespace Montage\Event;
 
-interface Subable {
+interface Subscribeable {
 
   /**
    *  get the name(s) of the event(s) this class is subscribing to
