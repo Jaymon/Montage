@@ -60,6 +60,49 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
     }//if
     
   }//method
+  
+  /**
+   *  return true if the request is a local request
+   *  
+   *  a request is local if it was made from the same computer as the server
+   *  
+   *  @since  9-6-11
+   *  @return boolean
+   */
+  public function isLocal(){
+  
+    $remote_addr = $this->server->get('REMOTE_ADDR','');
+    return in_array($remote_addr,array('127.0.0.1','::1'));
+  
+  }//method
+
+  /**
+   *  get a cookie value
+   *
+   *  @since  9-6-11
+   *  @param  string  $name
+   *  @param  mixed $default_val  what should be returned if cookie doesn't exist
+   *  @return mixed            
+   */
+  public function getCookie($name,$default_val = null){
+  
+    return $this->cookies->get($name,$default_val);
+  
+  }//method
+  
+  /**
+   *  true if the cookie by $name exists and is non-empty
+   *
+   *  @since  9-6-11
+   *  @param  string  $name
+   *  @return boolean    
+   */
+  public function hasCookie($name){
+  
+    $cookie_map = $this->cookies->all();
+    return !empty($cookie_map[$name]);
+  
+  }//method
 
   /**
    *  return the full requested url

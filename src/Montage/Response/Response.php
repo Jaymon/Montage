@@ -10,6 +10,8 @@
 namespace Montage\Response;
 
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
+use Symfony\Component\HttpFoundation\Cookie;
+
 use Montage\Field\Fieldable;
 
 class Response extends SymfonyResponse implements Fieldable {
@@ -30,6 +32,60 @@ class Response extends SymfonyResponse implements Fieldable {
    *  @var  array
    */
   protected $field_map = array();
+
+  /**
+   *  sets the unauthorized 401 headers for prompting http auth authentication
+   *
+   *  it is up to you to send them using {@link parent::sendHeaders()} or letting 
+   *  the script run its course      
+   *      
+   *  @since  9-6-11
+   *  @param  string  $realm  you can really put anything here I think, it seems to be the message
+   *                          that will be included in the http auth prompt         
+   */
+  public function setUnauthorized($realm = ''){
+  
+    /// header('WWW-Authenticate: Basic realm="API"'); 
+    /// header('HTTP/1.0 401 Unauthorized');
+  
+    $this->setHeader('WWW-Authenticate',sprintf('Basic realm="%s"',$realm));
+    $this->setStatusCode(401);
+  
+  }//method
+
+  /**
+   *  get a cookie value
+   *
+   *  @since  9-6-11
+   *  @param  string  $name
+   *  @return mixed    
+   */
+  public function getCookie($name){ return $this->headers->getCookie($name); }//method
+  
+  /**
+   *  true if the cookie by $name exists
+   *
+   *  @since  9-6-11
+   *  @param  string  $name
+   *  @return boolean    
+   */
+  public function hasCookie($name){ return $this->headers->hasCookie($cookie); }//method
+  
+  /**
+   *  set a cookie
+   *  
+   *  @since  9-6-11
+   *  @param  Cookie  $cookie the cookie object
+   */
+  public function setCookie(Cookie $cookie){ return $this->headers->setCookie($cookie); }//method
+
+  /**
+   *  remove a previously set cookie
+   *  
+   *  @since  9-6-11
+   *  @param  string  $name the name of the cookie to remove
+   */
+  public function killCookie($name){ return $this->headers->removeCookie($name); }//method
 
   /**
    *  send the http response headers
@@ -242,41 +298,5 @@ class Response extends SymfonyResponse implements Fieldable {
    *  @return boolean
    */
   public function hasFields(){ return !empty($this->field_map); }//method
-
-  /**
-   *  return the full requested url
-   *
-   *  @since  6-29-11   
-   *  @return string   
-   */
-  public function getUrl(){ return $this->getUri(); }//method
-  
-  /**
-   *  return the base requested url
-   *  
-   *  the base url is the requested url minus the requested path
-   *      
-   *  @since  6-29-11         
-   *  @return string
-   */
-  public function getBase(){ return $this->getScheme().'://'.$this->getHttpHost().$this->getBaseUrl(); }//method
-
-  /**
-   *  gets just the request path
-   *  
-   *  @example
-   *    http://example.com/var/web/foo/bar return foo/bar         
-   *    http://example.com/foo/bar return foo/bar
-   *       
-   *  @return string  just the request path without the root path
-   */
-  public function getPath(){ return $this->getPathInfo(); }//method
-  
-  /**
-   *  shortcut method for you to know if this is a command line request
-   *  
-   *  @return boolean
-   */
-  function isCli(){ return (strncasecmp(PHP_SAPI, 'cli', 3) === 0); }//method
 
 }//class
