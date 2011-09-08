@@ -221,7 +221,7 @@ abstract class Container extends Field implements Containable {
       
       // http://www.php.net/manual/en/reflectionclass.newinstanceargs.php#95137
       $ret_instance = empty($instance_params) ? new $class_name() : $rclass->newInstanceArgs($instance_params);
-      $ret_instance = $this->inject($ret_instance,$rclass);
+      $ret_instance = $this->methodInjection($ret_instance,$rclass);
       
     }else{
     
@@ -461,6 +461,132 @@ abstract class Container extends Field implements Containable {
   protected function getKey($class_name){ return mb_strtoupper($class_name); }//method
 
   /**
+   *  true if the method is an inject type method
+   *  
+   *  inject type methods are of the form: injectXXXXX(ClassName $var)
+   *  
+   *  @since  9-7-11   
+   *  @param  ReflectionFunctionAbstract  $method  the reflection of the method/function           
+   *  @return boolean
+   */
+  protected function isInjectMethod(\ReflectionFunctionAbstract $rmethod){
+  
+    $method_name = $rmethod->getName();
+        
+    $is_inject = (($method_name[0] === 'i') || ($method_name[0] === 'I'))
+      && (($method_name[1] === 'n') || ($method_name[1] === 'N'))
+      && (($method_name[2] === 'j') || ($method_name[2] === 'J'))
+      && (($method_name[3] === 'e') || ($method_name[3] === 'E'))
+      && (($method_name[4] === 'c') || ($method_name[4] === 'C'))
+      && (($method_name[5] === 't') || ($method_name[5] === 'T'));
+  
+    return $is_inject;
+  
+  }//method
+  
+  /**
+   *  true if the method is an set type method
+   *  
+   *  inject type methods are of the form: setXXXXX(ClassName $var)
+   *  
+   *  @since  9-7-11   
+   *  @param  ReflectionFunctionAbstract  $rmethod  the reflection of the method/function           
+   *  @return boolean
+   */
+  protected function isSetMethod(\ReflectionFunctionAbstract $rmethod){
+  
+    $method_name = $rmethod->getName();
+  
+    $is_set = (($method_name[0] === 's') || ($method_name[0] === 'S'))
+      && (($method_name[1] === 'e') || ($method_name[1] === 'E'))
+      && (($method_name[2] === 't') || ($method_name[2] === 'T'));
+  
+    return $is_set;
+  
+  }//method
+
+  /**
+   *  get the class name that is going to be injected via a method
+   *  
+   *  @since  9-7-11   
+   *  @param  ReflectionFunctionAbstract  $rmethod  the reflection of the method/function           
+   *  @return boolean
+   */
+  protected function getInjectClassName(\ReflectionFunctionAbstract $rmethod){
+  
+    // canary, only check the method if it is the right form...
+    if($rmethod->getNumberOfParameters() !== 1){ return ''; }//if
+    
+    $class_name = '';
+    
+    $rparams = $rmethod->getParameters();
+    $rparam = current($rparams);
+    $prclass = $rparam->getClass();
+    
+    if($prclass !== null){
+  
+      $class_name = $prclass->getName();
+      
+    }//if
+      
+    return $class_name;
+  
+  }//method
+  
+  /**
+   *  inject a dependency using: $instance::$rmethod({@link getInjectClassName()})
+   *
+   *  @since  9-7-11
+   *  @param  object  $instance
+   *  @param  ReflectionFunctionAbstract  $rmethod  the reflection of the method of $instance
+   *  @return boolean true if the instance was going to be reflected, regardless of whether it was
+   */
+  protected function injectInstance($instance,\ReflectionFunctionAbstract $rmethod){
+  
+    $ret_bool = false;
+    $method_name = $rmethod->getName();      
+    $is_inject = $this->isInjectMethod($rmethod);
+    $is_set = $this->isSetMethod($rmethod);
+
+    if($is_inject || $is_set){
+
+      if($class_name = $this->getInjectClassName($rmethod)){
+    
+        $ret_bool = true;
+    
+        try{
+        
+          if($is_inject){
+          
+            // the valid setter syntax is: injectName(ClassName $var_name), only methods matching that are forced injected...  
+            
+            $instance->{$method_name}($this->getInstance($class_name));
+              
+          }else if($is_set){
+          
+            // the valid setter syntax is: setName(ClassName $var_name), only methods matching that are set...
+          
+            if($this->hasInstance($class_name)){
+              
+              $instance->{$method_name}($this->getInstance($class_name));
+              
+            }//if
+              
+          }//if/else if
+          
+        }catch(\Exception $e){
+          // exceptions aren't fatal, just don't set the dependency
+        }//try/catch
+        
+      }//if
+    
+    }//if
+  
+    return $ret_bool;
+  
+  }//method
+
+  /**
    *  inject dependencies via setter methods
    *  
    *  by default, this class will only inject if the method is of the form:
@@ -471,92 +597,27 @@ abstract class Container extends Field implements Containable {
    *  can't be created)       
    *  
    *  @example:
-   *    injectFoo(Foo $foo);                  
+   *    injectFoo(Foo $foo); // foo instance will be created if it doesn't exist
+   *    setFoo(Foo $foo); // Foo instance will be injected only if it exists             
    *
    *  @since  6-14-11   
    *  @param  object  $instance the object instance to be injected
    *  @param  ReflectionClass $rclass the reflection object of the given $instance      
    *  @return object  $instance with its setters injected
    */
-  protected function inject($instance,\ReflectionClass $rclass = null){
+  protected function methodInjection($instance,\ReflectionClass $rclass = null){
   
     // canary...
     if(empty($instance)){ throw new \InvalidArgumentException('$instance was empty'); }//if
-    if(empty($rclass)){
-      $rclass = new ReflectionObject($instance);
-    }//if
+    if(empty($rclass)){ $rclass = new ReflectionObject($instance); }//if
   
     $ret_count = 0;
     
     $rmethod_list = $rclass->getMethods(ReflectionMethod::IS_PUBLIC);
     foreach($rmethod_list as $rmethod){
-    
-      // only check the method if it is the right form...
-      if($rmethod->getNumberOfParameters() === 1){
-      
-        $method_name = $rmethod->getName();
-        
-        $is_inject = (($method_name[0] === 'i') || ($method_name[0] === 'I'))
-          && (($method_name[1] === 'n') || ($method_name[1] === 'N'))
-          && (($method_name[2] === 'j') || ($method_name[2] === 'J'))
-          && (($method_name[3] === 'e') || ($method_name[3] === 'E'))
-          && (($method_name[4] === 'c') || ($method_name[4] === 'C'))
-          && (($method_name[5] === 't') || ($method_name[5] === 'T'));
-        
-        $is_set = (($method_name[0] === 's') || ($method_name[0] === 'S'))
-          && (($method_name[1] === 'e') || ($method_name[1] === 'E'))
-          && (($method_name[2] === 't') || ($method_name[2] === 'T'));
 
-        if($is_inject || $is_set){
+      $this->injectInstance($instance,$rmethod);
 
-          $rparams = $rmethod->getParameters();
-          foreach($rparams as $rparam){
-            
-            if($is_inject || $is_set){
-            
-              $prclass = $rparam->getClass();
-              if($prclass !== null){
-            
-                $class_name = $prclass->getName();
-            
-                try{
-                
-                  if($is_inject){
-                  
-                    // the valid setter syntax is: injectName(ClassName $var_name), only methods matching that are forced injected...  
-                    
-                    $class_name = $prclass->getName();
-                    $instance->{$method_name}($this->getInstance($class_name));
-                    $ret_count++;
-                      
-                  }else if($is_set){
-                  
-                    // the valid setter syntax is: setName(ClassName $var_name), only methods matching that are set...
-                  
-                    $class_name = $prclass->getName();
-                    if($this->hasInstance($class_name)){
-                      
-                      $instance->{$method_name}($this->getInstance($class_name));
-                      $ret_count++;
-                      
-                    }//if
-                      
-                  }//if/else if
-                  
-                }catch(\Exception $e){
-                  // exceptions aren't fatal, just don't set the dependency
-                }//try/catch
-                
-              }//if
-              
-            }//if
-        
-          }//foreach
-        
-        }//if
-        
-      }//if
-    
     }//foreach
   
     ///return $ret_count;

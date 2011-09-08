@@ -76,13 +76,43 @@ class ReflectionFile implements Reflector {
   public function __toString(){ return $this->body; }//method
   
   /**
+   *  return true if this instance is the class file for $class_name
+   * 
+   *  @since  9-7-11    
+   *  @param  string  $class_name
+   *  @return boolean
+   */
+  public function hasClass($class_name){
+  
+    $ret_bool = false;
+  
+    $class_key = $this->normalizeClassName($class_name);
+    $class_list = $this->getClasses();
+    
+    foreach($class_list as $class_map){
+    
+      $file_class_key = $this->normalizeClassName($class_map['class']);
+      if($class_key === $file_class_key){
+      
+        $ret_bool = true;
+        break;
+      
+      }//if
+    
+    }//foreach
+  
+    return $ret_bool;
+  
+  }//method
+  
+  /**
    *  get any php classes that are found in the file 
    *
    *  normally, a Reflection Class will return other Reflection instances but this
    *  doesn't do that because in order to do that you have to include the file so
    *  ReflectionClass can do its thing.      
    *      
-   *  @return array a list of maps with keys like class_name, extends, and implements
+   *  @return array a list of maps with keys like class, extends, and implements
    */
   public function getClasses(){
   
@@ -451,6 +481,24 @@ class ReflectionFile implements Reflector {
     }//if
     
     return array($i,$namespace);
+  
+  }//method
+  
+  /**
+   *  in order to do compares for classes, we need to make sure the classes are roughly the
+   *  same structurally, this method does that
+   *  
+   *  @since  9-7-11
+   *  @param  string  $class_name
+   *  @return string
+   */
+  protected function normalizeClassName($class_name){
+  
+    if($class_name[0] !== '\\'){
+      $class_name = '\\'.$class_name;
+    }//if
+    
+    return mb_strtoupper($class_name);
   
   }//method
 

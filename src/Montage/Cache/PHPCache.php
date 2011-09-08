@@ -6,7 +6,7 @@
  *  @note this class cannot cache objects, Montage\Cache\Cache uses serialize, so it
  *  can cache objects 
  *  
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes
  *  @since 8-2-11
  *  @package montage
@@ -61,9 +61,10 @@ class PHPCache extends Cache {
    *  get a native php code value for $val
    *  
    *  @param  mixed $val
+   *  @param  string  $arr_prefix how much whitespace an array should have   
    *  @return string
    */
-  protected function encodeVal($val){
+  protected function encodeVal($val,$arr_prefix = ''){
   
     $ret_str = '';
   
@@ -73,7 +74,7 @@ class PHPCache extends Cache {
     
     }else if(is_array($val)){
     
-      $ret_str = $this->encodeArr($val);
+      $ret_str = $this->encodeArr($val,$arr_prefix);
     
     }else if(is_null($val)){
     
@@ -104,21 +105,22 @@ class PHPCache extends Cache {
   /**
    *  go through and encode an entire array
    *  
-   *  @param  array $arr  the array to turn into a code string      
+   *  @param  array $arr  the array to turn into a code string
+   *  @param  string  $prefix how much whitespace each key should have before it, just for readability        
    *  @return string
    */
-  protected function encodeArr(array $arr){
+  protected function encodeArr(array $arr,$prefix = ''){
   
     $ret_str = 'array('.PHP_EOL;
     
     foreach($arr as $key => $val){
     
-      $ret_str .= sprintf('  %s => %s,',$this->encodeVal($key),$this->encodeVal($val)).PHP_EOL;
+      $ret_str .= sprintf('%s  %s => %s,',$prefix,$this->encodeVal($key),$this->encodeVal($val,$prefix.'  ')).PHP_EOL;
     
     }//foreach
     
     $ret_str = rtrim($ret_str,','.PHP_EOL).PHP_EOL;
-    $ret_str .= ')';
+    $ret_str .= $prefix.')';
   
     return $ret_str;
   

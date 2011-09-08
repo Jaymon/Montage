@@ -1,19 +1,12 @@
 <?php
 namespace Montage\Test\PHPUnit;
 
+use PHPUnit\FrameworkTestCase;
+
 use ReflectionClass;
 use Montage\Dependency\ReflectionFile;
-use out;
 
-require_once('out_class.php');
-  
-require_once(__DIR__.'/../Test.php');
-///require_once(__DIR__.'/../../../Path.php');
-
-///require_once(__DIR__.'/../../../Dependency/Reflection.php');
-require_once(__DIR__.'/../../../Dependency/ReflectionFile.php');
-
-class ReflectionFileTest extends Test {
+class ReflectionFileTest extends FrameworkTestCase {
 
   public function testFindClasses(){
   
@@ -191,6 +184,46 @@ class ReflectionFileTest extends Test {
       file_put_contents($temp_file,$test_map['in'],LOCK_EX);
       $rfile = new ReflectionFile($temp_file);
       $this->assertEquals($test_map['out'],$rfile->getClasses(),$i);
+    
+    }//foreach
+  
+  }//method
+  
+  public function testHasClass(){
+  
+    $test_list = array();
+    $test_list[] = array(
+      'file' => '<'.'?php
+        namespace Mingo;
+
+        use Montage\AutoLoad\AutoLoadable;
+        use MingoAutoload;
+
+        class AutoLoader extends MingoAutoload implements AutoLoadable {}
+        ',
+      'in' => '\Mingo\AutoLoader',
+      'out' => true
+    );
+    $test_list[] = array(
+      'file' => '<'.'?php
+        namespace Mingo;
+
+        use Montage\AutoLoad\AutoLoadable;
+        use MingoAutoload;
+
+        class AutoLoader extends MingoAutoload implements AutoLoadable {}
+        ',
+      'in' => '\blah\AutoLoader',
+      'out' => false
+    );
+  
+    $temp_file = tempnam(sys_get_temp_dir(),__CLASS__);
+  
+    foreach($test_list as $i => $test_map){
+    
+      file_put_contents($temp_file,$test_map['file'],LOCK_EX);
+      $rfile = new ReflectionFile($temp_file);
+      $this->assertEquals($test_map['out'],$rfile->hasClass($test_map['in']),$i);
     
     }//foreach
   

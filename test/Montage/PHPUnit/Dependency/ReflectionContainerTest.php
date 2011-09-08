@@ -1,20 +1,52 @@
 <?php
+/**
+ *  this class doesn't use any of the PHPUnit Montage plugin stuff because all
+ *  that stuff relies on the Container working withut problems, so you can't test
+ *  the container using it because if the container doesn't work, then the test
+ *  won't load   
+ *
+ ******************************************************************************/
 namespace Montage\PHPUnit {
   
-  use PHPUnit\FrameworkTestCase;
+  $base = realpath(__DIR__.'/../../../../src');
+  
+  require_once($base.'/Montage/Path.php');
+  
+  require_once($base.'/Montage/Field/GetFieldable.php');
+  require_once($base.'/Montage/Field/SetFieldable.php');
+  require_once($base.'/Montage/Field/Fieldable.php');
+  require_once($base.'/Montage/Field/Field.php');
+  
+  require_once($base.'/Montage/Cache/Cacheable.php');
+  require_once($base.'/Montage/Cache/Cache.php');
+  require_once($base.'/Montage/Cache/ObjectCache.php');
+  require_once($base.'/Montage/Cache/PHPCache.php');
+  
+  require_once($base.'/Montage/Dependency/ReflectionFile.php');
+  require_once($base.'/Montage/Dependency/Reflection.php');
+  
+  require_once($base.'/Montage/Dependency/Containable.php');
+  require_once($base.'/Montage/Dependency/Container.php');
+  require_once($base.'/Montage/Dependency/ReflectionContainer.php');
+  
+  require_once('out_class.php');
+  
+  ///use PHPUnit\FrameworkTestCase;
   use Montage\Dependency\Reflection;
   use Montage\Dependency\ReflectionContainer;
   
-  class ContainerTest extends FrameworkTestCase {
+  class ContainerTest extends \PHPUnit_Framework_TestCase {
+  
+    protected $reflection = null;
   
     protected $container = null;
   
     public function setUp(){
     
-      $reflection = new Reflection();
-      $reflection->addFile(__FILE__);
+      $this->reflection = new Reflection();
+      $this->reflection->addFile(__FILE__);
       
-      $this->container = new ReflectionContainer($reflection);
+      $this->container = new ReflectionContainer($this->reflection);
       
       ///out::e(spl_autoload_functions());
     
@@ -128,6 +160,47 @@ namespace Montage\PHPUnit {
       $this->assertSame(2,$instance->bar);
     
     }//method
+    
+    /**
+     *  makes sure the container is caching set* and inject* methods properly
+     *
+     *  @since  9-7-11     
+     */
+    public function testInjectCache(){
+    
+      $instance = $this->container->getInstance('Montage\Test\Fixtures\Dependency\FooBar');      
+      
+      $class_map = $this->reflection->getClass('Montage\Test\Fixtures\Dependency\FooBar');
+      
+      $this->assertArrayHasKey('info',$class_map);
+      $this->assertArrayHasKey('inject_map',$class_map['info']);
+      $this->assertArrayHasKey('inject',$class_map['info']['inject_map']);
+      $this->assertArrayHasKey('set',$class_map['info']['inject_map']);
+      
+      $this->assertEquals(1,count($class_map['info']['inject_map']['set']));
+      $this->assertEquals(1,count($class_map['info']['inject_map']['inject']));
+    
+    }//method
+    
+    /**
+     *  makes sure the container is caching set* and inject* methods properly from
+     *  inherited classes     
+     *
+     *  @since  9-7-11     
+     */
+    public function testInjectCache2(){
+    
+      $instance = $this->container->getInstance('Montage\Test\Fixtures\Dependency\BarBaz');      
+      
+      $class_map = $this->reflection->getClass('Montage\Test\Fixtures\Dependency\BarBaz');
+      
+      foreach($class_map['info']['inject_map'] as $type => $map){
+      
+        $this->assertEquals(2,count($map));
+      
+      }//foreach
+      
+    }//method
   
   }//class
   
@@ -160,6 +233,26 @@ namespace Montage\Test\Fixtures\Dependency {
   
     public function setChe(\Che $che){ $this->che = $che; }//method
     public function injectBong(\Bong $bong){ $this->bong = $bong; }//method
+  
+  }//class
+  
+  class FooBar2 {
+  
+    public $che = null;
+    public $bong = null;
+  
+    public function setChe(\Che $che){ $this->che = $che; }//method
+    public function injectBong(\Bong $bong){ $this->bong = $bong; }//method
+  
+  }//class
+  
+  class BarBaz extends FooBar2 {
+  
+    public $foo = null;
+    public $bar = null;
+  
+    public function setFoo(Foo $v){ $this->foo = $v; }//method
+    public function injectBar(Bar $v){ $this->bar = $v; }//method
   
   }//class
   

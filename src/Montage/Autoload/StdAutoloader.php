@@ -34,6 +34,7 @@ namespace Montage\Autoload;
 use Montage\Autoload\Autoloader;
 use Montage\Path;
 use Montage\Cache\Cacheable;
+use Montage\Dependency\ReflectionFile;
 
 class StdAutoloader extends Autoloader implements Cacheable {
 
@@ -60,6 +61,8 @@ class StdAutoloader extends Autoloader implements Cacheable {
    *  @var  array
    */
   protected $class_map = array();
+  
+  protected $export_cache = false;
   
   /**
    *  get all the user submitted paths
@@ -102,45 +105,89 @@ class StdAutoloader extends Autoloader implements Cacheable {
     $file_name = $this->normalizeClassName($class_name);
     
     // first check cache...
-    $ret_bool = $this->handleCache($file_name);
+    $ret_bool = $this->handleCache($class_name,$file_name);
     
-    // check instance paths...
+    // cache failed, so try to find the class...
     if($ret_bool === false){
     
-      $ret_bool = $this->handlePaths($file_name);
-    
-    }//if
-    
-    if($ret_bool === false){
-    
-      // check include paths...
-      $ret_bool = $this->handleIncludePaths($file_name);
+      $method_list = array(
+        'handlePaths', // check set internal instance paths using standardized naming conventions
+        'handleIncludePaths', // check set php include paths
+        'handleScan' // do a brute-force scan of all internal instance paths looking for the class
+      );
       
+      foreach($method_list as $method){
+      
+        if($ret_bool = $this->{$method}($class_name,$file_name)){
+        
+          // cache here
+          break;
+        
+        }//if
+              
+      }//foreach
+
     }//if
+  
+  }//method
+  
+  /**
+   *  does a brute for search of all the internal file paths looking for the class
+   *  
+   *  this method is extremely slow and is a last resort      
+   *  
+   *  @since  9-7-11
+   *  @param  string  $class_name the original looked for class name   
+   *  @param  string  $file_name  the normalized class file name      
+   *  @return boolean
+   */
+  protected function handleScan($class_name,$file_name){
+  
+    $ret_bool = false;
+    $class_bits = explode('\\',$class_name);
+    $short_name = end($class_bits); // eg, for \foo\bar\baz return just baz
+    
+    $regex = sprintf('#%s\S*?\.(?:php\d*|inc)#i',$short_name);
+    foreach($this->getPaths() as $path){
+    
+      $iterator = $path->createIterator($regex);
+      foreach($iterator as $file){
+      
+        $rfile = new ReflectionFile($file->getPathname());
+        if($rfile->hasClass($class_name)){
+        
+          if($ret_bool = $this->req($class_name,$file_name,$file->getPathname())){
+        
+            break 2;
+            
+          }//if
+        
+        }//if
+      
+      }//foreach
+    
+    }//foreach
+    
+    return $ret_bool;
   
   }//method
   
   /**
    *  handle checking $file_name against all the default php include paths
    *  
-   *  @since  9-1-11   
+   *  @since  9-1-11
+   *  @param  string  $class_name the original looked for class name   
    *  @param  string  $file_name  the normalized class file name      
    *  @return boolean
    */ 
-  protected function handleIncludePaths($file_name){
+  protected function handleIncludePaths($class_name,$file_name){
   
     $ret_bool = false;
   
     // check include paths...  
     foreach($this->getIncludePaths() as $path){
     
-      if($classpath = $this->req($path,$file_name)){
-      
-        $this->class_map[$file_name] = $classpath;
-        $ret_bool = true;
-        break;
-    
-      }//if
+      if($ret_bool = $this->req($class_name,$file_name,$this->normalizePath($path,$file_name))){ break; }//if
     
     }//foreach
   
@@ -151,24 +198,19 @@ class StdAutoloader extends Autoloader implements Cacheable {
   /**
    *  handle checking $file_name against all the paths defined with {@link addPath()}
    *  
-   *  @since  9-1-11   
+   *  @since  9-1-11
+   *  @param  string  $class_name the original looked for class name   
    *  @param  string  $file_name  the normalized class file name      
    *  @return boolean
    */
-  protected function handlePaths($file_name){
+  protected function handlePaths($class_name,$file_name){
   
     $ret_bool = false;
   
     // check user defined paths...
     foreach($this->getPaths() as $path){
     
-      if($classpath = $this->req($path,$file_name)){
-    
-        $this->class_map[$file_name] = $classpath;
-        $ret_bool = true;
-        break;
-      
-      }//if
+      if($ret_bool = $this->req($class_name,$file_name,$this->normalizePath($path,$file_name))){ break; }//if
     
     }//foreach
     
@@ -180,10 +222,11 @@ class StdAutoloader extends Autoloader implements Cacheable {
    *  handle checking $file_name against the internal object cache
    *  
    *  @since  9-1-11
+   *  @param  string  $class_name the original looked for class name
    *  @param  string  $file_name  the normalized class file name      
    *  @return boolean
    */
-  protected function handleCache($file_name){
+  protected function handleCache($class_name,$file_name){
   
     $ret_bool = false;
   
@@ -209,28 +252,41 @@ class StdAutoloader extends Autoloader implements Cacheable {
   }//method
 
   /**
+   *  assemble the path
+   *     
+   *  @since  9-7-11
+   *  @param  string  $path the base path without a trailing slash
+   *  @param  string  $file_name  the file that will be appended to the path      
+   *  @return string  the full assembled path
+   */
+  protected function normalizePath($path,$file_name){
+  
+    return $path.DIRECTORY_SEPARATOR.$file_name;
+  
+  }//method
+
+  /**
    *  require the full path if it exists
    *     
    *  @since  7-22-11
-   *  @param  string  $path the base path without a trailing slash
-   *  @param  string  $file_name  the file that will be appended to the path      
-   *  @return string  the path that was required
+   *  @param  string  $file the file to require      
+   *  @return boolean true if file was required
    */
-  protected function req($path,$file_name){
+  protected function req($class_name,$file_name,$file){
 
-    $file = $path.DIRECTORY_SEPARATOR.$file_name;
+    $ret_bool = false;
 
     if(is_file($file)){
       
-      require($file);
+      $this->class_map[$file_name] = $file;
+      $this->export_cache = true;
       
-    }else{
+      require($file);
+      $ret_bool = true;
+      
+    }//if
     
-      $file = '';
-    
-    }//if/else
-    
-    return $file;
+    return $ret_bool;
 
   }//method
   
@@ -257,7 +313,6 @@ class StdAutoloader extends Autoloader implements Cacheable {
   public function setCache(\Montage\Cache\Cache $cache = null){
     
     $this->cache = $cache;
-    ///if($cache !== null){ $this->importCache(); }//if
     
   }//method
   
@@ -338,7 +393,7 @@ class StdAutoloader extends Autoloader implements Cacheable {
   
   public function __destruct(){
   
-    $this->exportCache();
+    if($this->export_cache){ $this->exportCache(); }//if
   
   }//method
 

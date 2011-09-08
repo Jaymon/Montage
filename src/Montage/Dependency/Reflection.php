@@ -69,6 +69,8 @@ class Reflection extends ObjectCache implements \Reflector {
   
   protected $reloaded = false;
   
+  protected $export_cache = false;
+  
   public static function export(){ return ''; }//method
   public function __toString(){ return spl_object_hash($this); }//method
 
@@ -140,7 +142,8 @@ class Reflection extends ObjectCache implements \Reflector {
       // cache result, this slows down the first request but converts other requests
       // from around ~7ms to .1ms
       $this->children_class_map[$key] = $ret_list;
-      $this->exportCache();
+      $this->export_cache = true; ///$this->exportCache();
+      
       
     }//if/else
     
@@ -223,7 +226,7 @@ class Reflection extends ObjectCache implements \Reflector {
             
             // write out cache...
             $this->class_map[$key]['class_found'] = $ret_str;
-            $this->exportCache(); 
+            $this->export_cache = true; ///$this->exportCache(); 
           
           }//if/else
         
@@ -267,7 +270,7 @@ class Reflection extends ObjectCache implements \Reflector {
   
     if($ret_count > 0){
     
-      $this->exportCache();
+      $this->export_cache = true; ///$this->exportCache();
       
     }//if
       
@@ -324,14 +327,14 @@ class Reflection extends ObjectCache implements \Reflector {
     }//foreach
 
     $this->path_map['folders'][(string)$path] = $subpath_count;
-    $this->exportCache();
+    $this->export_cache = true; ///$this->exportCache();
     return $ret_count;
   
   }//method
   
   /**
-   *  if the class was defined outside of any paths then use this method so this class
-   *  will know about it    
+   *  if the class was defined outside of any paths then use this method so allow 
+   *  this instance to know the class exists
    *
    *  @since  6-7-11
    *  @param  string  $class_name the class that this instance should know about
@@ -346,6 +349,43 @@ class Reflection extends ObjectCache implements \Reflector {
     }//if
     
     return $this->setClass($class_name,$path,$extend_list,$rclass->getInterfaceNames());
+  
+  }//method
+  
+  /**
+   *  add information about the class
+   *  
+   *  this information will be added to 'info' key of the class map that is available
+   *  through {@link getClass()}
+   *  
+   *  @since  9-7-11
+   *  @param  string  $class_name
+   *  @param  array $info_map the key/value info you want to add to the class $class_name
+   *  @return boolean
+   */
+  public function addClassInfo($class_name,array $info_map){
+  
+    $class_key = $this->normalizeClassName($class_name);
+    if(!isset($this->class_map[$class_key])){
+      $this->class_map[$class_key] = array();
+    }//if
+    
+    if(isset($this->class_map[$class_key]['info'])){
+    
+      $this->class_map[$class_key]['info'] = array_merge(
+        $this->class_map[$class_key]['info'],
+        $info_map
+      );
+    
+    }else{
+    
+      $this->class_map[$class_key]['info'] = $info_map;
+    
+    }//if/else
+    
+    $this->export_cache = true; ///$this->exportCache(); // update cache
+    
+    return true;
   
   }//method
   
@@ -669,6 +709,12 @@ class Reflection extends ObjectCache implements \Reflector {
     if($class_name[0] === '\\'){ $class_name = mb_substr($class_name,1); }//if
     
     return $class_name;
+  
+  }//method
+  
+  public function __destruct(){
+  
+    if($this->export_cache){ $this->exportCache(); }//if
   
   }//method
 

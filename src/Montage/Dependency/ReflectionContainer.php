@@ -193,6 +193,118 @@ class ReflectionContainer extends Container {
   }//method
   
   /**
+   *  override parent to cache method names and params into the {@link $inject_map}
+   * 
+   *  @since  9-7-11    
+   *  @see  parent::injectInstance()
+   */
+  protected function injectInstance($instance,\ReflectionFunctionAbstract $rmethod){
+  
+    $ret_bool = parent::injectInstance($instance,$rmethod);
+  
+    if($ret_bool){
+    
+      $method_name = $rmethod->getName();
+      $class_name = $this->getInjectClassName($rmethod);
+      $reflection = $this->getReflection();
+      $inject_map = array();
+      
+      if($this->isInjectMethod($rmethod)){
+      
+        $inject_map['inject'] = array();
+        $inject_map['inject'][$method_name] = $class_name;
+      
+      }else if($this->isSetMethod($rmethod)){
+      
+        $inject_map['set'] = array();
+        $inject_map['set'][$method_name] = $class_name;
+      
+      }//if/else if
+      
+      $class_map = $reflection->getClass(get_class($instance));
+      $info_map = array();
+      
+      // update the class info with the new info...
+      if(isset($class_map['info'])){ $info_map = $class_map['info']; }//if
+      if(!isset($info_map['inject_map'])){ $info_map['inject_map'] = array(); }//if
+      
+      foreach($inject_map as $type => $list){
+        
+        foreach($list as $mn => $mc){
+        
+          if(!isset($info_map['inject_map'][$type])){ $info_map['inject_map'][$type] = array(); }//if
+        
+          $info_map['inject_map'][$type][$mn] = $mc;
+          
+        }//foreach
+      
+      }//foreach
+    
+      $reflection->addClassInfo(get_class($instance),$info_map);
+    
+    }//if
+  
+    return $ret_bool;
+    
+  }//method
+  
+  /**
+   *  override parent to check cache before manually injecting dependencies
+   * 
+   *  @since  9-7-11
+   *  @see  parent::injectInstance()
+   */
+  protected function methodInjection($instance,\ReflectionClass $rclass = null){
+  
+    $reflection = $this->getReflection();
+    $class_map = $reflection->getClass(get_class($instance));
+    if(isset($class_map['info']['inject_map'])){
+    
+      $inject_map = $class_map['info']['inject_map'];
+    
+      try{
+        
+        if(isset($inject_map['inject'])){
+          
+          foreach($inject_map['inject'] as $method_name => $class_name){
+          
+            $instance->{$method_name}($this->getInstance($class_name));
+          
+          }//foreach
+          
+        }//if
+        
+        if(isset($inject_map['set'])){
+          
+          foreach($inject_map['set'] as $method_name => $class_name){
+          
+            if($this->hasInstance($class_name)){
+              
+              $instance->{$method_name}($this->getInstance($class_name));
+              
+            }//if
+          
+          }//foreach
+          
+        }//if
+        
+      }catch(\Exception $e){
+        // exceptions aren't fatal, just don't set the dependency
+      }//try/catch
+    
+      $ret = $instance;
+    
+    }else{
+    
+      $ret = parent::methodInjection($instance,$rclass);
+    
+    }//if/else
+  
+    return $ret;
+  
+  }//method
+  
+  /**
    *  reset the container to its virgin state
    *     
    *  @since  8-22-11         
