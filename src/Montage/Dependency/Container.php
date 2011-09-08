@@ -461,6 +461,47 @@ abstract class Container extends Field implements Containable {
   protected function getKey($class_name){ return mb_strtoupper($class_name); }//method
 
   /**
+   *  handle actually setting $class_name into $instance using $method_name
+   *
+   *  @since  9-8-11
+   *  @see  handleInjectMethod()   
+   */
+  protected function handleSetMethod($instance,$method_name,$class_name){
+  
+    if($this->hasInstance($class_name)){
+        
+      $this->handleInjectMethod($instance,$method_name,$class_name);
+      
+    }//if
+    
+    return $instance;
+
+  }//method
+  
+  /**
+   *  handle actually injecting $class_name into $instance using $method_name
+   *
+   *  @since  9-8-11
+   *  @param  object  $instance
+   *  @param  string  $method_name
+   *  @param  string  $class_name the class that $instance is dependent on
+   *  @return object  $instance         
+   */
+  protected function handleInjectMethod($instance,$method_name,$class_name){
+  
+    try{
+        
+      $instance->{$method_name}($this->getInstance($class_name));
+        
+    }catch(\Exception $e){
+      // exceptions aren't fatal, just don't set the dependency
+    }//try/catch
+
+    return $instance;
+
+  }//method
+  
+  /**
    *  true if the method is an inject type method
    *  
    *  inject type methods are of the form: injectXXXXX(ClassName $var)

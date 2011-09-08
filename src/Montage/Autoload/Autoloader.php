@@ -61,11 +61,16 @@ abstract class Autoloader implements Autoloadable {
       
     }//if
     
-    $ret_name = 
-      join(DIRECTORY_SEPARATOR,$namespace)
-      .DIRECTORY_SEPARATOR.
-      str_replace('_',DIRECTORY_SEPARATOR,$class_name)
-      .'.php';
+    $ret_name = str_replace('_',DIRECTORY_SEPARATOR,$class_name).'.php';
+    
+    if(!empty($namespace)){
+      
+      $ret_name = 
+        join(DIRECTORY_SEPARATOR,$namespace)
+        .DIRECTORY_SEPARATOR.
+        $ret_name;
+        
+    }//if/else
   
     return $ret_name;
   

@@ -56,7 +56,7 @@ class ReflectionContainer extends Container {
     
     if($reflection->hasClass($instance_name)){
     
-      $class_map = $reflection->getClass($instance_name);
+      $class_map = $reflection->getClassInfo($instance_name);
       $class_list = $class_map['dependencies'];
       $class_list[] = $instance_name;
     
@@ -154,7 +154,7 @@ class ReflectionContainer extends Container {
   protected function handleOnCreate($class_key,array $params){
   
     $reflection = $this->getReflection();
-    $class_map = $reflection->getClass($class_key);
+    $class_map = $reflection->getClassInfo($class_key);
     $cb_class_list = $class_map['dependencies'];
     $cb_class_list[] = $class_key;
     
@@ -179,7 +179,7 @@ class ReflectionContainer extends Container {
   protected function handleOnCreated($class_key,$instance){
     
     $reflection = $this->getReflection();
-    $class_map = $reflection->getClass($class_key);
+    $class_map = $reflection->getClassInfo($class_key);
     $cb_class_list = $class_map['dependencies'];
     $cb_class_list[] = $class_key;
     
@@ -221,7 +221,7 @@ class ReflectionContainer extends Container {
       
       }//if/else if
       
-      $class_map = $reflection->getClass(get_class($instance));
+      $class_map = $reflection->getClassInfo(get_class($instance));
       $info_map = array();
       
       // update the class info with the new info...
@@ -257,41 +257,31 @@ class ReflectionContainer extends Container {
   protected function methodInjection($instance,\ReflectionClass $rclass = null){
   
     $reflection = $this->getReflection();
-    $class_map = $reflection->getClass(get_class($instance));
+    $class_map = $reflection->getClassInfo(get_class($instance));
     if(isset($class_map['info']['inject_map'])){
     
       $inject_map = $class_map['info']['inject_map'];
-    
-      try{
+
+      if(isset($inject_map['inject'])){
         
-        if(isset($inject_map['inject'])){
-          
-          foreach($inject_map['inject'] as $method_name => $class_name){
-          
-            $instance->{$method_name}($this->getInstance($class_name));
-          
-          }//foreach
-          
-        }//if
+        foreach($inject_map['inject'] as $method_name => $class_name){
         
-        if(isset($inject_map['set'])){
-          
-          foreach($inject_map['set'] as $method_name => $class_name){
-          
-            if($this->hasInstance($class_name)){
-              
-              $instance->{$method_name}($this->getInstance($class_name));
-              
-            }//if
-          
-          }//foreach
-          
-        }//if
+          $this->handleInjectMethod($instance,$method_name,$class_name);
         
-      }catch(\Exception $e){
-        // exceptions aren't fatal, just don't set the dependency
-      }//try/catch
-    
+        }//foreach
+        
+      }//if
+      
+      if(isset($inject_map['set'])){
+        
+        foreach($inject_map['set'] as $method_name => $class_name){
+        
+          $this->handleSetMethod($instance,$method_name,$class_name);
+        
+        }//foreach
+        
+      }//if
+      
       $ret = $instance;
     
     }else{

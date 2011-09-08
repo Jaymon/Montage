@@ -183,7 +183,7 @@ class Reflection extends ObjectCache implements \Reflector {
     try{
     
       // first check cache...
-      $class_map = $this->getClass($class_name);
+      $class_map = $this->getClassInfo($class_name);
       $key = $class_map['key'];
       
       if(isset($class_map['class_found'])){
@@ -356,7 +356,7 @@ class Reflection extends ObjectCache implements \Reflector {
    *  add information about the class
    *  
    *  this information will be added to 'info' key of the class map that is available
-   *  through {@link getClass()}
+   *  through {@link getClassInfo()}
    *  
    *  @since  9-7-11
    *  @param  string  $class_name
@@ -413,12 +413,15 @@ class Reflection extends ObjectCache implements \Reflector {
   
   /**
    *  get the class info
+   *  
+   *  the class info is all the information about the class that this class has
+   *  accumulated         
    *
    *  @since  6-27-11
    *  @param  string  $class_name
    *  @return array         
    */
-  public function getClass($class_name){
+  public function getClassInfo($class_name){
   
     $class_key = $this->normalizeClassName($class_name);
     // canary...
@@ -428,7 +431,7 @@ class Reflection extends ObjectCache implements \Reflector {
     }//if
     if($this->isChangedClass($class_key)){
       $this->reload();
-      return $this->getClass($class_name);
+      return $this->getClassInfo($class_name);
     }//if
     
     return $this->class_map[$class_key];
@@ -645,6 +648,13 @@ class Reflection extends ObjectCache implements \Reflector {
     }//if
     
     $class_map['dependencies'] = $dependency_list;
+    
+    // respect any previous info added with {@link addClassInfo()}...
+    if(isset($this->class_map[$key])){
+    
+      $class_map = array_merge($this->class_map[$key],$class_map);
+    
+    }//if
     
     $this->class_map[$key] = $class_map;
     

@@ -189,6 +189,11 @@ class ReflectionFileTest extends FrameworkTestCase {
   
   }//method
   
+  /**
+   *  test ->hasClass()
+   *  
+   *  @since  9-7-11
+   */
   public function testHasClass(){
   
     $test_list = array();

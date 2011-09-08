@@ -19,11 +19,11 @@
  *  
  *  che/baz/Happy/Blah.php     
  *  
- *  @todo another thing that could be done is fallback to just searching for the classname
- *  (eg, calling filename()) and then getting and including any files that match just the class's
- *  short name. Then checking class_exists after each one, then if found, cache the result. 
+ *  I'm not sure that is needed anymore though because {@link handleScan()} does everything
+ *  that would allow with no input, and it's only slower the first time since it caches the
+ *  correct path    
  *  
- *  @version 0.3
+ *  @version 0.4
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 6-27-11
  *  @package montage
@@ -110,11 +110,7 @@ class StdAutoloader extends Autoloader implements Cacheable {
     // cache failed, so try to find the class...
     if($ret_bool === false){
     
-      $method_list = array(
-        'handlePaths', // check set internal instance paths using standardized naming conventions
-        'handleIncludePaths', // check set php include paths
-        'handleScan' // do a brute-force scan of all internal instance paths looking for the class
-      );
+      $method_list = $this->getHandleMethods();
       
       foreach($method_list as $method){
       
@@ -136,6 +132,10 @@ class StdAutoloader extends Autoloader implements Cacheable {
    *  
    *  this method is extremely slow and is a last resort      
    *  
+   *  my original notes: another thing that could be done is fallback to just search for the classname
+   *  (eg, calling filename()) and then getting and including any files that match just the class's
+   *  short name. Then checking class_exists after each one, then if found, cache the result.
+   *      
    *  @since  9-7-11
    *  @param  string  $class_name the original looked for class name   
    *  @param  string  $file_name  the normalized class file name      
@@ -147,6 +147,7 @@ class StdAutoloader extends Autoloader implements Cacheable {
     $class_bits = explode('\\',$class_name);
     $short_name = end($class_bits); // eg, for \foo\bar\baz return just baz
     
+    // search for ClassName*.php, so things like ClassName.class.php are also found...
     $regex = sprintf('#%s\S*?\.(?:php\d*|inc)#i',$short_name);
     foreach($this->getPaths() as $path){
     
@@ -187,7 +188,9 @@ class StdAutoloader extends Autoloader implements Cacheable {
     // check include paths...  
     foreach($this->getIncludePaths() as $path){
     
-      if($ret_bool = $this->req($class_name,$file_name,$this->normalizePath($path,$file_name))){ break; }//if
+      $file_path = $this->normalizePath($path,$file_name);
+    
+      if($ret_bool = $this->req($class_name,$file_name,$file_path)){ break; }//if
     
     }//foreach
   
@@ -269,19 +272,22 @@ class StdAutoloader extends Autoloader implements Cacheable {
    *  require the full path if it exists
    *     
    *  @since  7-22-11
-   *  @param  string  $file the file to require      
+   *  @param  string  $class_name the class name
+   *  @param  string  $file_name  the $class_name ran through {@link parent::normalizeClassName()}         
+   *  @param  string  $file_path  the full file path of the file that defines the class in $class_name
    *  @return boolean true if file was required
    */
-  protected function req($class_name,$file_name,$file){
+  protected function req($class_name,$file_name,$file_path){
 
     $ret_bool = false;
 
-    if(is_file($file)){
+    if(is_file($file_path)){
       
-      $this->class_map[$file_name] = $file;
+      // set cache stuff...
+      $this->class_map[$file_name] = $file_path;
       $this->export_cache = true;
       
-      require($file);
+      require($file_path);
       $ret_bool = true;
       
     }//if
@@ -302,6 +308,24 @@ class StdAutoloader extends Autoloader implements Cacheable {
   protected function getIncludePaths(){
   
     return explode(PATH_SEPARATOR,get_include_path());
+  
+  }//method
+  
+  /**
+   *  return the handle methods that will be used if {@link handleCache()} failed
+   *  
+   *  this is basically here to make it easier to be overridden
+   *  
+   *  @since  9-8-11
+   *  @return array
+   */
+  protected function getHandleMethods(){
+  
+    return array(
+      'handlePaths', // check set internal instance paths using standardized naming conventions
+      'handleIncludePaths', // check set php include paths
+      'handleScan' // do a brute-force scan of all internal instance paths looking for the class
+    );
   
   }//method
   
