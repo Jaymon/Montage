@@ -257,6 +257,38 @@ class Reflection extends ObjectCache implements \Reflector {
   }//method
   
   /**
+   *  get all the absolute child classes of $short_name
+   *  
+   *  a short name is a class name with no namespace:
+   *  
+   *  class name: \Foo\Bar\ShortName // ShortName is the $short_name      
+   *  
+   *  @since  9-12-11
+   *  @param  string  $short_name the class whose children you want
+   *  @return array a list of full class names that are children of $short_name
+   */
+  public function findShortNames($short_name){
+  
+    $ret_list = array();
+    $short_key = $this->normalizeClassName($short_name);
+    $regex = sprintf('#(?:\\\\|^)%s$#',$short_key);
+  
+    foreach($this->class_map as $key => $class_map){
+    
+      if(preg_match($regex,$key)){
+      
+        $ret_list = array_merge($ret_list,$this->findClassNames($key));
+      
+      }//if
+    
+    }//foreach
+    
+    $ret_list = array_unique($ret_list);
+    return $ret_list;
+  
+  }//method
+  
+  /**
    *  adds a file to be reflected (ie, get all class information from the file)
    *
    *  @since  6-14-11

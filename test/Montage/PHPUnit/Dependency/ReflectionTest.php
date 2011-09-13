@@ -16,6 +16,30 @@ namespace Montage\Test\PHPUnit {
     }//method
 
     /**
+     *  @since  9-12-11
+     */   
+    public function testFindShortNames(){
+    
+      $test_list = array();
+      $test_list[] = array(
+        'in' => array('z'),
+        'out' => array(
+          'Foo\Bar\xz',
+          'Foo\Bar\yz'
+        )
+      );
+      $test_list[] = array(
+        'in' => array('wz'),
+        'out' => array(
+          'Foo\Bar\wz'
+        )
+      );
+      
+      $this->assertCalls($this->instance,'findShortNames',$test_list);
+    
+    }//method
+
+    /**
      *  @since  6-20-11
      */
     public function testFindClassNames(){
@@ -76,6 +100,16 @@ namespace Montage\Test\PHPUnit {
     }//method
   
   }//class
+
+}//namespace
+
+namespace Foo\Bar {
+
+  class z {}//class
+  class xz extends z {}//class
+  class yz extends z {}//class
+  
+  class wz {}//class
 
 }//namespace
 
