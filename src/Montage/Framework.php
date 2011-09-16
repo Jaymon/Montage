@@ -573,28 +573,49 @@ class Framework extends Field implements Dependable,Eventable {
             $params = array();
             
           }//if
-          
-          // set any default values if they are available, if they were not previously set then
-          // pull from the request variables like $_GET and $_POST to populate the array values...
-          if($rparam->isDefaultValueAvailable()){
-          
-            $request = $this->getRequest();
-          
-            foreach($rparam->getDefaultValue() as $default_key => $default_val){
-            
-              if(!isset($rfunc_params[$index][$default_key])){
-              
-                $rfunc_params[$index][$default_key] = $request->getField($default_key,$default_val);
-              
-              }//if
-            
-            }//foreach
-
-          }//if
         
         }else{
+        
+          $raw_param = isset($params[$index]) ? $params[$index] : null;
+        
+          // filter the creation of the object...
+          if($rclass = $rparam->getClass()){
+          
+            // broadcast an event to give a chance to create the object instance...
+            $event = new Event(
+              'framework.filter.controller_param_create',
+              array(
+                'param' => $raw_param,
+                'reflection_param' => $rparam,
+                'container' => $container
+              )
+            );
+            $event = $this->broadcastEvent($event);
+            $filtered_param = $event->getField('param');
+          
+            // set the filtered param...
+            $params[$index] = $filtered_param;
+          
+          }//if
     
           $rfunc_params[$index] = $container->normalizeParam($rparam,$params);
+          
+          // filter the post-creation of the object...
+          if(is_object($rfunc_params[$index])){
+            
+            $event = new Event(
+              'framework.filter.controller_param_created',
+              array(
+                'instance' => $rfunc_params[$index],
+                'param' => $raw_param,
+                'reflection_param' => $rparam,
+                'container' => $container
+              )
+            );
+            $event = $this->broadcastEvent($event);
+            $rfunc_params[$index] = $event->getField('instance');
+            
+          }//if
           
         }//if/else
         
@@ -612,32 +633,6 @@ class Framework extends Field implements Dependable,Eventable {
         );
       
       }//try/catch
-
-      if(is_object($rfunc_params[$index])){
-      
-        // populate a form object if there are passed in values...
-        if($rfunc_params[$index] instanceof \Montage\Form\Form){
-      
-          $request = $this->getRequest();
-          $form_name = $rfunc_params[$index]->getName();
-
-          if($form_field_map = $request->getField($form_name)){
-          
-            $rfunc_params[$index]->set($form_field_map);
-          
-          }//if
-          
-          // set the current url...
-          if(!$rfunc_params[$index]->hasUrl()){
-          
-            $url = $container->getInstance('Montage\Url');
-            $rfunc_params[$index]->setUrl($url->getCurrent());
-          
-          }//if
-        
-        }//if
-      
-      }//if
     
       $count++;
     
