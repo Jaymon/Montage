@@ -23,13 +23,6 @@ class Select {
   protected $class_interface = '\Montage\Start\Startable';
   
   /**
-   *  if no method can be found then fallback to this method
-   *
-   *  @var  string   
-   */
-  protected $method_default = 'handle';
-  
-  /**
    *  holds the information about what classes exist in the system
    *
    *  @var  Reflection   
@@ -46,13 +39,6 @@ class Select {
     $this->reflection = $reflection;
   
   }//method
-  
-  /**
-   *  get the method that should be called when each class is instantiated
-   *  
-   *  @return string
-   */
-  public function getMethod(){ return $this->method_default; }//method
   
   /**
    *  find all the class names that should be instantiated

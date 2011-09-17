@@ -2,23 +2,30 @@
 /**
  *  all start classes should use this interface 
  *  
- *  any start class in Montage will call a method named handle(). This method is not
- *  defined in this interface because it is a magic method similar to the Controller
- *  handle* methods. Meaning you can pass in any objects you want to it (thus changing
- *  the signature, and making it impossible to be defined in an interface) and those
- *  objects will be automatically resolved and passed in for you.
+ *  this interface is the skeleton for the Framework's start classes, the start classes
+ *  are classes that handle framework/app configuration every time the app runs. The
+ *  {@link handle{)} method is called in the {@link Montage\Framework::handleStart()} method.
  *  
  *  @example
  *    class DevStart implements Montage\Start\Startable {
- *      public function handle(Foo $foo,Bar $bar){}//method  
+ *      public function handle(){}//method  
  *    }       
  *  
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 6-17-11
  *  @package montage
- *  @subpackage Start  
+ *  @subpackage Start
  ******************************************************************************/      
 namespace Montage\Start;
 
-interface Startable {}//interface
+interface Startable {
+
+  /**
+   *  handle the meat of the configuration 
+   *
+   *  @since  9-16-11
+   */
+  public function handle();
+
+}//interface

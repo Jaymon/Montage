@@ -13,7 +13,7 @@
  *  see: http://misko.hevery.com/2008/07/08/how-to-think-about-the-new-operator/ for how
  *  I'm wrong about this, but convenience trumps rightness in this instance for me  
  *   
- *  @version 0.7
+ *  @version 0.8
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 12-28-09
  *  @package montage 
@@ -320,7 +320,11 @@ class Framework extends Field implements Dependable,Eventable {
       
           if($response->hasTemplate()){
           
-            $template = $this->getTemplate($response);
+            $template = $this->getTemplate();
+            
+            // update template with response values...
+            $template->setTemplate($response->getTemplate());
+            $template->addFields($response->getFields());
           
           }else{
           
@@ -447,7 +451,6 @@ class Framework extends Field implements Dependable,Eventable {
     $this->broadcastEvent($event);
     
     $start_class_list = $select->find($env);
-    $method_name = $select->getMethod();
 
     foreach($start_class_list as $i => $class_name){
     
@@ -455,7 +458,7 @@ class Framework extends Field implements Dependable,Eventable {
       $this->broadcastEvent($event);
     
       $instance_list[$i] = $container->getInstance($class_name);
-      $container->callMethod($instance_list[$i],$method_name);
+      $container->callMethod($instance_list[$i],'handle');
       
     }//foreach
      
@@ -593,8 +596,12 @@ class Framework extends Field implements Dependable,Eventable {
             $event = $this->broadcastEvent($event);
             $filtered_param = $event->getField('param');
           
-            // set the filtered param...
-            $params[$index] = $filtered_param;
+            if($filtered_param !== null){
+            
+              // set the filtered param...
+              $params[$index] = $filtered_param;
+              
+            }//if
           
           }//if
     
@@ -895,7 +902,7 @@ class Framework extends Field implements Dependable,Eventable {
   public function broadcastEvent(Event $event){
   
     $dispatch = $this->getEventDispatch();
-    return $dispatch->broadcast($event);
+    return empty($dispatch) ? $event : $dispatch->broadcast($event);
   
   }//method
   
@@ -911,7 +918,7 @@ class Framework extends Field implements Dependable,Eventable {
     if(isset($this->instance_map['cache'])){ return $this->instance_map['cache']; }//if
   
     // create the caching object...
-    $cache = new PHPCache(); ///$cache = new Cache();
+    $cache = new PHPCache();
     $cache->setPath($this->getField('cache_path'));
     $cache->setNamespace($this->getField('env'));
     $this->instance_map['cache'] = $cache;
@@ -948,23 +955,12 @@ class Framework extends Field implements Dependable,Eventable {
    *  get the template object that corresponds to the template file found in $response
    *
    *  @since  7-7-11
-   *  @param  Montage\Response\Response $response
    *  @return Montage\Response\Template         
    */
-  protected function getTemplate(Response $response){
-  
-    // canary...
-    if(!$response->hasTemplate()){ return null; }//if
+  protected function getTemplate(){
     
     $container = $this->getContainer();
-    
-    $template = $container->getInstance('\Montage\Response\Template');
-    
-    // update template with response values...
-    $template->setTemplate($response->getTemplate());
-    $template->addFields($response->getFields());
-    
-    return $template;
+    return $container->getInstance('\Montage\Response\Template');
     
   }//method
   
@@ -1074,8 +1070,9 @@ class Framework extends Field implements Dependable,Eventable {
   /**
    *  return a list of files that need to be included
    *  
-   *  sometimes, things need to be inlcuded before all the autoloaders have been loaded, these
-   *  files will be loaded before the autoloaders
+   *  sometimes, things need to be included before all the autoloaders have been loaded 
+   *  (eg, you have extended the autoloader with a custom class), these files will be 
+   *  loaded before the autoloaders
    *  
    *  @since  7-19-11
    *  @see  handleDependencies()
@@ -1084,14 +1081,8 @@ class Framework extends Field implements Dependable,Eventable {
   protected function getIncludes(){
   
     $path_list = array();
-    /* $path_list[] = new Path(
-      $this->getField('framework_path'),'plugins','Symfony','vendor','ClassLoader','UniversalClassLoader.php'
-    ); */
-  
     return $path_list;
   
   }//method
   
-  ///public function __destruct(){ \out::h(); }//method
-
 }//method

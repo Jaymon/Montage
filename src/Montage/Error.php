@@ -3,7 +3,7 @@
 /**
  *  this class handles errors    
  *   
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 5-26-10
  *  @package montage 
@@ -91,6 +91,8 @@ class Error implements Eventable {
       $dispatch->broadcast($event);
     
     }//if
+    
+    return $event;
   
   }//method
   
@@ -106,26 +108,22 @@ class Error implements Eventable {
    *  @return boolean false to pass the error through, true to block it from the normal handler
    */        
   public function handleRuntime($errno,$errstr,$errfile,$errline){
-  
-    ///\out::b($this->getName($errno));
-    ///\out::e($errstr,$errfile,$errline);
-    ///\out::b();
-  
+
     // canary...
     if($errno === E_RECOVERABLE_ERROR){
       throw new \InvalidArgumentException($errstr,$errno);
     }//if
   
     $error_map = array();
+    $error_map['group'] = 'RUNTIME';
     $error_map['type'] = $errno;
     $error_map['message'] = $errstr;
     $error_map['file'] = $errfile;
     $error_map['line'] = $errline;
     $error_map['name'] = $this->getName($error_map['type']);
     
-    // broadcast the error to anyone that is listening...
-    $event = new Event('framework.error',$error_map);
-    $this->broadcastEvent($event);
+    
+    $this->handleError($error_map);
     
     // still pass the errors through, change to true if you want to block errors...
     return false;
@@ -147,12 +145,10 @@ class Error implements Eventable {
     
       if(!isset($this->ERRORS_RUNTIME[$error_map['type']])){
     
+        $error_map['group'] = 'FATAL';
         $error_map['name'] = $this->getName($error_map['type']);
+        $this->handleError($error_map);
       
-        // broadcast the error to anyone that is listening...
-        $event = new Event('framework.error',$error_map);
-        $this->broadcastEvent($event);
-        
       }//if
       
     }//if
@@ -172,18 +168,31 @@ class Error implements Eventable {
   public function handleException($e){
   
     $error_map = array();
+    $error_map['group'] = 'EXCEPTION';
     $error_map['type'] = $e->getCode();
     $error_map['message'] = $e->getMessage();
     $error_map['file'] = $e->getFile();
     $error_map['line'] = $e->getLine();
-    $error_map['name'] = 'EXCEPTION';
+    $error_map['name'] = get_class($e);
     $error_map['instance'] = $e;
-    
-    // broadcast the error to anyone that is listening...
-    ///montage::getEvent()->broadcast(montage_event::KEY_ERROR,$error_map);
+    $this->handleError($error_map);
     
     return true;
     
+  }//method
+  
+  /**
+   *  do whatever with the $error_map
+   *  
+   *  @since  9-16-11
+   *  @param  array $error_map  all the gathered info about the error
+   */
+  protected function handleError(array $error_map){
+  
+    // broadcast the error to anyone that is listening...
+    $event = new Event('framework.error',$error_map);
+    $this->broadcastEvent($event);
+  
   }//method
   
   /**

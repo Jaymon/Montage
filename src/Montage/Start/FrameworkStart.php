@@ -15,18 +15,8 @@
 namespace Montage\Start;
 
 use Montage\Start\Start;
-use Montage\Event\Eventable;
-use Montage\Event\Event;
 
-class FrameworkStart extends Start implements Eventable {
-
-  /**
-   *  the event dispatcher
-   *
-   *  @see  setDispatch(), getDispatch()
-   *  @var  Dispatch      
-   */
-  protected $dispatch = null;
+class FrameworkStart extends Start {
 
   /**
    *  normally start class takes a FrameworkConfig instance but we override parent::__construct()
@@ -129,7 +119,7 @@ class FrameworkStart extends Start implements Eventable {
       }
     );
     
-    // start the error handler if it hasn't been started...
+    // start/register the error handler if it hasn't been started...
     $container->getInstance('Montage\Error');
     
     // set some events...
@@ -138,13 +128,14 @@ class FrameworkStart extends Start implements Eventable {
     // allow form objects in the controller method to be populated with submitted values
     $dispatch->listen(
       'framework.filter.controller_param_created',
-      function(Event $event){
+      function(\Montage\Event\Event $event){
+      
+        $instance = $event->getField('instance');
       
         // canary...
         if(!($instance instanceof \Montage\Form\Form)){ return; }//if
       
         $container = $event->getField('container');
-        $instance = $event->getField('instance');
         $request = $container->getInstance('Montage\Request\Requestable');
         
         $form_name = $instance->getName();
@@ -167,42 +158,6 @@ class FrameworkStart extends Start implements Eventable {
         
       }
     );
-  
-  }//method
-
-  /**
-   *  make sure the dispatcher gets created and injected
-   *
-   *  @since  9-15-11
-   *  @see  setEventDispatch()      
-   */
-  public function injectEventDispatch(Dispatch $dispatch){ $this->setEventDispatch($dispatch); }//method
-
-  /**
-   *  get the event dispatcher
-   *
-   *  @Param  Dispatch  $dispatch   
-   */
-  public function setEventDispatch(Dispatch $dispatch){ $this->dispatch = $dispatch; }//method
-  
-  /**
-   *  get the event dispatcher
-   *
-   *  @return Dispatch   
-   */
-  public function getEventDispatch(){ return $this->dispatch; }//method
-  
-  /**
-   *  just to make it a little easier to broadcast the event, and to also be able to 
-   *  easily override event broadcast for this entire class
-   *  
-   *  @since  8-25-11            
-   *  @return Event
-   */
-  public function broadcastEvent(Event $event){
-  
-    $dispatch = $this->getEventDispatch();
-    return $dispatch->broadcast($event);
   
   }//method
 
