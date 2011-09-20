@@ -967,6 +967,10 @@ class Framework extends Field implements Dependable,Eventable {
   /**
    *  compile all the important framework paths
    *
+   *  @todo this could be cached by saving the lists and then pulling them in and
+   *  just seeing if the created path matches one in the list, that would save the is_file
+   *  checks      
+   *      
    *  @since  6-27-11
    */
   protected function compilePaths(){
@@ -976,9 +980,7 @@ class Framework extends Field implements Dependable,Eventable {
     if(empty($app_path)){
       throw new \UnexpectedValueException('->getField("app_path") failed');
     }//if
-    
-    ///$this->setField('app_path',$app_path);
-    
+
     $framework_path = new Path(__DIR__,'..','..');
     $this->setField('framework_path',$framework_path);
     
@@ -1062,9 +1064,9 @@ class Framework extends Field implements Dependable,Eventable {
     $this->setField('reflection_paths',$reflection_path_list);
     $this->setField('view_paths',$view_path_list);
     $this->setField('vendor_paths',$vendor_path_list);
-    $this->setField('assets_paths',$assets_path_list);
+    $this->setField('asset_paths',$assets_path_list);
     $this->setField('plugin_paths',$plugins_path_list);
-  
+
   }//method
   
   /**

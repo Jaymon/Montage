@@ -6,7 +6,9 @@
  *  and move them to the web/assets folder and keep them in memory, then there will be a 
  *  __toString method that will output the js and css at the top of page, so anything can
  *  be overriden, http assets can be added, etc.
- *   
+ *  
+ *  @link http://guides.rubyonrails.org/asset_pipeline.html
+ *  
  *  @version 0.3
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 2-28-10
@@ -24,6 +26,23 @@ class Assets {
    *  @var  array
    */
   protected $path_list = array();
+  
+  /**
+   *  holds where the paths in the {@link $path_list} will be moved to
+   *  
+   *  @since  9-19-11   
+   *  @see  setToPath()      
+   *  @var  Path
+   */
+  protected $to_path = null;
+
+  ///public function addCss($
+
+  public function setToPath($path){
+  
+    $this->to_path = $this->normalizePath($path);
+  
+  }//method
 
   /**
    *  if the class should check more than one place for the template, add the alternate
@@ -38,14 +57,7 @@ class Assets {
    */
   public function addPath($path){
   
-    // canary...
-    if(empty($path)){
-      throw new \UnexpectedValueException('$path is empty');
-    }//if
-    if(!($path instanceof Path)){
-      $path = new Path($path);
-    }//if
-  
+    $path = $this->normalizePath($path);
     $this->path_list[] = $path;
     return $this;
   
@@ -56,6 +68,26 @@ class Assets {
     foreach($path_list as $path){ $this->addPath($path); }//foreach
     
     return $this;
+  
+  }//method
+  
+  /**
+   *  normalize the passed in path
+   *
+   *  @param  string  $path
+   *  @return Path   
+   */
+  protected function normalizePath($path){
+  
+    // canary...
+    if(empty($path)){
+      throw new \UnexpectedValueException('$path is empty');
+    }//if
+    if(!($path instanceof Path)){
+      $path = new Path($path);
+    }//if
+    
+    return $path;
   
   }//method
   
