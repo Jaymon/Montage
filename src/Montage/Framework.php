@@ -984,9 +984,13 @@ class Framework extends Field implements Dependable,Eventable {
     $framework_path = new Path(__DIR__,'..','..');
     $this->setField('framework_path',$framework_path);
     
-    $path = new Path($app_path,'cache');
-    $path->assure();
-    $this->setField('cache_path',$path);
+    if(!$this->hasField('cache_path')){
+      
+      $path = new Path($app_path,'cache');
+      $path->assure();
+      $this->setField('cache_path',$path);
+      
+    }//if
     
     $reflection_path_list = array();
     $view_path_list = array();
@@ -997,7 +1001,8 @@ class Framework extends Field implements Dependable,Eventable {
     $path = new Path($framework_path,'src');
     $reflection_path_list[] = $path;
     
-    $reflection_path_list[] = new Path($app_path,'src');
+    $path = new Path($app_path,'src');
+    if($path->exists()){ $reflection_path_list[] = $path; }//if
     
     $path = new Path($app_path,'config');
     if($path->exists()){ $reflection_path_list[] = $path; }//if

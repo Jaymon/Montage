@@ -99,7 +99,7 @@ class Reflection extends ObjectCache implements \Reflector {
   }//method
   
   /**
-   *  get all the absolute child classes of $class_name
+   *  get all the absolute instantiable child classes of $class_name
    *  
    *  @since  6-20-11
    *  @param  string  $class_name the class whose children you want
@@ -133,7 +133,12 @@ class Reflection extends ObjectCache implements \Reflector {
         if(isset($this->class_map[$key])){
         
           $cn = $this->class_map[$key]['class'];
-          if(!in_array($cn,$ignore_list,true)){ $ret_list[] = $cn; }//if
+          if(!in_array($cn,$ignore_list,true)){
+            
+            // only include the class if it can actually be created...
+            if(!empty($this->class_map[$key]['callable'])){ $ret_list[] = $cn; }//if
+            
+          }//if
         
         }//if
       
@@ -375,12 +380,20 @@ class Reflection extends ObjectCache implements \Reflector {
   public function addClass($class_name){
   
     $rclass = new ReflectionClass($class_name);
+    $implement_list = $rclass->getInterfaceNames();
     $extend_list = array();
     if($rextend = $rclass->getParentClass()){
       $extend_list[] = $rextend->getName();
     }//if
     
-    return $this->setClass($class_name,$path,$extend_list,$rclass->getInterfaceNames());
+    $class_map = array(
+      'class' => $this->getClassName($class,$namespace,$use_map),
+      'extends' => $extend_list,
+      'implements' => $implement_list,
+      'callable' => $rclass->isInstantiable()
+    );
+    
+    return $this->setClass($class_name,$path,$class_map);
   
   }//method
   
@@ -627,7 +640,7 @@ class Reflection extends ObjectCache implements \Reflector {
     
     foreach($class_list as $class_map){
     
-      if($this->setClass($class_map['class'],$file,$class_map['extends'],$class_map['implements'])){
+      if($this->setClass($class_map['class'],$file,$class_map)){
         $ret_count++;
       }//if
     
@@ -638,10 +651,20 @@ class Reflection extends ObjectCache implements \Reflector {
   }//method
   
   /**
-   *
+   *  set the class into the instances class map
+   *  
+   *  this will set information about the class like dependencies, whether the class
+   *  can be created (ie, not abstract or interface)
+   *      
    *  @since  6-7-11
+   *  @param  string  $class_name the class name
+   *  @param  string  $class_file the path to the .php file where the class is defined
+   *  @param  array $class_info_map information about the map, keys could be: callable, extends, implements
+   *                                among others, the keys are similar to the keys returned from 
+   *                                {@link ReflectionFile::getClasses()}
+   *  @return boolean   
    */
-  protected function setClass($class_name,$class_file,array $extend_list = array(),array $implement_list = array()){
+  protected function setClass($class_name,$class_file,array $class_info_map){
   
     $class_map = array();
     $key = $this->normalizeClassName($class_name);
@@ -652,10 +675,12 @@ class Reflection extends ObjectCache implements \Reflector {
     $class_map['hash'] = md5_file($class_file);
     
     $class_map['path'] = $class_file;
+    $class_map['callable'] = !empty($class_info_map['callable']);
     
+    $extend_list = isset($class_info_map['extends']) ? $class_info_map['extends'] : array();
+    $implement_list = isset($class_info_map['implements']) ? $class_info_map['implements'] : array();
     $parent_list = array_merge($extend_list,$implement_list);
-    
-    $dependency_list = $parent_list;
+    $dependency_list = $parent_list; // will be added to
     
     // add class as child to all its parent classes...
     foreach($parent_list as $parent_class){
@@ -724,7 +749,7 @@ class Reflection extends ObjectCache implements \Reflector {
     
     // @todo  this is only one way, checking if the path is a Subpath of all the other
     // paths, but what if a child path has already been included (eg, foo/bar was 
-    // added and then foo was added)? I solved this by putthing a check in setFile(),
+    // added and then foo was added)? I solved this by putting a check in setFile(),
     // though that will slow the addPath() method quite a bit as every file needs to
     // be checked if it has a parent in the path list
     

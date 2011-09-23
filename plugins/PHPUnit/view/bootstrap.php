@@ -24,9 +24,6 @@ $framework->preHandle();
 // set the static instance that any children can use...
 \PHPUnit\FrameworkTestCase::setFramework($framework);
 
-// hack to get out debug class to load if it is available... 
-class_exists('out');
-
 // get rid of any variables so PHPUnit doesn't try to save them and add them to $GLOBALS... 
 unset($framework);
 unset($app_path);

@@ -59,6 +59,26 @@ abstract class TestCase extends PHPUnit_Framework_TestCase {
   }//method
   
   /**
+   *  get a path that is relative to the system's temp dir      
+   *
+   *  @since  9-21-11
+   *  @param  string  $path,... one or more path bits to append to the found path
+   *  @return string  the full path   
+   */        
+  protected function getTempPath($path = ''){
+  
+    $path_bits = func_get_args();
+  
+    // get the directory the class is located in...
+    $rclass = new \ReflectionClass($this);
+    $class_name = $rclass->getShortName();
+  
+    $ret_path = new Path(sys_get_temp_dir(),$class_name,$path_bits);
+    return (string)$ret_path;
+  
+  }//method
+  
+  /**
    *  I noticed that I was spending a lot of time setting tests like this up, so I thought
    *  I would abstract it away
    *  

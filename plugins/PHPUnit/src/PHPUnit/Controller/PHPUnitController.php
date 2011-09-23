@@ -306,12 +306,11 @@ class PHPUnitController extends CliController {
     
     $this->tmpl->setField('app_path',$this->framework_config->getAppPath());
     
-    ///$temp_file = tempnam(sys_get_temp_dir(),__CLASS__);
-    $temp_file = sys_get_temp_dir().'bootstrap.php';
+    $temp_file = new Path(sys_get_temp_dir(),'bootstrap.php');
     
     // write out the bootsrap to the temp file...
-    file_put_contents($temp_file,$this->tmpl->handle(Template::OUT_STR),LOCK_EX);
-  
+    $temp_file->set($this->tmpl->handle(Template::OUT_STR));
+    
     return $temp_file;
   
   }//metohd

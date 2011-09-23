@@ -2,7 +2,9 @@
 /**
  *  handles all path related issues
  *  
- *  @version 0.3
+ *  @link http://us2.php.net/splfileinfo
+ *  
+ *  @version 0.4
  *  @author Jay Marcyes
  *  @since 12-6-10
  *  @package montage
@@ -12,9 +14,8 @@ namespace Montage;
 use FilesystemIterator;
 use RecursiveIteratorIterator;
 use RecursiveDirectoryIterator;
+use CallbackFilterIterator;
 use RegexIterator;
-use InvalidArgumentException;
-use UnexpectedValueException;
 use Countable,IteratorAggregate;
 use SplFileInfo;
  
@@ -54,7 +55,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
   
     // make sure path isn't empty...
     if(empty($path)){
-      throw new InvalidArgumentException('cannot verify that an empty $path exists');
+      throw new \InvalidArgumentException('cannot verify that an empty $path exists');
     }//if
     
     $orig_umask = umask(0000);
@@ -62,7 +63,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     // make sure path is directory, try to create it if it isn't...
     
     if(!mkdir($path,0777,true)){
-      throw new UnexpectedValueException(
+      throw new \UnexpectedValueException(
         sprintf(
           '"%s" is not a valid directory and the attempt to create it failed. '
           .'Check permissions for every directory on the path to make sure that path '
@@ -122,12 +123,44 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
   }//method
   
   /**
+   *  find an adjacent/sibling file/folder from the internal path
+   *
+   *  @since  9-22-11
+   */           
+  public function getSibling($regex){
+  
+    $ret_path = null;
+    $parent_path = $this->normalize((string)$this);
+  
+    // keep moving up a directory looking for a child that matches the $regex...
+    while($parent_path = $parent_path->getParent()){
+    
+      if($path = $parent_path->getChild($regex)){
+      
+        $ret_path = $this->normalize($path);
+        break;
+      
+      }//if
+
+    }//while
+
+    return $ret_path;  
+  
+  }//method
+  
+  /**
    *  move up either one directory or until the directory that matches $folder_regex is found
    *
    *  @example
    *    // internal path: /foo/bar/baz/che
+   *    $this->isDir(); // true   
    *    $this->getParent('#bar#'); // /foo/bar
-   *    $this->getParent(); // /foo/bar/baz         
+   *    $this->getParent(); // /foo/bar/baz
+   *    
+   *    // internal path: /foo/bar/baz.che
+   *    $this->isFile(); // true
+   *    $this->getParent('#foo#'); // /foo/
+   *    $this->getParent(); // /foo/bar/
    *      
    *  @since  8-30-11
    *  @param  string  $folder_regex  a regex to match with a parent directory
@@ -141,13 +174,13 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     if(empty($folder_regex)){ // just move up one if not folder specified
       
       // slice off one if dir or 2 (filename and dirname if file)...
-      $slice_length = $this->isFile() ? -2 : -1;
+      ///$slice_length = $this->isFile() ? -2 : -1;
+      $slice_length = -1;
       $path_bits = array_slice($path_bits,0,-1); // get rid of the last 
       
       if(!empty($path_bits)){
         
-        $class_name = get_class($this);
-        $ret_path = new $class_name($path_bits);
+        $ret_path = $this->normalize($path_bits);
         
       }//if
     
@@ -324,7 +357,6 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
   protected function compare(array $path_list,$callback,$break_on = true){
   
     $ret_mixed = false;
-    $self = get_class($this);
   
     foreach($path_list as $path){
     
@@ -336,7 +368,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
         
         }else{
         
-          if(!($path instanceof $self)){ $path = new $self($path); }//if
+          $path = $this->normalize($path);
           $ret_mixed = $callback($this->getPathname(),$path);
         
         }//if/else
@@ -493,6 +525,143 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
   }//method
 
   /**
+   *  append $data to a file
+   *  
+   *  @since  9-22-11
+   *  @see  write()
+   */
+  public function append($data){ return $this->write($data,LOCK_EX | FILE_APPEND); }//method
+  
+  /**
+   *  write $data to a file
+   *  
+   *  @since  9-22-11
+   *  @see  write()
+   */
+  public function set($data){ return $this->write($data,LOCK_EX); }//method
+
+  /**
+   *  get the contents of file
+   *  
+   *  @since  9-22-11
+   *  @return string  the contents of the file
+   */
+  public function get(){
+    
+    // canary...
+    if($this->isDir()){
+      throw new \UnexpectedValueException(
+        sprintf('Use getChildren() to get the contents of a directory. Path: %s',$this)
+      );
+    }//if
+    
+    return file_get_contents($this);
+    
+  }//method
+
+  /**
+   *  split the path by the directory separators
+   *
+   *  @example
+   *    echo $this; // /foo/bar/baz/che
+   *    $bits = $this->split(); // $bits equals array('foo','bar','baz','che');
+   *      
+   *  @since  9-21-11
+   *  @return array a list of directory separators      
+   */
+  public function split(){ return preg_split('#\\/#',(string)$this); }//method
+
+  /**
+   *  gets a unique fingerprint for the instance
+   *  
+   *  @since  9-21-11
+   *  @return string
+   */
+  public function getFingerprint(){
+  
+    // canary...
+    if(!$this->isFile()){
+      throw new \UnexpectedValueException(
+        sprintf('You can only get the fingerprint of a valid file that exists. Path: %s',$this)
+      );
+    }//if
+    
+    return md5_file((string)$this);
+  
+  }//method
+  
+  /**
+   *  copy the contents from $path into this instance
+   *
+   *  @since  9-21-11
+   *  @param  string  $path
+   *  @return integer how many bytes were copied over      
+   */
+  public function copyFrom($path){
+  
+    // canary...
+    if($this->isDir()){
+      throw new \UnexpectedValueException(
+        sprintf('Cannot copy a file into a directory, path: %s',$this)
+      );
+    }//if
+  
+    $path = $this->normalize($path);
+    if(!$path->isFile()){
+      throw new \UnexpectedValueException(
+        sprintf('src path %s does not actually exist',$path)
+      );
+    }//if
+    
+    // make sure the full path of $this exists...
+    $basepath = $this->normalize($this->getPath());
+    $basepath->assure();
+    
+    return copy((string)$path,(string)$this);
+    
+  }//method
+
+  /**
+   *  get the part of path that is relative to the internal path
+   *  
+   *  @example
+   *    echo $this; // /foo/bar/
+   *    echo $path; // /foo/bar/baz/che
+   *    $this->getRelative($path); // baz/che               
+   *
+   *  @since  9-21-11
+   *  @param  string|self $path
+   *  @return string
+   */
+  public function getRelative($path){
+  
+    // canary...
+    if(empty($path)){ return null; }//if
+    
+    $path = $this->normalize($path);
+    $count = 0;
+    
+    $ret_str = str_replace((string)$this,'',(string)$path,$count);
+    
+    if($count > 0){
+    
+      if(($ret_str[0] === '\\') || ($ret_str[0] === '/')){
+      
+        $ret_str = mb_substr($ret_str,1);
+      
+      }//if
+    
+    }else{
+    
+      $ret_str = (string)$path;
+    
+    }//if/else
+    
+    return $ret_str;
+  
+  }//method
+
+  /**
    *  takes $path_1 and finds out where it starts in relation to $path_2, it then returns
    *  the rest of $path_1 that doesn't intersect with $path_2
    *  
@@ -506,11 +675,10 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
    *  @param  string  $path_2 the root path   
    *  @return array the remaining elements of $path_1 where it starts in relation to $path_2            
    */
-  /* public function getIntersection($path_2){
+  /* public function getIntersection($path){
   
     // canary...
-    if(empty($path_1)){ return array(); }//if
-    if(empty($path_2)){ return $path_1; }//if
+    if(empty($path)){ return ''; }//if
     
     // canary, split 'em if we have to...
     if(!is_array($path_1)){ $path_1 = preg_split('#\\/#u',$path_1); }//if
@@ -546,6 +714,25 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
    *  @return \Traversable
    */
   public function getIterator(){ return $this->createIterator(); }//method
+
+  /**
+   *  create an iterator to iterate through only the file children
+   *  
+   *  @since  9-20-11
+   *  @param  string  $regex
+   *  @param  integer $depth
+   *  @return \Traversable
+   */
+  public function createFileIterator($regex = '',$depth = -1){
+  
+    $iterator = $this->createIterator($regex,$depth);
+    return new CallbackFilterIterator(
+      $iterator,
+      function($current,$key,$iterator){ return $current->isFile(); }
+    );
+  
+  
+  }//method
 
   /**
    *  create an iterator to iterate through the children
@@ -629,11 +816,6 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
             $ret_list = array_merge($ret_list,$path_bit); // merge the bits into the final list
           }//if
           
-          ///$path_bit = trim((string)$path_bit,'\\/');
-          ///if(!empty($path_bit) && !ctype_space($path_bit)){
-          ///  $ret_list[] = $path_bit;
-          ///}//if
-          
         }//if/else
         
       }//if/else
@@ -682,6 +864,53 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     }//if
     
     return $path;
+  
+  }//method
+  
+  /**
+   *  make sure a string path is an instance of this class
+   *
+   *  @since  9-21-11
+   *  @param  string|array|self $path
+   *  @return self      
+   */
+  protected function normalize($path){
+  
+    // canary...
+    if($path instanceof self){ return $path; }//if
+  
+    $class_name = get_class($this);
+    return new $class_name($path);
+  
+  }//method
+  
+  /**
+   *  append $data to the file
+   *
+   *  @since  9-22-11
+   *  @param  string  $data
+   *  @param  integer $flags   
+   *  @return integer number of bytes written
+   */
+  protected function write($data,$flags = LOCK_EX){
+  
+    // canary...
+    if($this->isDir()){
+      throw new \UnexpectedValueException(
+        sprintf('You cannot write to a directory. Path: %s',$this)
+      );
+    }//if
+  
+    $ret_int = file_put_contents($this,$data,$flags);
+    if($ret_int === false){
+    
+      throw new \UnexpectedValueException(
+        sprintf('writing to path "%s" failed',$this)
+      );
+    
+    }//method
+  
+    return $ret_int;
   
   }//method
 

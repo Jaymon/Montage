@@ -3,7 +3,7 @@
  *  uses token_get_all() method to reflect on a file and return information about
  *  what classes the file contains 
  *
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 6-14-11
  *  @package montage
@@ -152,10 +152,40 @@ class ReflectionFile implements Reflector {
             
             break;
           
-          case T_CLASS:
+          case T_ABSTRACT:
+          
+            // only try and find a class if it is actually a class (could be a function)
+            // another way to do this would be to look behind from T_CLASS to see if there
+            // is a T_ABSTRACT token
+          
+            $ai = $i;
+            
+            // move from the abstract to the class token...
+            while($tokens[++$ai][0] !== T_CLASS){
+            
+              if($tokens[$ai][0] === T_FUNCTION){ break; }//if
+            
+            }//while
+          
+            if($tokens[$ai][0] === T_CLASS){
+            
+              list($i,$map) = $this->getClass($ai,$tokens,$namespace,$use_map,false);
+              $ret_list[] = $map;
+              
+            }//if
+          
+            break;
+          
           case T_INTERFACE:
+          
+            list($i,$map) = $this->getClass($i,$tokens,$namespace,$use_map,false);
+            $ret_list[] = $map;
+            
+            break;
+          
+          case T_CLASS:
 
-            list($i,$map) = $this->getClass($i,$tokens,$namespace,$use_map);
+            list($i,$map) = $this->getClass($i,$tokens,$namespace,$use_map,true);
             $ret_list[] = $map;
 
             break;
@@ -295,13 +325,14 @@ class ReflectionFile implements Reflector {
    *  @param  array $tokens all the tokens
    *  $param  string  $namespace  the namespace in current use
    *  @param  array $use_map  all the USE statements this namespace has
-   *  @return array the current $i and the found info   
+   *  @param  boolean $is_callable  true if the class can be created, false otherwise   
+   *  @return array the current $i and the found info
    */
-  protected function getClass($i,$tokens,$namespace,$use_map){
+  protected function getClass($i,$tokens,$namespace,$use_map,$is_callable = true){
   
     $class = '';
     $extends_list = $implements_list = array();
-  
+
     for($i = $i + 1; ($tokens[$i] !== '{') ;$i++){
 
       if(is_string($tokens[$i])){
@@ -351,7 +382,8 @@ class ReflectionFile implements Reflector {
     $ret_map = array(
       'class' => $this->getClassName($class,$namespace,$use_map),
       'extends' => $extends_list,
-      'implements' => $implements_list
+      'implements' => $implements_list,
+      'callable' => $is_callable
     );
   
     return array($i,$ret_map);

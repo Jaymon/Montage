@@ -14,7 +14,7 @@
  *  @since 2-28-10
  *  @package montage
  ******************************************************************************/
-namespace Montage;
+namespace Montage\Asset;
 
 use Montage\Path;
 
@@ -36,8 +36,6 @@ class Assets {
    */
   protected $to_path = null;
 
-  ///public function addCss($
-
   public function setToPath($path){
   
     $this->to_path = $this->normalizePath($path);
@@ -57,7 +55,49 @@ class Assets {
    */
   public function addPath($path){
   
+    // canary...
+    if(empty($this->to_path)){
+      throw new \UnexpectedValueException('your trying to add a path when there is no $to_path set');
+    }//if
+  
     $path = $this->normalizePath($path);
+    
+    foreach($path->createFileIterator() as $file){
+    
+      $relative_path = $path->getRelative($file);
+      $fingerprint = md5_file((string)$file);
+    
+      $relative_path_info = pathinfo($relative_path);
+      
+      $public_path = $relative_path_info['dirname']
+        .DIRECTORY_SEPARATOR.
+        $relative_path_info['filename']
+        .'-'.
+        $fingerprint;
+        
+      if(isset($relative_path_info['extension'])){
+      
+        $public_path .= '.'.$relative_path_info['extension'];
+      
+      }//if
+      
+      $public_path = new Path($this->to_path,$public_path);
+    
+      if(!$public_path->isFile()){
+      
+        // clear all old paths that might exist (just to keep the directory semi clear)...
+        $kill_path = $public_path->getParent();
+        $kill_path->clear(sprintf('#%s-[^\.]+#i',$relative_path_info['filename']));
+      
+        // copy the file to the new public location...
+        $public_path->copyFrom($file);
+      
+      }//if
+      
+      ///$this->setPath($relative_path,$public_path);
+      
+    }//foreach
+    
     $this->path_list[] = $path;
     return $this;
   

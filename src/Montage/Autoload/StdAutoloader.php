@@ -141,35 +141,25 @@ class StdAutoloader extends Autoloader implements Cacheable {
    *  @param  string  $file_name  the normalized class file name      
    *  @return boolean
    */
-  protected function handleScan($class_name,$file_name){
+  protected function handlePathScan($class_name,$file_name){
   
-    $ret_bool = false;
-    $class_bits = explode('\\',$class_name);
-    $short_name = end($class_bits); // eg, for \foo\bar\baz return just baz
-    
-    // search for ClassName*.php, so things like ClassName.class.php are also found...
-    $regex = sprintf('#%s\S*?\.(?:php\d*|inc)#i',$short_name);
-    foreach($this->getPaths() as $path){
-    
-      $iterator = $path->createIterator($regex);
-      foreach($iterator as $file){
-      
-        $rfile = new ReflectionFile($file->getPathname());
-        if($rfile->hasClass($class_name)){
-        
-          if($ret_bool = $this->req($class_name,$file_name,$file->getPathname())){
-        
-            break 2;
-            
-          }//if
-        
-        }//if
-      
-      }//foreach
-    
-    }//foreach
-    
-    return $ret_bool;
+    return $this->scanReq($class_name,$file_name,$this->getPaths());
+  
+  }//method
+  
+  /**
+   *  does a brute for search of all the include file paths looking for the class
+   *  
+   *  this method is extremely slow and is a last last resort      
+   *  
+   *  @since  9-20-11
+   *  @param  string  $class_name the original looked for class name   
+   *  @param  string  $file_name  the normalized class file name      
+   *  @return boolean
+   */
+  protected function handleIncludePathScan($class_name,$file_name){
+  
+    return $this->scanReq($class_name,$file_name,$this->getIncludePaths());
   
   }//method
   
@@ -297,6 +287,49 @@ class StdAutoloader extends Autoloader implements Cacheable {
   }//method
   
   /**
+   *  check $class_name in all the $path_list
+   *  
+   *  @since  9-20-11
+   *  @param  string  $class_name the original looked for class name   
+   *  @param  string  $file_name  the normalized class file name
+   *  @param  array $path_list  a list of paths
+   *  @return boolean
+   */
+  protected function scanReq($class_name,$file_name,array $path_list){
+  
+    $ret_bool = false;
+    $class_bits = explode('\\',$class_name);
+    $short_name = end($class_bits); // eg, for \foo\bar\baz return just baz
+    
+    // search for ClassName*.php, so things like ClassName.class.php are also found...
+    $regex = sprintf('#%s\S*?\.(?:php\d*|inc)#i',$short_name);
+    foreach($path_list as $path){
+    
+      if(!($path instanceof Path)){ $path = new Path($path); }//if
+    
+      $iterator = $path->createIterator($regex);
+      foreach($iterator as $file){
+      
+        $rfile = new ReflectionFile($file->getPathname());
+        if($rfile->hasClass($class_name)){
+        
+          if($ret_bool = $this->req($class_name,$file_name,$file->getPathname())){
+        
+            break 2;
+            
+          }//if
+        
+        }//if
+      
+      }//foreach
+    
+    }//foreach
+    
+    return $ret_bool;
+  
+  }//method
+  
+  /**
    *  get all the global application defined included paths
    *  
    *  I originally cached this, but that didn't allow future additions to the include path after the
@@ -324,7 +357,8 @@ class StdAutoloader extends Autoloader implements Cacheable {
     return array(
       'handlePaths', // check set internal instance paths using standardized naming conventions
       'handleIncludePaths', // check set php include paths
-      'handleScan' // do a brute-force scan of all internal instance paths looking for the class
+      'handlePathScan', // do a brute-force scan of all internal instance paths looking for the class
+      'handleIncludePathScan' // do a brute-force of include paths (super super slow)
     );
   
   }//method

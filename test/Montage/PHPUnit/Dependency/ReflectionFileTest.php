@@ -26,6 +26,68 @@ class ReflectionFileTest extends FrameworkTestCase {
     $test_list = array();
     $test_list[] = array(
       'in' => '<'.'?php
+        abstract class Foo extends Bar implements Che {}
+        ',
+      'out' => array(
+        0 => array(
+          'class' => '\Foo',
+          'extends' => array('\Bar'),
+          'implements' => array('\Che'),
+          'callable' => false
+        )
+      )
+    );
+    $test_list[] = array(
+      'in' => '<'.'?php
+        abstract class Foo extends Bar implements Che {
+        
+          abstract public function goo(){}
+        
+        }
+        ',
+      'out' => array(
+        0 => array(
+          'class' => '\Foo',
+          'extends' => array('\Bar'),
+          'implements' => array('\Che'),
+          'callable' => false
+        )
+      )
+    );
+    $test_list[] = array(
+      'in' => '<'.'?php
+        abstract public function foo(){}
+        ',
+      'out' => array()
+    );
+    $test_list[] = array(
+      'in' => '<'.'?php
+        interface Foo {}
+        ',
+      'out' => array(
+        0 => array(
+          'class' => '\Foo',
+          'extends' => array(),
+          'implements' => array(),
+          'callable' => false
+        )
+      )
+    );
+    $test_list[] = array(
+      'in' => '<'.'?php
+        interface Foo extends Bar {}
+        ',
+      'out' => array(
+        0 => array(
+          'class' => '\Foo',
+          'extends' => array('\Bar'),
+          'implements' => array(),
+          'callable' => false
+        )
+      )
+    );
+    $test_list[] = array(
+      'in' => '<'.'?php
         namespace Mingo;
 
         use Montage\AutoLoad\AutoLoadable;
@@ -37,7 +99,8 @@ class ReflectionFileTest extends FrameworkTestCase {
         0 => array(
           'class' => '\Mingo\AutoLoader',
           'extends' => array('\MingoAutoload'),
-          'implements' => array('\Montage\AutoLoad\AutoLoadable')
+          'implements' => array('\Montage\AutoLoad\AutoLoadable'),
+          'callable' => true
         )
       )
     );
@@ -56,7 +119,8 @@ class ReflectionFileTest extends FrameworkTestCase {
         0 => array(
           'class' => '\happy',
           'extends' => array('\StdObject'),
-          'implements' => array()
+          'implements' => array(),
+          'callable' => true
         )
       )
     );
@@ -81,12 +145,14 @@ class ReflectionFileTest extends FrameworkTestCase {
         0 => array(
           'class' => '\foo\foo',
           'extends' => array('\bang\boom\pow','\foo\che\bar'),
-          'implements' => array()
+          'implements' => array(),
+          'callable' => true
         ),
         1 => array(
           'class' => '\bar\bar',
           'extends' => array(),
-          'implements' => array('\Serializable','\Countable')
+          'implements' => array('\Serializable','\Countable'),
+          'callable' => true
         )
       )
     );
@@ -100,7 +166,8 @@ class ReflectionFileTest extends FrameworkTestCase {
         0 => array(
           'class' => '\foo',
           'extends' => array('\bang\boom\pow','\che\bar'),
-          'implements' => array()
+          'implements' => array(),
+          'callable' => true
         )
       )
     );
@@ -114,7 +181,8 @@ class ReflectionFileTest extends FrameworkTestCase {
         0 => array(
           'class' => '\foo',
           'extends' => array('\bang\boom\pow'),
-          'implements' => array()
+          'implements' => array(),
+          'callable' => true
         )
       )
     );
@@ -128,7 +196,8 @@ class ReflectionFileTest extends FrameworkTestCase {
         0 => array(
           'class' => '\foo',
           'extends' => array('\che\bar'),
-          'implements' => array()
+          'implements' => array(),
+          'callable' => true
         )
       )
     );
@@ -142,7 +211,8 @@ class ReflectionFileTest extends FrameworkTestCase {
         0 => array(
           'class' => '\foo',
           'extends' => array('\che\bar'),
-          'implements' => array()
+          'implements' => array(),
+          'callable' => true
         )
       )
     );
@@ -154,7 +224,8 @@ class ReflectionFileTest extends FrameworkTestCase {
         0 => array(
           'class' => '\foo',
           'extends' => array('\bar'),
-          'implements' => array()
+          'implements' => array(),
+          'callable' => true
         )
       )
     );
@@ -172,7 +243,8 @@ class ReflectionFileTest extends FrameworkTestCase {
         0 => array(
           'class' => '\happy\Bar',
           'extends' => array('\Montage\Path'),
-          'implements' => array('\Countable')
+          'implements' => array('\Countable'),
+          'callable' => true
         )
       )
     );
