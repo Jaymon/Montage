@@ -255,7 +255,7 @@ class Framework extends Field implements Dependable,Eventable {
   protected function handleResponse($controller_response = null){
   
     $container = $this->getContainer();
-    $template = null;
+    $use_template = false;
     $response = $this->getResponse();
   
     $event = new Event(
@@ -277,7 +277,7 @@ class Framework extends Field implements Dependable,Eventable {
     
     }else if(is_array($controller_response)){
     
-      $event = new InfoEvent('Controller Response was an array, so returning that as json');
+      $event = new InfoEvent('Controller Response was an array, returning json');
       $this->broadcastEvent($event);
     
       $response->setContentType(Response::CONTENT_JSON);
@@ -287,7 +287,7 @@ class Framework extends Field implements Dependable,Eventable {
     
       if(method_exists($controller_response,'__toString')){
       
-        $event = new InfoEvent('Controller Response was an object, returning __toString() value');
+        $event = new InfoEvent('Controller Response was an object, returning __toString()');
         $this->broadcastEvent($event);
       
         $response->setContent((string)$controller_response);
@@ -296,7 +296,7 @@ class Framework extends Field implements Dependable,Eventable {
       
         throw new \RuntimeException(
           sprintf(
-            'Controller returned an "%s" instance, which has no __toString()',
+            'Controller returned an "%s" instance which has no __toString()',
             get_class($controller_response)
           )
         );
@@ -313,6 +313,7 @@ class Framework extends Field implements Dependable,Eventable {
       
         $response->killTemplate();
         $response->setContent('');
+        $use_template = false;
       
       }else{
       
@@ -320,11 +321,7 @@ class Framework extends Field implements Dependable,Eventable {
       
           if($response->hasTemplate()){
           
-            $template = $this->getTemplate();
-            
-            // update template with response values...
-            $template->setTemplate($response->getTemplate());
-            $template->addFields($response->getFields());
+            $use_template = true;
           
           }else{
           
@@ -345,26 +342,43 @@ class Framework extends Field implements Dependable,Eventable {
     
     $response->send(); // send headers and content
     
-    if(!empty($template)){
-    
-      $event = new Event(
-        'framework.filter_template',
-        array(
-          'template' => $template
-        )
-      );
-      $event = $this->broadcastEvent($event);
-      
-      $event = new InfoEvent(sprintf('Using template: %s',$template->getTemplate()));
-      $this->broadcastEvent($event);
-      
-      // output the template response to the screen...
-      $template->handle(Template::OUT_STD);
-      
-    }//if
+    // handle outputting using the template...
+    if($use_template){ $this->handleTemplate(); }//if
     
     return $response;
   
+  }//method
+  
+  /**
+   *  handle the template portion of the response
+   *  
+   *  @note this method will echo to the user
+   *  
+   *  @since  9-23-11
+   */
+  protected function handleTemplate(){
+  
+    $response = $this->getResponse();
+    $template = $this->getTemplate();
+  
+    // update template with response values...
+    $template->setTemplate($response->getTemplate());
+    $template->addFields($response->getFields());
+  
+    $event = new Event(
+      'framework.filter_template',
+      array(
+        'template' => $template
+      )
+    );
+    $event = $this->broadcastEvent($event);
+    
+    $event = new InfoEvent(sprintf('Using template: %s',$template->getTemplate()));
+    $this->broadcastEvent($event);
+    
+    // output the template response to the screen...
+    $template->handle(Template::OUT_STD);
+
   }//method
 
   /**

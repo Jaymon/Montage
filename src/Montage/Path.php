@@ -3,6 +3,7 @@
  *  handles all path related issues
  *  
  *  @link http://us2.php.net/splfileinfo
+ *  @link http://us2.php.net/manual/en/class.splfileobject.php 
  *  
  *  @version 0.4
  *  @author Jay Marcyes
@@ -622,11 +623,11 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
   }//method
 
   /**
-   *  get the part of path that is relative to the internal path
+   *  get the part of internal path that is relative to the passed in path
    *  
    *  @example
-   *    echo $this; // /foo/bar/
-   *    echo $path; // /foo/bar/baz/che
+   *    echo $this; // /foo/bar/baz/che
+   *    echo $path; // /foo/bar/
    *    $this->getRelative($path); // baz/che               
    *
    *  @since  9-21-11
@@ -641,7 +642,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     $path = $this->normalize($path);
     $count = 0;
     
-    $ret_str = str_replace((string)$this,'',(string)$path,$count);
+    $ret_str = str_replace((string)$path,'',(string)$this,$count);
     
     if($count > 0){
     
@@ -653,7 +654,9 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     
     }else{
     
-      $ret_str = (string)$path;
+      throw new \UnexpectedValueException(
+        sprint('The internal path %s is not relative to %s',$this,$path)
+      );
     
     }//if/else
     

@@ -11,11 +11,11 @@ class AssetsTest extends FrameworkTestCase {
    */
   public function testAddPath(){
     
-    $path = $this->getFixturePath('Asset');
-    $to_path = $this->getTempPath('Asset');
+    $src_path = $this->getFixturePath('Asset');
+    $dest_path = $this->getTempPath('Asset');
     
-    \out::e($to_path);
-    \out::e($path);
+    \out::e($dest_path);
+    \out::e($src_path);
     
     $assets = new Assets();
     $assets->setToPath($to_path);
