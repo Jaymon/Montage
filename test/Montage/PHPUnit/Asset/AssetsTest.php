@@ -18,9 +18,10 @@ class AssetsTest extends FrameworkTestCase {
     \out::e($src_path);
     
     $assets = new Assets();
-    $assets->setToPath($to_path);
+    $assets->setSrcPaths(array($src_path));
+    $assets->setDestPath($dest_path,'assets');
     
-    $assets->addPath($path);
+    $assets->handle();
   
   }//method
 

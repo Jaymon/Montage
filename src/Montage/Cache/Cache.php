@@ -79,15 +79,9 @@ class Cache {
   public function set($key,$val){
     
     $path = $this->getPath($key);
-
-    $bytes = file_put_contents(
-      $path,
-      $this->encodeStr($val),
-      LOCK_EX
-    );
-    
+    $bytes = $path->set($this->encodeStr($val));
     return $bytes;
-  
+    
   }//method
   
   /**
@@ -99,7 +93,7 @@ class Cache {
   public function get($key){
   
     $path = $this->getPath($key);
-    return $path->exists() ? $this->decodeStr(file_get_contents($path)) : null;
+    return $path->exists() ? $this->decodeStr($path->get()) : null;
     
   }//method
   

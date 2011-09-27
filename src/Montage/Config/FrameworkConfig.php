@@ -61,6 +61,15 @@ class FrameworkConfig extends Config {
   public function getAppPath(){ return $this->getField('app_path',''); }//method
   
   /**
+   *  get the public path
+   *  
+   *  the public path is the path where the index.php would be      
+   *
+   *  @return string   
+   */
+  public function getPublicPath(){ return new Path($this->getField('app_path'),'public'); }//method
+  
+  /**
    *  get the application's data path
    *  
    *  tha data path is where application data should go      

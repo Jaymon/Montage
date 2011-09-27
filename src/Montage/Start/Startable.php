@@ -22,7 +22,7 @@ namespace Montage\Start;
 interface Startable {
 
   /**
-   *  handle the meat of the configuration 
+   *  handle the meat of the framework starting up
    *
    *  @since  9-16-11
    */

@@ -364,6 +364,8 @@ class Framework extends Field implements Dependable,Eventable {
     // update template with response values...
     $template->setTemplate($response->getTemplate());
     $template->addFields($response->getFields());
+    
+    $this->handleAssets();
   
     $event = new Event(
       'framework.filter_template',
@@ -379,6 +381,55 @@ class Framework extends Field implements Dependable,Eventable {
     // output the template response to the screen...
     $template->handle(Template::OUT_STD);
 
+  }//method
+  
+  protected function handleAssets(){
+  
+    // canary...
+    if(!$this->hasField('asset_paths')){ return; }//if
+  
+    $instance_list = array();
+    $container = $this->getContainer();
+    $config = $this->getConfig();
+    
+    $public_path = $config->getPublicPath();
+    $asset_path_list = $this->getField('asset_paths',array());
+    
+    ///$public_path = new Path($config->getPublicPath(),'assets');
+    
+    // create the assets selector...
+    $select = $container->getInstance('\Montage\Asset\Select');
+    
+    $class_list = $select->find();
+    foreach($class_list as $i => $class_name){
+    
+      $instance_list[$class_name] = $container->getInstance($class_name);
+      $instance_list[$class_name]->setDestPath($public_path,'assets');
+      
+      
+      // remove asset paths that are taken care of by the instance...
+      $src_asset_path_list = $instance_list[$class_name]->getSrcPaths();
+      foreach($asset_path_list as $asset_i => $asset_path){
+      
+        if($asset_path->isParent($src_asset_path_list)){
+        
+          unset($asset_path_list[$asset_i]);
+        
+        }//if
+      
+      }//foreach
+      
+      
+      ///$instance_list[$i]->handle();
+      
+    }//foreach */
+    
+    \out::e($asset_path_list);
+  
+  
+    $template = $this->getTemplate();
+  
+  
   }//method
 
   /**
@@ -472,7 +523,7 @@ class Framework extends Field implements Dependable,Eventable {
       $this->broadcastEvent($event);
     
       $instance_list[$i] = $container->getInstance($class_name);
-      $container->callMethod($instance_list[$i],'handle');
+      $instance_list[$i]->handle();
       
     }//foreach
      
@@ -975,6 +1026,19 @@ class Framework extends Field implements Dependable,Eventable {
     
     $container = $this->getContainer();
     return $container->getInstance('\Montage\Response\Template');
+    
+  }//method
+  
+  /**
+   *  return the framework config
+   *  
+   *  @since  9-26-11      
+   *  @return Montage\Config\FrameworkConfig
+   */
+  protected function getConfig(){
+    
+    $container = $this->getContainer();
+    return $container->getInstance('\Montage\Config\frameworkConfig');
     
   }//method
   

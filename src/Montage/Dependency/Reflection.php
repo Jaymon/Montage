@@ -674,7 +674,7 @@ class Reflection extends ObjectCache implements \Reflector {
     ///$class_map['last_modified'] = filemtime($class_file); // use MD5 instead?
     $class_map['hash'] = md5_file($class_file);
     
-    $class_map['path'] = $class_file;
+    $class_map['path'] = (string)$class_file;
     $class_map['callable'] = !empty($class_info_map['callable']);
     
     $extend_list = isset($class_info_map['extends']) ? $class_info_map['extends'] : array();

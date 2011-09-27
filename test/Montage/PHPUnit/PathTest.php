@@ -8,6 +8,57 @@ use Montage\Path;
 class PathTest extends TestCase {
 
   /**
+   *  a Path instance will try and create the parent folder structure before writing
+   *  the contents of the file if the parent folders don't already exist   
+   *
+   *  @since  9-26-11
+   */
+  public function testFolderAutoCreationWhenWriting(){
+  
+    $path_str = (string)$this->getTempPath(md5(microtime(true)),md5(microtime(true)),'test.txt');
+    
+    $set_path_txt = 'this is the string';
+    
+    $set_path = new Path($path_str);
+    $set_path->set($set_path_txt);
+  
+    $get_path = new Path($path_str);
+    $get_path_txt = $get_path->get();
+    
+    $this->assertSame($set_path_txt,$get_path_txt);
+    
+  }//method
+
+  public function testPathStuff(){
+
+    ///$path = new Path('E:\Projects\sandbox\montage\_active\test\fixtures\Path');
+    $path = new Path('E:\Projects\sandbox\montage\_active\test\fixtures\Path\che.txt');
+    
+    foreach($path as $p){
+    
+      \out::e($p);
+    
+    }//foreach
+    
+    return;
+    
+    \out::b();
+    
+    \out::p('iterate');
+    
+    foreach($path->createIterator() as $p){
+    
+      \out::e($p->getFilename());
+      \out::e($p->getBasename());
+    
+    }//foreach
+  
+    \out::p();
+  
+  }//method
+
+
+  /**
    *  make sure ->getParent() works
    *
    *  @since  8-30-11   

@@ -26,15 +26,25 @@ use Montage\Event\Dispatch;
 
 abstract class Start extends Field implements Startable, Dependable, Eventable {
 
+  /**
+   *  the framework configuration object
+   *  
+   *  @var  Montage\Config\FrameworkConfig
+   */
   protected $framework_config = null;
 
+  /**
+   *  the dependency injection container
+   *  
+   *  @var  Montage\Dependency\Containable
+   */
   protected $container = null;
   
   /**
    *  the event dispatcher
    *
    *  @see  setDispatch(), getDispatch()
-   *  @var  Dispatch      
+   *  @var  Montage\Event\Dispatch      
    */
   protected $dispatch = null;
 

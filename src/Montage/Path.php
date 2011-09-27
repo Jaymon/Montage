@@ -34,10 +34,89 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
   public function __construct($path){
   
     $path = func_get_args();
-    $path = $this->build($path);
-    $path = $this->format($path);
+    
+    if(!isset($path[1]) && ($path[0] instanceof self)){
+    
+      $path = $path[0]->getPathname();
+    
+    }else{
+      
+      $path = $this->build($path);
+      $path = $this->format($path);
+      
+    }//if/else
+    
+    // make sure this class is always used...
+    $this->setInfoClass(get_class($this));
     
     parent::__construct($path);
+  
+  }//method
+
+  /**
+   *  overrides the parent to be more like how I assumed it would be
+   *  
+   *  if the path doesn't exist then use the {@link getParent()} method to get the above
+   *  path.
+   *  
+   *  @since  9-26-11
+   *  @param  string  $class_name the class to use
+   *  @return self
+   */
+  /* public function getPathInfo($class_name = ''){
+  
+    $ret_path = null;
+  
+    if($this->exists()){
+    
+      $ret_path = parent::getPathInfo($class_name);
+    
+    }else{
+    
+      if($ret_path = $this->getParent()){
+      
+        if(!empty($class_name)){
+    
+          $ret_path = new $class_name($ret_path);
+    
+        }//if
+      
+      }//if
+    
+    }//if/else
+  
+    return $ret_path;
+  
+  }//method */
+
+  /**
+   *  overrides {@link parent::getFilename()} to mimic {@link pathinfo()}
+   *  
+   *  @example
+   *    echo $this; // foo/bar.che
+   *    echo $this->getFilename(); // bar      
+   *      
+   *  @since  9-24-11
+   *  @return string  the filename of the file without an extension
+   */        
+  public function getFilename(){
+  
+    return pathinfo($this,PATHINFO_FILENAME);
+  
+  }//method
+  
+  /**
+   *  get the extension of the file
+   *  
+   *  this method exists as of php >= 5.3.6 but I need it now
+   *  http://us2.php.net/manual/en/splfileinfo.getextension.php
+   *  
+   *  @since  9-26-11
+   *  @return string
+   */
+  public function getExtension(){
+  
+    return pathinfo($this,PATHINFO_EXTENSION);
   
   }//method
 
@@ -128,7 +207,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
    *
    *  @since  9-22-11
    */           
-  public function getSibling($regex){
+  public function getSibling($regex,$depth = -1){
   
     $ret_path = null;
     $parent_path = $this->normalize((string)$this);
@@ -136,7 +215,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     // keep moving up a directory looking for a child that matches the $regex...
     while($parent_path = $parent_path->getParent()){
     
-      if($path = $parent_path->getChild($regex)){
+      if($path = $parent_path->getChild($regex,$depth)){
       
         $ret_path = $this->normalize($path);
         break;
@@ -173,7 +252,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     $path_bits = explode(DIRECTORY_SEPARATOR,(string)$this);
   
     if(empty($folder_regex)){ // just move up one if not folder specified
-      
+
       // slice off one if dir or 2 (filename and dirname if file)...
       ///$slice_length = $this->isFile() ? -2 : -1;
       $slice_length = -1;
@@ -262,6 +341,20 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     
     return $this->compare($path_list,$callback,false);
     
+  }//method
+  
+  /**
+   *  true if the passed in $path and the internal path are the same
+   *  
+   *  @since  9-26-11
+   *  @param  string  $path path to check the internal path against
+   *  @return boolean
+   */
+  public function is($path){
+  
+    $path = $this->normalize($path);
+    return (string)$this === (string)$path;
+  
   }//method
   
   /**
@@ -390,7 +483,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
    *  @since  7-28-11
    *  @param  string  $regex  the PCRE pattern the file needs to match
    *  @param  integer $depth  use 1 to get just immediate children, defaults to all depths 
-   *  @return string  the matching child path
+   *  @return Path  the matching child path
    */
   public function getChild($regex,$depth = -1){
   
@@ -436,11 +529,11 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     
       if($val->isFile()){
       
-        $ret_map['files'][] = $key;
+        $ret_map['files'][] = $val;
       
       }else{
       
-        $ret_map['folders'][] = $key;
+        $ret_map['folders'][] = $val;
       
       }//if/else
       
@@ -468,6 +561,8 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
    */
   public function clear($regex = ''){
   
+    // canary, if it doesn't exist just return 1 since it was technically "cleared"...
+    if(!$this->exists()){ return 1; }//if
     // canary, just empty the file contents if it is a file...
     if($this->isFile()){
       $file_instance = $this->openFile('r+');
@@ -519,7 +614,17 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
   public function kill(){
   
     $ret_count = $this->clear();
-    if(rmdir($this->getPathname())){ $ret_count++; }//if
+    if($this->isDir()){
+    
+      // delete a folder...
+      if(rmdir($this->getPathname())){ $ret_count++; }//if
+      
+    }else{
+    
+      // delete a file...
+      unlink($this->getPathname());
+    
+    }//if/else
     
     return $ret_count;
   
@@ -592,7 +697,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
   }//method
   
   /**
-   *  copy the contents from $path into this instance
+   *  copy the contents from the file in $path into the file of this instance
    *
    *  @since  9-21-11
    *  @param  string  $path
@@ -632,7 +737,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
    *
    *  @since  9-21-11
    *  @param  string|self $path
-   *  @return string
+   *  @return String
    */
   public function getRelative($path){
   
@@ -646,10 +751,14 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     
     if($count > 0){
     
-      if(($ret_str[0] === '\\') || ($ret_str[0] === '/')){
+      if(!empty($ret_str)){
       
-        $ret_str = mb_substr($ret_str,1);
-      
+        if(($ret_str[0] === '\\') || ($ret_str[0] === '/')){
+        
+          $ret_str = mb_substr($ret_str,1);
+        
+        }//if
+        
       }//if
     
     }else{
@@ -750,25 +859,38 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     $depth = (int)$depth;
     $iterator = null;
   
-    if(($depth < 0) || ($depth > 1)){
-    
-      $iterator = new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator(
+    if($this->isDir()){
+      
+      if(($depth < 0) || ($depth > 1)){
+      
+        $iterator = new RecursiveDirectoryIterator(
           $this->getPathname(),
           FilesystemIterator::CURRENT_AS_FILEINFO | FilesystemIterator::KEY_AS_PATHNAME | FilesystemIterator::SKIP_DOTS
-        ),
-        RecursiveIteratorIterator::SELF_FIRST
-      );
+        );
+        $iterator->setInfoClass(get_class($this));
       
-      $iterator->setMaxDepth($depth);
-    
+        $iterator = new RecursiveIteratorIterator(
+          $iterator,
+          RecursiveIteratorIterator::SELF_FIRST
+        );
+        
+        $iterator->setMaxDepth($depth);
+      
+      }else{
+      
+        $iterator = new FilesystemIterator(
+          $this->getPathname(),
+          FilesystemIterator::CURRENT_AS_FILEINFO | FilesystemIterator::KEY_AS_PATHNAME | FilesystemIterator::SKIP_DOTS
+        );
+        $iterator->setInfoClass(get_class($this));
+        
+      }//if/else
+      
     }else{
     
-      $iterator = new FilesystemIterator(
-        $this->getPathname(),
-        FilesystemIterator::CURRENT_AS_FILEINFO | FilesystemIterator::KEY_AS_PATHNAME | FilesystemIterator::SKIP_DOTS
-      );
-      
+      $iterator = $this->openFile();
+      $iterator->setFlags(\SplFileObject::DROP_NEW_LINE | \SplFileObject::SKIP_EMPTY);
+    
     }//if/else
       
     if(!empty($regex)){
@@ -776,9 +898,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
       $iterator = new RegexIterator($iterator,$regex,RegexIterator::MATCH);
     
     }//if/else
-  
-    ///$iterator->setInfoClass(get_class($this)); // doing this doubles execution time from 70ms to ~170ms
-  
+
     return $iterator;
   
   }//method
@@ -804,7 +924,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
 
         $ret_list[] = $this->build($path_bit);
         
-      }else{
+      }else if(!empty($path_bit)){
         
         if($path_bit instanceof self){
         
@@ -812,8 +932,10 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
         
         }else{
           
+          // windows: no space before or after folder names allowed (windows will strip them automatically)
+          // linux: mkdir "  foo"; cd "  foo"; is completely allowed, as is: mkdir "  "; cd "  "
+          
           $path_bit = preg_split('#[\\\\/]#',$path_bit); // split on dir separators
-          $path_bit = array_map('trim',$path_bit); // trim all the individual bits
           $path_bit = array_filter($path_bit); // get rid of any empty values
           if(!empty($path_bit)){
             $ret_list = array_merge($ret_list,$path_bit); // merge the bits into the final list
@@ -821,7 +943,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
           
         }//if/else
         
-      }//if/else
+      }//if/else if
       
     }//foreach
     
@@ -843,8 +965,13 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     if(empty($path)){ return ''; }//if
   
     // make sure the path is a full valid path, none of this ../../ type stuff...
-    if($realpath = realpath($path)){
-      $path = $realpath;
+    // this call is incredibly slow so only do it if we have to...
+    if(preg_match('#(?<=^|[\\\\/])\.+[\\\\/]#',$path)){
+      
+      if($realpath = realpath($path)){
+        $path = $realpath;
+      }//if
+      
     }//if
   
     $path = $this->trimSlash($path);
@@ -904,14 +1031,28 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
       );
     }//if
   
-    $ret_int = file_put_contents($this,$data,$flags);
-    if($ret_int === false){
+    // make sure there is a valid path to write to...
+    $parent = $this->getParent();
+    $parent->assure();
+  
+    if($parent->isWritable()){
+    
+      $ret_int = file_put_contents($this,$data,$flags);
+      if($ret_int === false){
+      
+        throw new \UnexpectedValueException(
+          sprintf('writing to path "%s" failed with an unknown error',$this)
+        );
+      
+      }//method
+      
+    }else{
     
       throw new \UnexpectedValueException(
-        sprintf('writing to path "%s" failed',$this)
+        sprintf('path "%s" is not writeable for file: %s',$parent,$this->getBasename())
       );
     
-    }//method
+    }//if/else
   
     return $ret_int;
   
