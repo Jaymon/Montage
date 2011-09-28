@@ -38,10 +38,10 @@ abstract class TestCase extends PHPUnit_Framework_TestCase {
     // get the directory the class is located in...
     $rclass = new \ReflectionClass($this);
     $class_filename = $rclass->getFileName();
-    $class_path = dirname($class_filename);
+    $class_path = new Path($class_filename);
+    $path = $class_path->getParent();
     
     // now move backward until you find the "test directory"
-    $path = new Path($class_path);
     if($test_path = $path->getParent('#test#')){
     
       $ret_path = new Path($test_path,$this->fixture_dir,$path_bits);

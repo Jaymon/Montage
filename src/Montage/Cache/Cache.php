@@ -2,7 +2,6 @@
 /**
  *  handle caching
  *  
- *
  *  this object does the actual caching, if you want your object to be cacheable then
  *  you would implement Cacheable or extend ObjectCache
  *  
@@ -63,7 +62,6 @@ class Cache {
     // canary...
     if(!($path instanceof Path)){ $path = new Path($path); }//if
   
-    $path->assure();
     $this->path = $path;
     return $this;
   
@@ -182,7 +180,6 @@ class Cache {
     }//if
     
     $path = new Path($this->path,$this->namespace,$namespace);
-    $path->assure();
     
     if(!empty($key)){
       

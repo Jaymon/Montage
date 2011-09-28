@@ -7,6 +7,57 @@ use Montage\Path;
 
 class PathTest extends TestCase {
 
+  public function testGetSibling(){
+  
+    $path = $this->getFixturePath('Path','foo');
+    
+    preg_match('#bar\\\\2#','C:\Projects\Sandbox\Montage\_active\test\fixtures\Path\bar\2\1.txt',$matched);
+    \out::e($matched);
+    
+    preg_match('#bar/2#','C:/Projects/Sandbox/Montage/_active/test/fixtures/Path/bar/2/1.txt',$matched);
+    \out::e($matched);
+    
+    preg_match('/bar\/2/i','C:/Projects/Sandbox/Montage/_active/test/fixtures/Path/bar/2/1.txt',$matched);
+    \out::e($matched);
+    
+    preg_match('/bar\\\\2/i','C:\Projects\Sandbox\Montage\_active\test\fixtures\Path\bar\2\1.txt',$matched);
+    \out::e($matched);
+    
+    preg_match('#bar\/2#','C:/Projects/Sandbox/Montage/_active/test/fixtures/Path/bar/2/1.txt',$matched);
+    \out::e($matched);
+    
+    $regex = '#bar'.DIRECTORY_SEPARATOR.'2#';
+    preg_match($regex,'C:\Projects\Sandbox\Montage\_active\test\fixtures\Path\bar\2\1.txt',$matched);
+    \out::e($matched);
+    
+    ///$path->getSibling('#bar/2$#');
+  
+  }//method
+
+  /**
+   *  makes sure Path does what would you expect if empty bits are passed in, or
+   *  if a Path instance is passed in that has no actual path   
+   *
+   *  @since  9-27-11
+   */
+  public function testEmptyPath(){
+  
+    $path = new Path('');
+    $this->assertEquals('',(string)$path);
+    
+    $path = new Path($path);
+    $this->assertEquals('',(string)$path);
+    
+    $path = new Path('foo',$path,'bar');
+    $expected = new Path('foo','bar');
+    $this->assertEquals((string)$expected,(string)$path);
+    
+    $path = new Path(new Path(''),'foo','bar');
+    $expected = new Path('foo','bar');
+    $this->assertEquals((string)$expected,(string)$path);
+  
+  }//method
+
   /**
    *  a Path instance will try and create the parent folder structure before writing
    *  the contents of the file if the parent folders don't already exist   

@@ -5,7 +5,13 @@
  *  @link http://us2.php.net/splfileinfo
  *  @link http://us2.php.net/manual/en/class.splfileobject.php 
  *  
- *  @version 0.4
+ *  @idea contains() could replace isParent() 
+ *  @idea setRegexFilter() and setCallbackFilter() could influence an internal iterator
+ *  and simplify iterating through either a file or a directory. setDepth() would be
+ *  just as good for only getting the first N lines of a file, or the recurssing the 
+ *  first N children of a directory     
+ * 
+ *  @version 0.5
  *  @author Jay Marcyes
  *  @since 12-6-10
  *  @package montage
@@ -764,7 +770,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     }else{
     
       throw new \UnexpectedValueException(
-        sprint('The internal path %s is not relative to %s',$this,$path)
+        sprintf('The internal path %s is not relative to %s',$this,$path)
       );
     
     }//if/else
@@ -928,7 +934,11 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
         
         if($path_bit instanceof self){
         
-          $ret_list[] = $path_bit->__toString();
+          if($path_bit_str = $path_bit->__toString()){
+        
+            $ret_list[] = $path_bit->__toString();
+            
+          }//if
         
         }else{
           

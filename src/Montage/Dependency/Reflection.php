@@ -69,8 +69,6 @@ class Reflection extends ObjectCache implements \Reflector {
   
   protected $reloaded = false;
   
-  protected $export_cache = false;
-  
   public static function export(){ return ''; }//method
   public function __toString(){ return spl_object_hash($this); }//method
 
@@ -776,12 +774,6 @@ class Reflection extends ObjectCache implements \Reflector {
     if($class_name[0] === '\\'){ $class_name = mb_substr($class_name,1); }//if
     
     return $class_name;
-  
-  }//method
-  
-  public function __destruct(){
-  
-    if($this->export_cache){ $this->exportCache(); }//if
   
   }//method
 

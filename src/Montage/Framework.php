@@ -388,47 +388,30 @@ class Framework extends Field implements Dependable,Eventable {
     // canary...
     if(!$this->hasField('asset_paths')){ return; }//if
   
-    $instance_list = array();
     $container = $this->getContainer();
     $config = $this->getConfig();
-    
     $public_path = $config->getPublicPath();
     $asset_path_list = $this->getField('asset_paths',array());
-    
-    ///$public_path = new Path($config->getPublicPath(),'assets');
     
     // create the assets selector...
     $select = $container->getInstance('\Montage\Asset\Select');
     
-    $class_list = $select->find();
-    foreach($class_list as $i => $class_name){
+    // create the global assets class that will handle everything...
+    $class_name = $select->findCatchAll();
+    $assets = $container->getInstance($class_name);
+    $assets->setDestPath($public_path,$config->getField('asset_prefix','assets'));
+    $assets->setSrcPaths($asset_path_list);
     
-      $instance_list[$class_name] = $container->getInstance($class_name);
-      $instance_list[$class_name]->setDestPath($public_path,'assets');
-      
-      
-      // remove asset paths that are taken care of by the instance...
-      $src_asset_path_list = $instance_list[$class_name]->getSrcPaths();
-      foreach($asset_path_list as $asset_i => $asset_path){
-      
-        if($asset_path->isParent($src_asset_path_list)){
-        
-          unset($asset_path_list[$asset_i]);
-        
-        }//if
-      
-      }//foreach
-      
-      
-      ///$instance_list[$i]->handle();
-      
-    }//foreach */
+    // create all the "other" asset classes...
+    $class_name_list = $select->find();
+    foreach($class_name_list as $i => $class_name){
     
-    \out::e($asset_path_list);
-  
-  
+      $assets->addInstance($container->createInstance($class_name));
+    
+    }//foreach
+    
     $template = $this->getTemplate();
-  
+    ///$template->setField('assets',$instance_list);
   
   }//method
 
@@ -443,7 +426,7 @@ class Framework extends Field implements Dependable,Eventable {
     $instances = new \SplObjectStorage();
     
     // create the standard autoloader...
-    if($sal = $container->getInstance('\Montage\Autoload\StdAutoloader')){
+    if($sal = $container->createInstance('\Montage\Autoload\StdAutoloader')){
     
       $sal->addPaths($this->getField('reflection_paths',array()));
       $sal->addPaths($this->getField('vendor_paths',array()));
@@ -462,7 +445,7 @@ class Framework extends Field implements Dependable,Eventable {
     
     foreach($class_list as $class_name){
     
-      $instance = $container->getInstance($class_name);
+      $instance = $container->createInstance($class_name);
       
       $instance->register();
       $instances->attach($instance);
@@ -493,7 +476,7 @@ class Framework extends Field implements Dependable,Eventable {
 
     foreach($class_list as $i => $class_name){
     
-      $instance_list[$i] = $container->getInstance($class_name);
+      $instance_list[$i] = $container->createInstance($class_name);
       $instance_list[$i]->register();
       
     }//foreach
@@ -522,7 +505,7 @@ class Framework extends Field implements Dependable,Eventable {
       $event = new InfoEvent(sprintf('Starting: %s',$class_name));
       $this->broadcastEvent($event);
     
-      $instance_list[$i] = $container->getInstance($class_name);
+      $instance_list[$i] = $container->createInstance($class_name);
       $instance_list[$i]->handle();
       
     }//foreach

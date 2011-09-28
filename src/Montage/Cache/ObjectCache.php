@@ -2,7 +2,7 @@
 /**
  *  any class can extend this class and instantly have the ability to cache itself
  *  
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 6-22-11
  *  @package montage 
@@ -19,6 +19,13 @@ class ObjectCache implements Cacheable {
    *  @var  Montage\Cache\Cache
    */
   protected $cache = null;
+  
+  /**
+   *  set to true to have {@link __destruct()} export the cache
+   *
+   *  @var  boolean
+   */
+  protected $export_cache = false;
 
   /**
    *  set the object that will do the caching for any class that implements this interface
@@ -122,6 +129,12 @@ class ObjectCache implements Cacheable {
     if(empty($cache)){ return false; }//if
   
     return $cache->kill($this->cacheName());
+  
+  }//method
+  
+  public function __destruct(){
+  
+    if($this->export_cache){ $this->exportCache(); }//if
   
   }//method
   
