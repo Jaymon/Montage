@@ -33,13 +33,19 @@ abstract class Assets {
   
   protected $asset_map = array();
 
-  abstract public function getType();
+  abstract public function getExtension();
   
   public function getAssets(){ return $asset_map; }//method
 
   public function setSrcPaths(array $path_list){
   
     $this->src_path_list = $path_list;
+  
+  }//method
+  
+  public function addSrcPath($path){
+  
+    $this->src_path_list[] = $path;
   
   }//method
 

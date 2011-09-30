@@ -2,7 +2,10 @@
 namespace Montage\PHPUnit;
   
 use PHPUnit\FrameworkTestCase;
+
 use Montage\Asset\Assets;
+use Montage\Asset\Asset;
+use Montage\Asset\FrameworkAssets;
 
 class AssetsTest extends FrameworkTestCase {
   
@@ -15,8 +18,13 @@ class AssetsTest extends FrameworkTestCase {
     $bar_src_path = $this->getFixturePath('Asset','Bar','assets');
     
     $foo_assets = new FooAssets();
-    $foo_assets->setSrcPaths(array($foo_src_path));
+    $foo_assets->addSrcPath($foo_src_path);
     
+    $bar_assets = new BarAssets();
+    $bar_assets->addSrcPath($bar_src_path);
+    
+    $framework_assets = new FrameworkAssets();
+    $framework_assets->setSrcPaths(array($foo_src_path,$bar_src_path)
     
     
     \out::e($foo_src_path);
@@ -44,12 +52,12 @@ class AssetsTest extends FrameworkTestCase {
 
 class FooAssets extends Assets {
 
-  public function getType(){ return 'css'; }//method
+  public function getExtension(){ return 'css'; }//method
 
 }//class
 
 class BarAssets extends Assets {
 
-  public function getType(){ return 'js'; }//method
+  public function getExtension(){ return 'js'; }//method
 
 }//class
