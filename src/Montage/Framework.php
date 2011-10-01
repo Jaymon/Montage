@@ -389,29 +389,38 @@ class Framework extends Field implements Dependable,Eventable {
     if(!$this->hasField('asset_paths')){ return; }//if
   
     $container = $this->getContainer();
+    $request = $this->getRequest();
     $config = $this->getConfig();
-    $public_path = $config->getPublicPath();
-    $asset_path_list = $this->getField('asset_paths',array());
+    $dest_path = new Path($config->getPublicPath(),'assets');
     
     // create the assets selector...
     $select = $container->getInstance('\Montage\Asset\Select');
     
     // create the global assets class that will handle everything...
-    $class_name = $select->findCatchAll();
-    $assets = $container->getInstance($class_name);
-    $assets->setDestPath($public_path,$config->getField('asset_prefix','assets'));
-    $assets->setSrcPaths($asset_path_list);
+    $assets = $container->getInstance($select->findCatchAll());
+    
+    $assets->setDestPath($dest_path);
+    $assets->setPrefixPath(
+      new Path(
+        $request->getBasePath(),
+        $config->getField('asset_prefix','assets')
+      )
+    );
+    
+    $assets->setSrcPaths($this->getField('asset_paths',array()));
     
     // create all the "other" asset classes...
     $class_name_list = $select->find();
-    foreach($class_name_list as $i => $class_name){
+    foreach($class_name_list as $class_name){
     
-      $assets->addInstance($container->createInstance($class_name));
+      $assets->add($container->createInstance($class_name));
     
     }//foreach
     
+    $assets->handle();
+    
     $template = $this->getTemplate();
-    ///$template->setField('assets',$instance_list);
+    $template->setField('assets',$assets);
   
   }//method
 

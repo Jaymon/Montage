@@ -53,7 +53,7 @@ class Select {
    */
   public function find(){
   
-    return $this->reflection->findClassNames($this->class_extend,$this->class_catchall);
+    return $this->reflection->findClassNames($this->class_extend,array($this->class_catchall));
     
   }//method
   

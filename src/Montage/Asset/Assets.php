@@ -1,17 +1,19 @@
 <?php
 /**
- *  handle an asset  
+ *  handle a group of assets (basically, this wraps a bunch of Asset instances)
  * 
  *  @version 0.1
- *  @author Jay Marcyes {@link http://marcyes.com}
- *  @since 9-23-11
+ *  @author Jay Marcyes
+ *  @since 9-22-11
  *  @package montage
+ *  @subpackage Asset 
  ******************************************************************************/
 namespace Montage\Asset;
 
 use Montage\Path;
+use IteratorAggregate;
 
-abstract class Assets {
+abstract class Assets implements Assetable,IteratorAggregate {
 
   /**
    *  holds where the paths in the {@link $path_list} will be moved to
@@ -27,33 +29,73 @@ abstract class Assets {
    *
    *  @var  Path
    */
-  protected $relative_path = null;
+  protected $prefix_path = null;
   
+  /**
+   *  holds all the source paths that this intance will build its Asset list with
+   *  
+   *  @see  setSrcPaths(), addSrcPath()      
+   *  @var  array
+   */
   protected $src_path_list = array();
   
-  protected $asset_map = array();
-
-  abstract public function getExtension();
+  /**
+   *  holds all the Asset instances this class represents
+   *
+   *  @var  array an array of Asset instances
+   */
+  protected $asset_list = array();
   
-  public function getAssets(){ return $asset_map; }//method
+  /**
+   *  get the name of this asset
+   *
+   *  @return string
+   */
+  public function getName(){ return get_class($this); }//method
+  
+  /**
+   *  get the assets this instance wraps
+   *
+   *  @return array
+   */
+  public function get(){ return $this->asset_list; }//method
 
+  /**
+   *  set a list of source paths for this instance to use
+   *
+   *  @param  array $path_list   
+   */
   public function setSrcPaths(array $path_list){
   
-    $this->src_path_list = $path_list;
+    $this->src_path_list = array();
+    foreach($path_list as $path){
+      $this->addSrcPath($path);
+    }//foreach
   
   }//method
   
+  /**
+   *  add the source $path to the source path list
+   *
+   *  @param  Path  $path
+   */
   public function addSrcPath($path){
   
-    $this->src_path_list[] = $path;
+    $this->src_path_list[] = $this->normalizePath($path);
   
   }//method
 
+  /**
+   *  get the source paths this instance uses
+   *
+   *  @return array   
+   */
   public function getSrcPaths(){
   
     // canary...
     if(!empty($this->src_path_list)){ return $this->src_path_list; }//if
   
+    // get the file location of the parent class...
     $rclass = new \ReflectionClass($this);
     $file = new Path($rclass->getFileName());
     
@@ -64,23 +106,28 @@ abstract class Assets {
     
     }//if
     
-    $this->src_path_list = array((string)$src_path);
+    $this->addSrcPath($src_path);
+    
     return $this->src_path_list;
     
   }//method
 
-  public function setDestPath($path,$relative_path = ''){
+  /**
+   *  when {@link handle()} is called all the source assets will be transferred to this path
+   *
+   *  @param  string  $path
+   */
+  public function setDestPath($path){
   
     $this->dest_path = $this->normalizePath($path);
     
-    if(!empty($relative_path)){
-    
-      $this->relative_path = $this->normalizePath($relative_path);
-      
-    }//if
-  
   }//method
   
+  /**
+   *  get the destination path
+   *
+   *  @return Path   
+   */
   public function getDestPath(){
   
     // canary...
@@ -92,157 +139,193 @@ abstract class Assets {
   
   }//if
   
-  public function handle(){
+  /**
+   *  before a file is transferred to the destination path, it is prefixed with this path
+   *  
+   *  basically, a file gets moved from source to: destination_path / prefix_path / source_file            
+   *
+   *  @param  string  $prefix_path   
+   */
+  public function setPrefixPath($prefix_path){
   
-    $dest_path = $this->getDestPath();
-  
-    $src_path_list = $this->getSrcPaths();
-    foreach($src_path_list as $src_path){
-    
-      $src_path = $this->normalizePath($src_path);
-    
-      if($asset_map = $this->move($src_path,$dest_path,$this->relative_path)){
-      
-        $this->asset_map = array_merge($this->asset_map,$asset_map);
-      
-      }//if
-    
-    }//foreach
+    $this->prefix_path = $this->normalizePath($prefix_path);
   
   }//method
-
-  protected function move(Path $src_path,Path $dest_path,Path $relative_path = null){
   
-    $ret_map = array();
+  /**
+   *  get the prefix path
+   *
+   *  @return Path
+   */
+  public function getPrefixPath(){ return $this->prefix_path; }//method
   
-    foreach($src_path->createFileIterator() as $src_file){
+  /**
+   *  this will handle the transfer of the source assets to their final resting place
+   */
+  public function handle(){
+  
+    $src_path_list = $this->getSrcPaths();
+    $dest_path = $this->getDestPath();
+    $prefix_path = $this->getPrefixPath();
+  
+    foreach($src_path_list as $src_path){
     
-      $src_file = $this->normalizePath($src_file);
-      $fingerprint = $src_file->getFingerprint();
+      foreach($this->getPathIterator($src_path) as $src_file){
       
-      $relative_file = $this->normalizePath($src_file->getRelative($src_path));
+        if($asset = $this->move($src_path,$src_file,$dest_path,$prefix_path)){
 
-      $public_filename = $relative_file->getFilename().'-'.$fingerprint;
+          $this->add($asset);
+
+        }//if
         
-      if($extension = $relative_file->getExtension()){
-      
-        $public_filename .= '.'.$extension;
-      
-      }//if
-      
-      $public_path = new Path($dest_path,$relative_path,$relative_file->getPath(),$public_filename);
+      }//foreach
     
-      $key = $this->getKey($relative_file);
-      $ret_map[$key] = new Asset(
-        $src_path,
-        $public_path,
-        $this->getUrl($public_path)
-      );
-      
-      $ret_map[$key]['url'] = $this->getUrl($public_path);
-      $ret_map[$key]['dest_path'] = $public_path;
-      $ret_map[$key]['src_path'] = $src_file;
-      $ret_map[$key]['type'] = $this->getType($extension);
-    
-      if(!$public_path->isFile()){
-      
-        // clear all old paths that might exist (just to keep the directory semi clear)...
-        $kill_path = $public_path->getParent();
-        $kill_path->clear(sprintf('#%s-[^\.]+#i',$relative_file->getFilename()));
-        
-        // copy the file to the new public location...
-        $public_path->copyFrom($src_file);
-      
-      }//if
-      
     }//foreach
-  
-    \out::e($ret_map);
-    return $ret_map;
   
   }//method
 
   /**
-   *  if the class should check more than one place for the template, add the alternate
-   *  paths using this, setTemplate will then go through all the paths checking
-   *  to see if the file exists in any path
-   *  
-   *  we render the template files using the include_paths so you can set other template files
-   *  in the actual template and include them without having to actually know the path, it's "all
-   *  for your convenience" programming
-   *  
-   *  @param  string  $path the template path to add to the include paths
+   *  moves the $src_file, found via $src_path, to $dest_path.$prefix_path 
+   *
+   *  @param  Path  $src_path one of the source paths that was used to find $src_file
+   *  @param  Path  $src_file the file being moved
+   *  @param  Path  $dest_path  the destination path
+   *  @param  Path  $prefix_path  the prefix that will be appended to $destination_path before $src_file is moved
+   *  @return Asset   
    */
-  public function addPath($path){
+  protected function move(Path $src_path,Path $src_file,Path $dest_path,Path $prefix_path = null){
   
-    // canary...
-    if(empty($this->to_path)){
-      throw new \UnexpectedValueException('your trying to add a path when there is no $to_path set');
+    $ret_asset = null;
+  
+    $fingerprint = $src_file->getFingerprint();
+    
+    $relative_file = $this->normalizePath($src_file->getRelative($src_path));
+
+    $public_filename = $relative_file->getFilename().'-'.$fingerprint;
+      
+    if($extension = $this->getSrcExtension($src_file)){
+    
+      $public_filename .= '.'.$extension;
+    
     }//if
+    
+    $public_file = new Path($dest_path,$relative_file->getPath(),$public_filename);
+    
+    $ret_asset = new Asset(
+      $relative_file,
+      $src_file,
+      $public_file,
+      $this->getUrl($prefix_path,$public_file)
+    );
   
-    $path = $this->normalizePath($path);
+    if(!$public_file->isFile()){
     
-    foreach($path->createFileIterator() as $file){
+      // clear all old paths that might exist (just to keep the directory semi clear)...
+      $kill_path = $public_file->getParent();
+      $kill_path->clear(sprintf('#%s-[^\.]+\.%s#i',$relative_file->getFilename(),$this->getExtension()));
+      
+      // copy the file to the new public location...
+      $public_file->setFrom($src_file);
     
-      $relative_path = $path->getRelative($file);
-      $fingerprint = md5_file((string)$file);
+    }//if
+
+    return $ret_asset;
+  
+  }//method
+
+  /**
+   *  required for the IteratorAggregate interface
+   *
+   *  @return \Traversable
+   */
+  public function getIterator(){
+  
+    $ret_iterator = new \AppendIterator();
+  
+    $src_path_list = $this->getSrcPaths();
+    foreach($src_path_list as $src_path){
     
-      $relative_path_info = pathinfo($relative_path);
+      $iterator = $this->getPathIterator($src_path);
       
-      $public_path = $relative_path_info['dirname']
-        .DIRECTORY_SEPARATOR.
-        $relative_path_info['filename']
-        .'-'.
-        $fingerprint;
-        
-      if(isset($relative_path_info['extension'])){
-      
-        $public_path .= '.'.$relative_path_info['extension'];
-      
-      }//if
-      
-      $public_path = new Path($this->to_path,$public_path);
+      $ret_iterator->append($iterator);
     
-      if(!$public_path->isFile()){
-      
-        // clear all old paths that might exist (just to keep the directory semi clear)...
-        $kill_path = $public_path->getParent();
-        $kill_path->clear(sprintf('#%s-[^\.]+#i',$relative_path_info['filename']));
-      
-        // copy the file to the new public location...
-        $public_path->copyFrom($file);
-      
-      }//if
-      
-      ///$this->setPath($relative_path,$public_path);
+    }//foreach
+  
+    return $ret_iterator;
+  
+  }//method
+  
+  /**
+   *  output all the assets that this instance wraps
+   *
+   *  @return string   
+   */
+  public function __toString(){
+  
+    $ret_str = '';
+    $assets_iterator = new \RecursiveIteratorIterator(
+      new \RecursiveArrayIterator($this->get())
+    );
+    foreach($assets_iterator as $asset){
+    
+      $ret_str .= $asset->__toString().PHP_EOL;
       
     }//foreach
-    
-    $this->path_list[] = $path;
-    return $this;
   
-  }//method
-  
-  public function addPaths(array $path_list){
-  
-    foreach($path_list as $path){ $this->addPath($path); }//foreach
-    
-    return $this;
-  
-  }//method
-  
-  protected function getKey($filename){
-  
-    // all directory separators should be url separators...
-    $ret_str = str_replace('\\','/',$filename);
-    
-    // everything should be uppsercase...
-    $ret_str = mb_strtoupper($ret_str);
-    
     return $ret_str;
   
   }//method
   
+  /**
+   *  add an Asset to this instance
+   *  
+   *  @param  Assetable $asset  any object that implements Assetable
+   */
+  public function add(Assetable $asset){
+  
+    $this->asset_list[$asset->getName()] = $asset;
+  
+  }//method
+  
+  /**
+   *  get the regex that will be used to iterate through the source paths
+   *
+   *  @return string   
+   */
+  protected function getIteratorRegex(){
+    
+    $regex = '';
+    if($ext = $this->getExtension()){ $regex = sprintf('#\.%s#i',$ext); }//if
+    return $regex;
+    
+  }//method
+  
+  /**
+   *  get the path iterator that will be used to do the actual source path iteration
+   *
+   *  @param  Path  $path a path to iterate, usually a source path   
+   */        
+  protected function getPathIterator(Path $path){
+  
+    $regex = $this->getIteratorRegex();
+    return $path->createFileIterator($regex);
+  
+  }//method
+  
+  /**
+   *  get the extension of the $file
+   *
+   *  @param  Path  $file
+   *  @return string      
+   */
+  protected function getSrcExtension(Path $file){ return $file->getExtension(); }//method
+  
+  /**
+   *  get the url that the asset will use
+   *
+   *  @param  Path  $path
+   *  @return string  a url   
+   */
   protected function getUrl(Path $path){
   
     $dest_path = $this->getDestPath();

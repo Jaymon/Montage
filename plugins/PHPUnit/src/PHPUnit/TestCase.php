@@ -70,10 +70,17 @@ abstract class TestCase extends PHPUnit_Framework_TestCase {
     $path_bits = func_get_args();
   
     // get the directory the class is located in...
-    $rclass = new \ReflectionClass($this);
-    $class_name = $rclass->getShortName();
+    ///$rclass = new \ReflectionClass($this);
+    ///$class_name = $rclass->getShortName();
+    $class_name = get_class($this);
   
-    $ret_path = new Path(sys_get_temp_dir(),$class_name,$path_bits);
+    $ret_path = new Path(
+      sys_get_temp_dir(),
+      $class_name,
+      md5(microtime(true)),
+      $path_bits
+    );
+    
     return (string)$ret_path;
   
   }//method

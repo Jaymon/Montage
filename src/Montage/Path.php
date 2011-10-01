@@ -709,7 +709,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
    *  @param  string  $path
    *  @return integer how many bytes were copied over      
    */
-  public function copyFrom($path){
+  public function setFrom($path){
   
     // canary...
     if($this->isDir()){
@@ -721,12 +721,12 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     $path = $this->normalize($path);
     if(!$path->isFile()){
       throw new \UnexpectedValueException(
-        sprintf('src path %s does not actually exist',$path)
+        sprintf('source file at path %s does not actually exist',$path)
       );
     }//if
     
     // make sure the full path of $this exists...
-    $basepath = $this->normalize($this->getPath());
+    $basepath = $this->getParent();
     $basepath->assure();
     
     return copy((string)$path,(string)$this);

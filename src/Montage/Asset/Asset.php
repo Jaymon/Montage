@@ -1,48 +1,50 @@
 <?php
 /**
- *  handle assets
- *
- *  how I'm imagining assets working: it will go through and compile the list of all assets
- *  and move them to the web/assets folder and keep them in memory, then there will be a 
- *  __toString method that will output the js and css at the top of page, so anything can
- *  be overriden, http assets can be added, etc.
+ *  represent one Asset file, usually a css or js file
  *  
- *  @link http://guides.rubyonrails.org/asset_pipeline.html
- *  
- *  @version 0.3
- *  @author Jay Marcyes {@link http://marcyes.com}
- *  @since 2-28-10
+ *  @version 0.1
+ *  @author Jay Marcyes
+ *  @since 9-21-11
  *  @package montage
+ *  @subpackage Asset 
  ******************************************************************************/
 namespace Montage\Asset;
 
 use Montage\Path;
 use Montage\Field\Field;
 
-class Asset extends Field {
+class Asset extends Field implements Assetable {
 
-  const TYPE_STYLESHEET = 1;
-  const TYPE_JAVASCRIPT = 2;
-  const TYPE_IMAGE = 3;
+  // const TYPE_STYLESHEET = 1;
+  // const TYPE_JAVASCRIPT = 2;
+  // const TYPE_IMAGE = 3;
   
-  public function __construct(Path $src_path,Path $public_path,$url){
+  /**
+   *  construct an instance
+   *  
+   *  @param  string  $name the name of this Asset   
+   *  @param  Path  $src_file where the asset originated from
+   *  @param  Path  $public_file  where the asset's final resting place is
+   *  @param  string  $url  the url that can be used in an html document
+   */
+  public function __construct($name,Path $src_file,Path $public_file,$url){
   
-    $this->setField('src_path',$src_path);
-    $this->setField('public_path',$public_path);
+    $this->setName($name);
+    $this->setField('src_file',$src_file);
+    $this->setField('public_file',$public_file);
     $this->setField('url',$url);
   
   }//method
   
+  /**
+   *  output the asset
+   *  
+   *  @return string
+   */
   public function __toString(){
   
-    return $this->outType();
-
-  }//method
-  
-  protected function outType(){
-  
     $ret_str = '';
-    $extension = $this->public_path->getExtension();
+    $extension = $this->getField('public_file')->getExtension();
     $ext = mb_strtolower($extension);
     
     switch($ext){
@@ -68,16 +70,60 @@ class Asset extends Field {
   
   }//method
   
+  /**
+   * 
+   *
+   */        
+  public function getExtension(){ return $this->getField('public_file')->getExtension(); }//method
+  
+  /**
+   *  get a key for the file name
+   *
+   *  @return string
+   */
+  public function getName(){ return $this->getField('name'); }//method
+  
+  /**
+   *  normalize and set the asset name
+   *  
+   *  @param  string  $name
+   */
+  protected function setName($name){
+  
+    $name = new Path($name);
+    $parent = $name->getParent();
+    $ret_str = new Path($parent,$name->getFilename());
+    
+    // all directory separators should be url separators...
+    $ret_str = str_replace('\\','/',$ret_str);
+    
+    // everything should be uppsercase...
+    $ret_str = mb_strtolower($ret_str);
+    
+    $this->setField('name',$ret_str);
+  
+  }//method
+  
+  /**
+   *  get a css stylesheet html block
+   *  
+   *  @return string
+   */
   protected function outStylesheet(){
   
     return sprintf(
       '<link rel="stylesheet" href="%s" type="text/css" media="%s">',
       $this->getField('url'),
-      $this->getFiel('media','screen, projection')
+      $this->getField('media','screen, projection')
     );
   
   }//method
   
+  /**
+   *  get a javascript html block
+   *  
+   *  @return string
+   */
   protected function outJavascript(){
   
     return sprintf(
@@ -87,6 +133,11 @@ class Asset extends Field {
   
   }//method
   
+  /**
+   *  get an image html block
+   *  
+   *  @return string
+   */
   protected function outImage(){
   
     return sprintf(
