@@ -14,17 +14,17 @@
  *  @version 0.5
  *  @author Jay Marcyes
  *  @since 12-6-10
- *  @package montage
+ *  @package Utilities
  ******************************************************************************/
-namespace Montage;
+///namespace Montage;
 
-use FilesystemIterator;
-use RecursiveIteratorIterator;
-use RecursiveDirectoryIterator;
-use CallbackFilterIterator;
-use RegexIterator;
-use Countable,IteratorAggregate;
-use SplFileInfo;
+///use FilesystemIterator;
+///use RecursiveIteratorIterator;
+///use RecursiveDirectoryIterator;
+///use CallbackFilterIterator;
+///use RegexIterator;
+///use Countable,IteratorAggregate;
+///use SplFileInfo;
  
 class Path extends SplFileInfo implements Countable,IteratorAggregate {
   
@@ -56,6 +56,23 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     $this->setInfoClass(get_class($this));
     
     parent::__construct($path);
+  
+  }//method
+  
+  /**
+   *  combine the $path into the internal path
+   *  
+   *  @example
+   *    echo $this; // foo/bar/baz
+   *    echo $this->combine('bar','baz','bart','lisa','homer'); // foo/bar/baz/bart/lisa/homer            
+   *
+   *  @since  10-1-11
+   *  @return Path
+   */ 
+  public function combine($path){
+  
+    throw new \BadMethodCallException('tbi');
+    $path = func_get_args();
   
   }//method
 

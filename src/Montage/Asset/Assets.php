@@ -10,8 +10,9 @@
  ******************************************************************************/
 namespace Montage\Asset;
 
-use Montage\Path;
+use Path;
 use IteratorAggregate;
+use FlattenArrayIterator;
 
 abstract class Assets implements Assetable,IteratorAggregate {
 
@@ -166,13 +167,12 @@ abstract class Assets implements Assetable,IteratorAggregate {
   
     $src_path_list = $this->getSrcPaths();
     $dest_path = $this->getDestPath();
-    $prefix_path = $this->getPrefixPath();
   
     foreach($src_path_list as $src_path){
     
       foreach($this->getPathIterator($src_path) as $src_file){
       
-        if($asset = $this->move($src_path,$src_file,$dest_path,$prefix_path)){
+        if($asset = $this->move($src_path,$src_file,$dest_path)){
 
           $this->add($asset);
 
@@ -190,10 +190,9 @@ abstract class Assets implements Assetable,IteratorAggregate {
    *  @param  Path  $src_path one of the source paths that was used to find $src_file
    *  @param  Path  $src_file the file being moved
    *  @param  Path  $dest_path  the destination path
-   *  @param  Path  $prefix_path  the prefix that will be appended to $destination_path before $src_file is moved
    *  @return Asset   
    */
-  protected function move(Path $src_path,Path $src_file,Path $dest_path,Path $prefix_path = null){
+  protected function move(Path $src_path,Path $src_file,Path $dest_path){
   
     $ret_asset = null;
   
@@ -215,7 +214,7 @@ abstract class Assets implements Assetable,IteratorAggregate {
       $relative_file,
       $src_file,
       $public_file,
-      $this->getUrl($prefix_path,$public_file)
+      $this->getUrl($public_file)
     );
   
     if(!$public_file->isFile()){
@@ -263,9 +262,7 @@ abstract class Assets implements Assetable,IteratorAggregate {
   public function __toString(){
   
     $ret_str = '';
-    $assets_iterator = new \RecursiveIteratorIterator(
-      new \RecursiveArrayIterator($this->get())
-    );
+    $assets_iterator = new FlattenArrayIterator($this->get());
     foreach($assets_iterator as $asset){
     
       $ret_str .= $asset->__toString().PHP_EOL;
@@ -329,11 +326,12 @@ abstract class Assets implements Assetable,IteratorAggregate {
   protected function getUrl(Path $path){
   
     $dest_path = $this->getDestPath();
+    $prefix_path = $this->getPrefixPath();
     
-    $ret_str = $path->getRelative($dest_path);
+    $ret_str = new Path($prefix_path,$path->getRelative($dest_path));
     
     // we need url separators...
-    $ret_str = str_replace('\\','/',$ret_str);
+    $ret_str = str_replace('\\','/',(string)$ret_str);
     
     if($ret_str[0] !== '/'){
     

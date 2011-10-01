@@ -11,7 +11,7 @@
 namespace Montage\Config;
 
 use Montage\Config\Config;
-use Montage\Path;
+use Path;
 
 class FrameworkConfig extends Config {
 

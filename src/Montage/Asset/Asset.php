@@ -10,7 +10,7 @@
  ******************************************************************************/
 namespace Montage\Asset;
 
-use Montage\Path;
+use Path;
 use Montage\Field\Field;
 
 class Asset extends Field implements Assetable {
@@ -51,17 +51,17 @@ class Asset extends Field implements Assetable {
     
       case 'css':
       
-        $ret_str = $this->outStylesheet();
+        $ret_str = $this->renderStylesheet();
         break;
         
       case 'js':
       
-        $ret_str = $this->outJavascript();
+        $ret_str = $this->renderJavascript();
         break;
     
       default:
     
-        $ret_str = $this->outImage();
+        $ret_str = $this->renderImage();
         break;
     
     }//switch
@@ -109,7 +109,7 @@ class Asset extends Field implements Assetable {
    *  
    *  @return string
    */
-  protected function outStylesheet(){
+  protected function renderStylesheet(){
   
     return sprintf(
       '<link rel="stylesheet" href="%s" type="text/css" media="%s">',
@@ -124,7 +124,7 @@ class Asset extends Field implements Assetable {
    *  
    *  @return string
    */
-  protected function outJavascript(){
+  protected function renderJavascript(){
   
     return sprintf(
       '<script type="text/javascript" src="%s"></script>',
@@ -138,7 +138,7 @@ class Asset extends Field implements Assetable {
    *  
    *  @return string
    */
-  protected function outImage(){
+  protected function renderImage(){
   
     return sprintf(
       '<img src="%s" title="%s" alt="%s">',

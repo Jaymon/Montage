@@ -15,7 +15,7 @@
  ******************************************************************************/
 namespace Montage\Asset;
 
-use Montage\Path;
+use Path;
 
 class FrameworkAssets extends Assets {
   

@@ -5,7 +5,6 @@
  *  other names: handler, sequence, assembler, dispatcher, scheduler
  *  http://en.wikipedia.org/wiki/Montage_%28filmmaking%29  
  *  
- *  
  *  This class creates a lot of new instances
  *  we shouldn't have "new" inside the class, but sometimes you just have to break the rules 
  *  to make things easier, I didn't want to have to create a Cache and Reflection 
@@ -21,7 +20,7 @@
 namespace Montage;
 
 use Montage\Cache\PHPCache;
-use Montage\Path;
+use Path;
 use Montage\Field\Field;
 
 use Montage\Dependency\Reflection;
@@ -38,6 +37,8 @@ use Montage\Response\Template;
 use Montage\Event\Event;
 use Montage\Event\InfoEvent;
 use Montage\Event\Eventable;
+
+require_once(__DIR__.'/../../plugins/Utilities/src/Path.php');
 
 // load the Framework autoloader, this will handle all other dependencies to load this class
 // so I don't have to have a ton of includes() right here...
@@ -1083,9 +1084,6 @@ class Framework extends Field implements Dependable,Eventable {
     $path = new Path($app_path,'vendor');
     if($path->exists()){ $vendor_path_list[] = $path; }//if
     
-    $path = new Path($app_path,'assets');
-    if($path->exists()){ $assets_path_list[] = $path; }//if
-    
     // add the plugin paths...
     $plugin_base_path_list = array();
     $plugin_base_path_list[] = new Path($framework_path,'plugins');
@@ -1135,6 +1133,9 @@ class Framework extends Field implements Dependable,Eventable {
       }//if
       
     }//foreach
+  
+    $path = new Path($app_path,'assets');
+    if($path->exists()){ $assets_path_list[] = $path; }//if
   
     $this->setField('reflection_paths',$reflection_path_list);
     $this->setField('view_paths',$view_path_list);

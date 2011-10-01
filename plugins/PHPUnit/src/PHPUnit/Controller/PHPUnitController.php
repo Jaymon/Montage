@@ -13,7 +13,7 @@ namespace PHPUnit\Controller;
 use Montage\Controller\CliController;
 use Montage\Framework;
 use Montage\Config\FrameworkConfig;
-use Montage\Path;
+use Path;
 use Montage\Response\Template;
 
 class PHPUnitController extends CliController {

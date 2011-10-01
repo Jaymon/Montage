@@ -12,7 +12,7 @@
  ******************************************************************************/
 namespace Montage\Cache;
 
-use Montage\Path;
+use Path;
 
 class Cache {
 

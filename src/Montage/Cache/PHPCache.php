@@ -15,7 +15,7 @@
 namespace Montage\Cache;
 
 use Montage\Cache\Cache;
-use Montage\Path;
+use Path;
 
 class PHPCache extends Cache {
   

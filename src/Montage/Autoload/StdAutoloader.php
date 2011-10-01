@@ -32,7 +32,7 @@
 namespace Montage\Autoload;
 
 use Montage\Autoload\Autoloader;
-use Montage\Path;
+use Path;
 use Montage\Cache\Cacheable;
 use Montage\Dependency\ReflectionFile;
 

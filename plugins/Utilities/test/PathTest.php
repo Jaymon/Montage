@@ -1,11 +1,9 @@
 <?php
-namespace Montage\Test\PHPUnit;
 
-use PHPUnit\TestCase;
-use ReflectionClass;
-use Montage\Path;
+$base = realpath(__DIR__.'/../src');
+require_once($base.'/Path.php');
 
-class PathTest extends TestCase {
+class PathTest extends \PHPUnit_Framework_TestCase {
 
   public function testGetSibling(){
   
@@ -457,6 +455,41 @@ class PathTest extends TestCase {
     $this->assertEquals(($total_count + 1),$ret_count);
     $this->assertFalse($path_list[0]->exists());
   
+  }//method
+  
+  protected function getFixturePath($path){
+  
+    $path = func_get_args();
+    $ret_path = sprintf(
+      '.%sfixtures%s%s',
+      DIRECTORY_SEPARATOR,
+      DIRECTORY_SEPARATOR,
+      join(DIRECTORY_SEPARATOR,$path)
+    );
+    
+    return realpath($path);
+  
+  }//method
+  
+  protected function getTempPath($path){
+  
+    $path = func_get_args();
+    
+    $ret_path = sys_get_temp_dir();
+    if(mb_substr($ret_path,-1) !== DIRECTORY_SEPARATOR){
+    
+      $ret_path .= DIRECTORY_SEPARATOR;
+    
+    }//if
+    
+    $ret_path = sprintf(
+      '%s%s',
+      $ret_path,
+      join(DIRECTORY_SEPARATOR,$path)
+    );
+  
+    return $ret_path;
+    
   }//method
 
 }//class

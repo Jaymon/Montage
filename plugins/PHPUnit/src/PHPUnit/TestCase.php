@@ -11,7 +11,7 @@
 namespace PHPUnit;
 
 use PHPUnit_Framework_TestCase;
-use Montage\Path;
+use Path;
 
 abstract class TestCase extends PHPUnit_Framework_TestCase {
   

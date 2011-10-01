@@ -13,7 +13,7 @@ namespace Montage\Response;
 
 use Montage\Field\Field;
 use Montage\Escape;
-use Montage\Path;
+use Path;
 
 class Template extends Field {
 
