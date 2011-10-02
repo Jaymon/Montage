@@ -64,6 +64,19 @@ class Field implements Fieldable {
   }//method
   
   /**
+   *  return the value of getField, but wrap it in an escape object
+   *  
+   *  this is useful for making sure user submitted input is safe
+   *
+   *  @see  getField()      
+   */
+  public function escField($key,$default_val = null){
+    
+    return new Escape($this->getField($key,$default_val));
+    
+  }//method
+  
+  /**
    *  remove $key and its value from the map
    *  
    *  @param  string  $key

@@ -5,10 +5,11 @@
  *  the reason this interface exists is to make sure any class can mimick the field
  *  behavior even if it can't extend the Field class 
  *  
- *  @version 0.1
- *  @author Jay Marcyes {@link http://marcyes.com}
+ *  @version 0.3
+ *  @author Jay Marcyes
  *  @since 6-30-11
- *  @package montage 
+ *  @package montage
+ *  @subpackage Field 
  ******************************************************************************/
 namespace Montage\Field;
 
@@ -40,6 +41,15 @@ interface GetFieldable {
   public function getField($key,$default_val = null);
   
   /**
+   *  return the value of getField, but wrap it in an escape object
+   *  
+   *  this is useful for making sure user submitted input is safe
+   *
+   *  @see  getField()      
+   */
+  public function escField($key,$default_val = null);
+  
+  /**
    *  check's if a field exists and is equal to $val
    *  
    *  @param  string  $key  the name
@@ -63,4 +73,4 @@ interface GetFieldable {
    */
   public function hasFields();
 
-}//class     
+}//interface    

@@ -128,9 +128,9 @@ class FrameworkStart extends Start {
     // allow form objects in the controller method to be populated with submitted values
     $dispatch->listen(
       'framework.filter.controller_param_created',
-      function(\Montage\Event\Event $event){
+      function(\Montage\Event\FilterEvent $event){
       
-        $instance = $event->getField('instance');
+        $instance = $event->getParam();
       
         // canary...
         if(!($instance instanceof \Montage\Form\Form)){ return; }//if
@@ -154,7 +154,7 @@ class FrameworkStart extends Start {
         
         }//if
         
-        $event->setField('instance',$instance);
+        $event->setParam($instance);
         
       }
     );

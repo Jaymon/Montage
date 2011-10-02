@@ -12,6 +12,7 @@ namespace Montage\Request;
 use Symfony\Component\HttpFoundation\Request as SymfonyRequest;
 use Montage\Request\Requestable;
 use Montage\Field\GetFieldable;
+use Montage\Field\Escape;
 
 class Request extends SymfonyRequest implements Requestable,GetFieldable {
   
@@ -244,6 +245,19 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
   
     return $ret_mixed;
   
+  }//method
+  
+  /**
+   *  return the value of getField, but wrap it in an escape object
+   *  
+   *  this is useful for making sure user submitted input is safe
+   *
+   *  @see  getField()      
+   */
+  public function escField($key,$default_val = null){
+    
+    return new Escape($this->getField($key,$default_val));
+    
   }//method
   
   /**

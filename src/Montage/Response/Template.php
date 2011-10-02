@@ -3,8 +3,8 @@
 /**
  *  render the template 
  *   
- *  @version 0.2
- *  @author Jay Marcyes {@link http://marcyes.com}
+ *  @version 0.3
+ *  @author Jay Marcyes
  *  @since 2-22-10
  *  @package montage
  *  @subpackage template 
@@ -18,15 +18,6 @@ use Path;
 class Template extends Field {
 
   /**
-   *  this is the default value, it will capture the output of the template and return it as a string
-   */     
-  const OUT_STR = 1;
-  /**
-   *  if set, this will output the template to standard output
-   */     
-  const OUT_STD = 2;
-
-  /**
    *  the actual template file that will be used to render the view
    *  @var  string
    */
@@ -35,9 +26,14 @@ class Template extends Field {
   /**
    *  the default template extension
    *
-   *  @var  string   
+   *  most likely, you won't ever need to touch this! But if you do need to change it:
+   *  this is appended on the end (see {@link normalizePath()}), so you must include the
+   *  period of an extension (eg, .ext not just ext), this will allow you to do something 
+   *  like _template.php and have it still work correctly.
+   *      
+   *  @var  string
    */
-  protected $template_ext = '.php';
+  protected $template_postfix = '.php';
   
   /**
    *  hold all the paths this instance will use to find the template file
@@ -54,45 +50,14 @@ class Template extends Field {
   public function hasTemplate(){ return !empty($this->template); }//method
   
   /**
-   *  Open, parse, and return/output the template file.
-   *     
-   *  @param  integer $options  one or more of the class constants or'ed together (eg, OPTION_* | OPTION_*)
-   *  @return mixed boolean if OUT_STD is set, string if OUT_STR is set   
-   */        
-  public function handle($options = self::OUT_STR){
+   *  this is the method called automatically in the Framework, override if you want to change defaults
+   *
+   *  @return mixed
+   */
+  public function handle(){
     
-    // canary...
-    if(!$this->hasTemplate()){ throw new \RuntimeException('no template file specified'); }//if
-    
-    $ret_mix = '';
     $template = $this->getTemplate();
-
-    // decide to return string or output to standard out, default is string...
-    $is_ret_str = true;
-    if($options & self::OUT_STD){
-      $is_ret_str = false;
-      $ret_mix = false;
-    }//if/else if
-    
-    if($is_ret_str){
-    
-      // capture the template into a string...
-      // NOTE 5-1-08: if the page just comes out blank for some reason, their might 
-      //  be an unsupported character in the template, and even better are chances that it 
-      //  is that dumbass windows quote symbol...
-      ob_start();
-        $this->render($template);
-        $ret_mix = ob_get_contents(); // Get the contents of the buffer
-      // End buffering and discard
-      ob_end_clean();
-    
-    }else{
-    
-      $ret_mix = $this->render($template);
-    
-    }//if/else
-    
-    return $ret_mix;
+    return $this->out($template);
     
   }//method
   
@@ -131,40 +96,77 @@ class Template extends Field {
   }//method
   
   /**
-   *  overloaded from parent so when in the template it will return a montage_escaped wrapped
-   *  value, this is useful for making sure user submitted input is safe while not having to worry
-   *  about it anywhere else but the view      
+   *  return the output of a template
    *  
-   *  @see  parent::getField()
+   *  if you want to just echo the template to the screen, use {@link out()}
+   *  
+   *  @param  string  $template the template name
+   *  @param  array $field_map  if you have any specific fields to pass to the template   
+   *  @return boolean
    */
-  public function escField($key,$default_val = null){
+  public function render($template,array $field_map = array()){
     
-    $ret_mix = $default_val;
+    $ret_str = '';
     
-    if($this->existsField($key)){
-      $ret_mix = new Escape($this->field_map[$key]);
-    }//if
+    // capture the template into a string...
+    // NOTE 5-1-08: if the page just comes out blank for some reason, there might 
+    //  be an unsupported character in the template...
+    ob_start();
     
-    return $ret_mix;
+      try{
+      
+        $this->out($template,$field_map);
+        $ret_str = ob_get_contents(); // Get the contents of the buffer
+        
+      }catch(\Exception $e){
+      
+        ob_end_clean();
+        throw $e;
+      
+      }//try/catch
+        
+    // End buffering and discard
+    ob_end_clean();
+    
+    return $ret_str;
     
   }//method
   
   /**
-   *  include a template
+   *  echo to the screen the output of a template
    *  
-   *  this will usually be called inside a template
+   *  if you want to return the template output, use {@link render()}
    *  
    *  @param  string  $template the template name
+   *  @param  array $field_map  if you have any specific fields to pass to the template   
    *  @return boolean
    */
-  protected function render($template){
+  public function out($template,array $field_map = array()){
   
     // canary...
     if(empty($template)){ throw new \InvalidArgumentException('$template was empty'); }//if
   
-    // go ahead and just print the output to the screen
+    $ret_str = '';
     $template_path = $this->normalizePath($template);
+    $orig_field_map = array();
+    
+    // if there are passed in fields than add those to the previous fields...
+    if(!empty($field_map)){
+    
+      $orig_field_map = $this->getFields();
+      $field_map = array_merge($orig_field_map,$field_map);
+      $this->setFields($field_map);
+      
+    }//if
+    
     include($template_path);
+    
+    // restore the original fields...
+    if(!empty($field_map)){
+    
+      $this->setFields($orig_field_map);
+    
+    }//if
     
     return true;
     
@@ -219,9 +221,9 @@ class Template extends Field {
    */
   protected function normalizeTemplateName($template){
   
-    if(!preg_match(sprintf('#%s$#i',preg_quote($this->template_ext)),$template)){
+    if(!preg_match(sprintf('#%s$#i',preg_quote($this->template_postfix)),$template)){
     
-      $template .= $this->template_ext;
+      $template .= $this->template_postfix;
     
     }//if
   

@@ -149,7 +149,15 @@ abstract class Assets implements Assetable,IteratorAggregate {
    */
   public function setPrefixPath($prefix_path){
   
-    $this->prefix_path = $this->normalizePath($prefix_path);
+    if(empty($prefix_path)){
+    
+      $this->prefix_path = null;
+    
+    }else{
+  
+      $this->prefix_path = $this->normalizePath($prefix_path);
+      
+    }//if/else
   
   }//method
   
@@ -254,24 +262,49 @@ abstract class Assets implements Assetable,IteratorAggregate {
   
   }//method
   
+  public function hasName($name){
+  
+    $asset_map = $this->get();
+    return isset($asset_map[$name]);
+  
+  }//method
+  
+  /**
+   *  render a particular asset
+   *  
+   *  @param  string  $name the name of the asset      
+   *  @return string
+   */
+  public function render($name = ''){
+  
+    $ret_str = '';
+    $asset_map = $this->get();
+    
+    if(isset($asset_map[$name])){
+    
+      $ret_str .= $asset_map[$name]->render().PHP_EOL;
+    
+    }else{
+    
+      $assets_iterator = new FlattenArrayIterator($this->get());
+      foreach($assets_iterator as $asset){
+      
+        $ret_str .= $asset->render().PHP_EOL;
+        
+      }//foreach
+    
+    }//if/else
+  
+    return $ret_str;
+  
+  }//method
+  
   /**
    *  output all the assets that this instance wraps
    *
    *  @return string   
    */
-  public function __toString(){
-  
-    $ret_str = '';
-    $assets_iterator = new FlattenArrayIterator($this->get());
-    foreach($assets_iterator as $asset){
-    
-      $ret_str .= $asset->__toString().PHP_EOL;
-      
-    }//foreach
-  
-    return $ret_str;
-  
-  }//method
+  public function __toString(){ $this->render(); }//method
   
   /**
    *  add an Asset to this instance

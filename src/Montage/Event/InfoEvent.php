@@ -24,10 +24,8 @@ class InfoEvent extends Event {
   /**
    *  create a new Event
    *  
-   *  @param  string  $event_name the event name      
-   *  @param  array $field_map  the values you want this event to contain when it is handled by the callbacks
-   *  @param  boolean $persist  set to true to have this event stick around until something is listening to
-   *                            $event_name, if something is already listening, then this is ignored
+   *  @param  string  $msg  the info message
+   *  @param  array $options  any other values you want to pass to the event callback   
    */
   public function __construct($msg,array $options = array()){
   

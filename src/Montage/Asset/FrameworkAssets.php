@@ -86,26 +86,55 @@ class FrameworkAssets extends Assets {
   }//method
   
   /**
-   *  render the assets of a particular extension
+   *  render a particular asset
    *  
-   *  @param  string  $extension  usually something like css or js      
+   *  @param  string  $name the name of the asset      
    *  @return string
    */
-  public function render($extension){
+  public function render($name = ''){
+  
+    // canary...
+    if(empty($name)){ throw new \InvalidArgumentException('$name was empty'); }//if
   
     $ret_str = '';
     $asset_map = $this->get();
     
-    if(isset($asset_map[$extension])){
+    if(isset($asset_map[$name])){
     
-      foreach($asset_map[$extension] as $asset){
+      foreach($asset_map[$name] as $asset){
       
-        $ret_str .= $asset->__toString();
+        $ret_str .= $asset->render().PHP_EOL;
       
       }//foreach
     
-    }//if
+    }else{
     
+      foreach(new \FlattenArrayIterator($asset_map) as $asset_name => $asset){
+      
+        if($asset instanceof Assets){
+        
+          if($asset->hasName($name)){
+        
+            $ret_str .= $asset->render($name).PHP_EOL;
+            break;
+          
+          }//if
+        
+        }else{
+        
+          if($name == $asset_name){
+          
+            $ret_str .= $asset->render().PHP_EOL;
+            break;
+          
+          }//if
+        
+        }//if/else
+      
+      }//foreach
+    
+    }//if/else
+
     return $ret_str;
   
   }//method

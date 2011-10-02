@@ -5,12 +5,11 @@
  *  other names: handler, sequence, assembler, dispatcher, scheduler
  *  http://en.wikipedia.org/wiki/Montage_%28filmmaking%29  
  *  
- *  This class creates a lot of new instances
- *  we shouldn't have "new" inside the class, but sometimes you just have to break the rules 
- *  to make things easier, I didn't want to have to create a Cache and Reflection 
- *  instance to pass in here to resolve all the dependencies...
+ *  This class creates a lot of dependencies instead of having them be passed in.
+ *  This is for convenience to make things easier, (eg, I didn't want to have to create 
+ *  a Cache and Reflection instance to pass in here to resolve all the dependencies).
  *  see: http://misko.hevery.com/2008/07/08/how-to-think-about-the-new-operator/ for how
- *  I'm wrong about this, but convenience trumps rightness in this instance for me  
+ *  I'm wrong about this, but for me, convenience trumps rightness in this instance.
  *   
  *  @version 0.8
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -36,6 +35,7 @@ use Montage\Response\Template;
 
 use Montage\Event\Event;
 use Montage\Event\InfoEvent;
+use Montage\Event\FilterEvent;
 use Montage\Event\Eventable;
 
 require_once(__DIR__.'/../../plugins/Utilities/src/Path.php');
@@ -259,15 +259,14 @@ class Framework extends Field implements Dependable,Eventable {
     $use_template = false;
     $response = $this->getResponse();
   
-    $event = new Event(
-      'framework.filter_response',
-      array(
-        'response' => $response,
-        'controller_response' => $controller_response
-      )
+    $event = new FilterEvent(
+      'framework.filter.controller_response',
+      $controller_response,
+      array('response' => $response)
     );
+    
     $event = $this->broadcastEvent($event);
-    $controller_response = $event->getField('controller_response');
+    $controller_response = $event->getParam();
   
     if(is_string($controller_response)){
     
@@ -344,7 +343,14 @@ class Framework extends Field implements Dependable,Eventable {
     $response->send(); // send headers and content
     
     // handle outputting using the template...
-    if($use_template){ $this->handleTemplate(); }//if
+    if($use_template){
+    
+      $ret_mix = $this->handleTemplate();
+      
+      // if a string was returned, set that into the response object...
+      if(is_string($ret_mix)){ $response->setContent($ret_mix); }//if
+      
+    }//if
     
     return $response;
   
@@ -368,22 +374,23 @@ class Framework extends Field implements Dependable,Eventable {
     
     $this->handleAssets();
   
-    $event = new Event(
-      'framework.filter_template',
-      array(
-        'template' => $template
-      )
-    );
+    $event = new FilterEvent('framework.filter.template',$template);
     $event = $this->broadcastEvent($event);
+    $template = $event->getParam();
     
     $event = new InfoEvent(sprintf('Using template: %s',$template->getTemplate()));
     $this->broadcastEvent($event);
     
     // output the template response to the screen...
-    $template->handle(Template::OUT_STD);
+    return $template->handle();
 
   }//method
   
+  /**
+   *  handle the automatic framework handling of the assets spread throughout the app
+   *
+   *  @since  9-27-11
+   */
   protected function handleAssets(){
   
     // canary...
@@ -419,6 +426,10 @@ class Framework extends Field implements Dependable,Eventable {
     }//foreach
     
     $assets->handle();
+    
+    $event = new FilterEvent('framework.filter.assets',$assets);
+    $event = $this->broadcastEvent($event);
+    $assets = $event->getParam();
     
     $template = $this->getTemplate();
     $template->setField('assets',$assets);
@@ -574,19 +585,18 @@ class Framework extends Field implements Dependable,Eventable {
     $container = $this->getContainer();
     
     // allow filtering of the controller info...
-    $event = new Event(
-      'framework.filter_controller',
-      array(
-        'controller' => $class_name,
-        'method' => $method,
-        'params' => $params
-      )
+    $filter_map = array(
+      'controller' => $class_name,
+      'method' => $method,
+      'params' => $params
     );
+    $event = new FilterEvent('framework.filter.controller_info',$filter_map);
     $event = $this->broadcastEvent($event);
     
-    $class_name = $event->getField('controller');
-    $method = $event->getField('method');
-    $params = $event->getField('params');
+    $filter_map = $event->getParam();
+    $class_name = $filter_map['controller'];
+    $method = $filter_map['method'];
+    $params = $filter_map['params'];
     
     $controller = $container->getInstance($class_name);
     
@@ -643,16 +653,16 @@ class Framework extends Field implements Dependable,Eventable {
           if($rclass = $rparam->getClass()){
           
             // broadcast an event to give a chance to create the object instance...
-            $event = new Event(
+            $event = new FilterEvent(
               'framework.filter.controller_param_create',
+              $raw_param,
               array(
-                'param' => $raw_param,
                 'reflection_param' => $rparam,
                 'container' => $container
               )
             );
             $event = $this->broadcastEvent($event);
-            $filtered_param = $event->getField('param');
+            $filtered_param = $event->getParam();
           
             if($filtered_param !== null){
             
@@ -668,17 +678,17 @@ class Framework extends Field implements Dependable,Eventable {
           // filter the post-creation of the object...
           if(is_object($rfunc_params[$index])){
             
-            $event = new Event(
+            $event = new FilterEvent(
               'framework.filter.controller_param_created',
+              $rfunc_params[$index],
               array(
-                'instance' => $rfunc_params[$index],
                 'param' => $raw_param,
                 'reflection_param' => $rparam,
                 'container' => $container
               )
             );
             $event = $this->broadcastEvent($event);
-            $rfunc_params[$index] = $event->getField('instance');
+            $rfunc_params[$index] = $event->getParam();
             
           }//if
           

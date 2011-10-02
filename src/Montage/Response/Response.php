@@ -13,6 +13,7 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 use Symfony\Component\HttpFoundation\Cookie;
 
 use Montage\Field\Fieldable;
+use Montage\Field\Escape;
 
 class Response extends SymfonyResponse implements Fieldable {
 
@@ -204,6 +205,17 @@ class Response extends SymfonyResponse implements Fieldable {
    */
   public function getField($key,$default_val = null){
     return $this->existsField($key) ? $this->field_map[$key] : $default_val;
+  }//method
+  
+  /**
+   *  return the value of getField, but wrap it in an escape object
+   *  
+   *  this is useful for making sure user submitted input is safe
+   *
+   *  @see  getField()      
+   */
+  public function escField($key,$default_val = null){
+    return new Escape($this->getField($key,$default_val));
   }//method
   
   /**

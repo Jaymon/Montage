@@ -28,5 +28,13 @@ interface Assetable {
    *  @return string   
    */
   public function getExtension();
+  
+  /**
+   *  render a particular asset
+   *  
+   *  @param  string  $name the name of the asset      
+   *  @return string
+   */
+  public function render($name = '');
 
 }//class

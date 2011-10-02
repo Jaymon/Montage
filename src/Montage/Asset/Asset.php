@@ -2,7 +2,7 @@
 /**
  *  represent one Asset file, usually a css or js file
  *  
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes
  *  @since 9-21-11
  *  @package montage
@@ -41,7 +41,15 @@ class Asset extends Field implements Assetable {
    *  
    *  @return string
    */
-  public function __toString(){
+  public function __toString(){ return $this->render(); }//method
+  
+  /**
+   *  render a particular asset
+   *  
+   *  @param  string  $name the name of the asset      
+   *  @return string
+   */
+  public function render($name = ''){
   
     $ret_str = '';
     $extension = $this->getField('public_file')->getExtension();

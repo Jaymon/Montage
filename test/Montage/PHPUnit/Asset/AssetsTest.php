@@ -10,6 +10,39 @@ use Montage\Asset\FrameworkAssets;
 
 class AssetsTest extends FrameworkTestCase {
   
+  /**
+   *  make sure Asset rendering works
+   *
+   *  @since  10-1-11
+   */
+  public function testRender(){
+  
+    $dest_path = $this->getTempPath('Asset');
+    $src_path = $this->getFixturePath('Asset','Che','assets');
+    
+    $assets = new FooAssets();
+    $assets->addSrcPath($src_path);
+    $assets->setDestPath($dest_path);
+    $assets->handle();
+    
+    $str = $assets->render('1');
+    $this->assertNotEmpty($str);
+    
+    $framework_assets = new FrameworkAssets();
+    $framework_assets->setDestPath($dest_path);
+    $framework_assets->setSrcPaths(array($src_path));
+    $framework_assets->add($assets);
+    
+    $framework_assets->handle();
+    
+    $str = $framework_assets->render('css');
+    $this->assertNotEmpty($str);
+  
+    $str = $framework_assets->render('1');
+    $this->assertNotEmpty($str);
+  
+  }//method
+  
   public function testAssets(){
   
     $dest_path = $this->getTempPath('Asset');

@@ -13,9 +13,9 @@
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 12-28-09
  *  @package montage
- *  @subpackage template 
+ *  @subpackage Field 
  ******************************************************************************/
-namespace Montage;
+namespace Montage\Field;
 
 class Escape implements \ArrayAccess,\Iterator,\Countable {
 

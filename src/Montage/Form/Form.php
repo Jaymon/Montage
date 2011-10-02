@@ -17,7 +17,9 @@ use Montage\Form\Field\Field;
 use Montage\Form\Field\Input;
 use ReflectionObject;
 use ArrayIterator;
-use ArrayAccess,IteratorAggregate,Montage\Field\Fieldable;
+use ArrayAccess,IteratorAggregate;
+
+use Montage\Field\Fieldable;
 
 abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fieldable {
 
@@ -336,6 +338,17 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
     
     return $ret_mixed;
     
+  }//method
+  
+  /**
+   *  return the value of getField, but wrap it in an escape object
+   *  
+   *  this is useful for making sure user submitted input is safe
+   *
+   *  @see  getField()      
+   */
+  public function escField($key,$default_val = null){
+    throw new \BadMethodCallException('This method is not used in this class');
   }//method
   
   /**

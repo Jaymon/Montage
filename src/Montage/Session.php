@@ -10,6 +10,8 @@
 namespace Montage;
 
 use Montage\Field\Fieldable;
+use Montage\Field\Escape;
+
 use Symfony\Component\HttpFoundation\Session as SymfonySession;
 use Symfony\Component\HttpFoundation\SessionStorage\SessionStorageInterface;
 
@@ -65,6 +67,19 @@ class Session extends SymfonySession implements Fieldable {
    *  @return mixed
    */
   public function getField($key,$default_val = null){ return $this->get($key,$default_val); }//method
+  
+  /**
+   *  return the value of getField, but wrap it in an escape object
+   *  
+   *  this is useful for making sure user submitted input is safe
+   *
+   *  @see  getField()      
+   */
+  public function escField($key,$default_val = null){
+    
+    return new Escape($this->getField($key,$default_val));
+    
+  }//method
   
   /**
    *  remove $key and its value from the map
