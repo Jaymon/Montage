@@ -392,7 +392,7 @@ class Framework extends Field implements Dependable,Eventable {
    *  @since  9-27-11
    */
   protected function handleAssets(){
-  
+
     // canary...
     if(!$this->hasField('asset_paths')){ return; }//if
   

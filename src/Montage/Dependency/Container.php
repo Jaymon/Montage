@@ -342,24 +342,7 @@ abstract class Container extends Field implements Containable {
             
             }else{
             
-              $ret_param = $this->getInstance($class_name);
-            
-              /* $reflection = $this->getReflection();
-              $found_instance = false;
-            
-              foreach($this->instance_map as $class_key => $instance){
-              
-                if($this->isRelatedClass($class_name,$class_key)){
-              
-                  $ret_params[] = $instance;
-                  $found_instance = true;
-                  break;
-                  
-                }//if
-              
-              }//foreach */
-            
-              ///throw $e;
+              throw $e;
               
             }//if/else
           
@@ -599,13 +582,15 @@ abstract class Container extends Field implements Containable {
         
           if($is_inject){
           
-            // the valid setter syntax is: injectName(ClassName $var_name), only methods matching that are forced injected...  
+            // the valid inject syntax is: injectName(ClassName $var_name), 
+            // only methods matching that are force injected...  
             
             $instance->{$method_name}($this->getInstance($class_name));
               
           }else if($is_set){
           
-            // the valid setter syntax is: setName(ClassName $var_name), only methods matching that are set...
+            // the valid setter syntax is: setName(ClassName $var_name), 
+            // only methods matching that are set...
           
             if($this->hasInstance($class_name)){
               
