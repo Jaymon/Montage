@@ -24,7 +24,7 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
    */
   public function initialize(array $query = array(), array $request = array(), array $attributes = array(), array $cookies = array(), array $files = array(), array $server = array(), $content = null){
     
-    $cli_query = array();    
+    $cli_query = null;
 
     if(!empty($server['argv'])){
     
@@ -35,12 +35,12 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
     
       if(isset($cli[1])){
       
-        $cli_query = $this->parseArgv($cli);
-  
+        $cli_query = new \ParseOpt($cli);
+      
         // treat all the key/vals as query vars...
-        if(!empty($cli_query['map'])){
+        if($cli_query->hasFields()){
         
-          $query = array_merge($query,$cli_query['map']);
+          $query = array_merge($query,$cli_query->getFields());
         
         }//if
       
@@ -53,10 +53,10 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
     parent::initialize($query, $request, $attributes, $cookies, $files, $server, $content);
     
     // treat any cli vals as appendages to the path...
-    if(!empty($cli_query['list'])){
+    if(!empty($cli_query) && $cli_query->hasList()){
     
       // this overrides automagic path finding...
-      $this->pathInfo = join('/',$cli_query['list']);
+      $this->pathInfo = join('/',$cli_query->getList());
     
     }//if
     
@@ -281,144 +281,6 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
   public function getFields(){
   
     return array_merge($this->query->all(),$this->request->all());
-  
-  }//method
-      
-  /**
-   *  function to make passing arguments passed into the CLI easier
-   *  
-   *  an argument has to be in the form: --name=val or --name if you want name to be true
-   *  
-   *  if you want to do an array, then specify the name multiple times: --name=val1 --name=val2 will
-   *  result in ['name'] => array(val1,val2)
-   *  
-   *  we don't use php's http://php.net/manual/en/function.getopt.php because inputs are variable
-   *  and we don't know what they will be before hand. Really, I'm shocked at how unflexible php's
-   *  built in solution is                  
-   *  
-   *  @example
-   *    // command line: php test.php --foo=bar baz che
-   *    $this->parseArgv($_SYSTEM['argv']); // array('list' => array('baz,'che'), 'map' => array('foo' => 'bar'))      
-   *      
-   *  @param  array $argv the values passed into php from the commmand line
-   *  @param  array $required_argv_map hold required args that need to be passed in to be considered valid.
-   *                                  The name is the key and the required value will be the val, if the val is null
-   *                                  then the name needs to be there with a value (in $argv), if the val 
-   *                                  is not null then that will be used as the default value if 
-   *                                  the name isn't passed in with $argv 
-   *  @return array array has 2 indexes: 'list' and 'map' where list contains all args that weren't in
-   *                the form --name=val (ie, they are in the form val) and map contains all --name=val   
-   */
-  public function parseArgv($argv,$required_argv_map = array())
-  {
-    // canary...
-    if(empty($argv)){ return array(); }//if
-  
-    $ret_list = array();
-    $ret_map = array();
-  
-    // do some hackish stuff to decide if the first argv needs to be stripped...
-    $bt = debug_backtrace();
-    
-    // we want to look at the file that started the request...
-    end($bt);
-    $key = key($bt);
-    
-    if(!empty($bt[$key]['file'])){
-    
-      $file_path = $bt[$key]['file'];
-      $file_name = basename($bt[$key]['file']);
-    
-      if(($argv[0] == $file_path) || ($argv[0] == $file_name)){
-        $argv = array_slice($argv,1);
-      }//if
-
-    }//if
-  
-    foreach($argv as $arg){
-    
-      // canary...
-      if((!isset($arg[0]) || !isset($arg[1])) || ($arg[0] != '-') || ($arg[1] != '-')){
-        
-        /* throw new \InvalidArgumentException(
-          sprintf('%s does not conform to the --name=value convention',$arg)
-        ); */
-        
-        $ret_list[] = $arg;
-        continue;
-        
-      }//if
-    
-      $arg_bits = explode('=',$arg,2);
-      // strip off the dashes...
-      $name = mb_substr($arg_bits[0],2);
-      
-      $val = true;
-      if(isset($arg_bits[1])){
-        
-        $val = $arg_bits[1];
-        
-        if(!is_numeric($val)){
-          
-          // convert literal true or false into actual booleans...
-          switch(mb_strtoupper($val)){
-          
-            case 'TRUE':
-              $val = true;
-              break;
-              
-            case 'FALSE':
-              $val = false;
-              break;
-          
-          }//switch
-        
-        }//if
-        
-      }//if
-      
-      if(isset($ret_map[$name])){
-      
-        $ret_map[$name] = (array)$ret_map[$name];
-        $ret_map[$name][] = $val;
-        
-      }else{
-      
-        $ret_map[$name] = $val;
-        
-      }//if/else
-    
-    }//foreach
-      
-    // make sure any required key/val pairings are there...
-    if(!empty($required_argv_map)){
-    
-      foreach($required_argv_map as $name => $default_val){
-      
-        if(!isset($ret_map[$name])){
-        
-          if($default_val === null){
-          
-            throw new \UnexpectedValueException(
-              sprintf(
-                '%s was not passed in and is required, you need to pass it in: --%s=[VALUE]',
-                $name,
-                $name
-              )
-            );
-            
-          }else{
-          
-            $ret_map[$name] = $default_val;
-            
-          }///if/else
-        }//if
-      
-      }//foreach
-    
-    }//if
-  
-    return array('list' => $ret_list,'map' => $ret_map);
   
   }//method
 
