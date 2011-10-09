@@ -109,12 +109,12 @@ class Framework extends Field implements Dependable,Eventable {
   
     $ret_mixed = true;
   
+    // this needs to be the first thing done otherwise preHandle() will keep getting
+    // called again and again as other methods call this method to make sure everything
+    // is ready...
+    $this->is_ready = true;
+  
     try{
-    
-      // this needs to be the first thing done otherwise preHandle() will keep getting
-      // called again and again as other methods call this method to make sure everything
-      // is ready...
-      $this->is_ready = true;
     
       // collect all the paths we're going to use...
       $this->compilePaths();
@@ -867,14 +867,11 @@ class Framework extends Field implements Dependable,Eventable {
   public function getContainer(){
   
     // canary...
-    if(isset($this->instance_map['container'])){
-      ///\out::e(spl_object_hash($this->instance_map['container']));
-      return $this->instance_map['container'];
-    }//if
+    if(isset($this->instance_map['container'])){ return $this->instance_map['container']; }//if
   
     $this->preHandle();
     $reflection = $this->getReflection();
-    $container_class_name = $reflection->findClassName('Montage\Dependency\ReflectionContainer');
+    $container_class_name = $reflection->findClassName('Montage\Dependency\FrameworkContainer');
     $container = new $container_class_name($reflection);
     
     $this->setContainer($container);
@@ -890,13 +887,8 @@ class Framework extends Field implements Dependable,Eventable {
    */
   protected function getControllerSelect(){
   
-    // canary...
-    if(isset($this->instance_map['controller_select'])){ return $this->instance_map['controller_select']; }//if
-    
     $container = $this->getContainer();
-    $this->instance_map['controller_select'] = $container->getInstance('Montage\Controller\Select');
-    
-    return $this->instance_map['controller_select'];
+    return $container->getControllerSelect();
   
   }//method
   
@@ -908,13 +900,8 @@ class Framework extends Field implements Dependable,Eventable {
    */
   protected function getRequest(){
   
-    // canary...
-    if(isset($this->instance_map['request'])){ return $this->instance_map['request']; }//if
-  
     $container = $this->getContainer();
-    $this->instance_map['request'] = $container->getInstance('Montage\Request\Requestable');
-    
-    return $this->instance_map['request'];
+    return $container->getRequest();
   
   }//method
   
@@ -927,7 +914,7 @@ class Framework extends Field implements Dependable,Eventable {
   public function getResponse(){
   
     $container = $this->getContainer();
-    return $container->getInstance('\Montage\Response\Response');
+    return $container->getResponse();
   
   }//method
   
@@ -954,7 +941,7 @@ class Framework extends Field implements Dependable,Eventable {
     if(isset($this->instance_map['event_dispatch'])){ return $this->instance_map['event_dispatch']; }//if
   
     $container = $this->getContainer();
-    $this->instance_map['event_dispatch'] = $container->getInstance('\Montage\Event\Dispatch');
+    $this->instance_map['event_dispatch'] = $container->getEventDispatch();
      
     return $this->instance_map['event_dispatch'];
   
@@ -1028,7 +1015,7 @@ class Framework extends Field implements Dependable,Eventable {
   protected function getTemplate(){
     
     $container = $this->getContainer();
-    return $container->getInstance('\Montage\Response\Template');
+    return $container->getTemplate();
     
   }//method
   
@@ -1041,7 +1028,7 @@ class Framework extends Field implements Dependable,Eventable {
   protected function getConfig(){
     
     $container = $this->getContainer();
-    return $container->getInstance('\Montage\Config\frameworkConfig');
+    return $container->getConfig();
     
   }//method
   

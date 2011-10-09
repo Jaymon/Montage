@@ -14,8 +14,9 @@ namespace Montage\Response;
 use Montage\Field\Field;
 use Montage\Escape;
 use Path;
+use Montage\Dependency\Dependable;
 
-class Template extends Field {
+class Template extends Field implements Dependable {
 
   /**
    *  the actual template file that will be used to render the view
@@ -41,6 +42,16 @@ class Template extends Field {
    *  @var  array
    */
   protected $path_list = array();
+  
+  /**
+   *  holds the container instance
+   *
+   *  @var  \Montage\Dependency\Containable
+   */
+  protected $container = null;
+  
+  public function setContainer(\Montage\Dependency\Containable $container){ $this->container = $container; }//method
+  public function getContainer(){ return $this->container; }//method
   
   /**
    *  the actual template name (eg, layout.php or page_tmpl.php
