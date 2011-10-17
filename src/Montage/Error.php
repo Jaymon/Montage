@@ -56,6 +56,7 @@ class Error implements Eventable {
   public function __construct(){
   
     // set error handlers...
+    // http://us2.php.net/set_error_handler
     set_error_handler(array($this,'handleRuntime'));
     register_shutdown_function(array($this,'handleFatal'));
   
@@ -113,6 +114,11 @@ class Error implements Eventable {
     if($errno === E_RECOVERABLE_ERROR){
       throw new \InvalidArgumentException($errstr,$errno);
     }//if
+    // respect error reporting, ignore supressed errors...
+    // http://us2.php.net/manual/en/language.operators.errorcontrol.php
+    // this can be done with either the @ symbol before an expression, or with: error_reporting(0) at
+    // the top of the script
+    if(error_reporting() === 0){ return false; }//if
   
     $error_map = array();
     $error_map['group'] = 'RUNTIME';
@@ -121,7 +127,6 @@ class Error implements Eventable {
     $error_map['file'] = $errfile;
     $error_map['line'] = $errline;
     $error_map['name'] = $this->getName($error_map['type']);
-    
     
     $this->handleError($error_map);
     

@@ -117,21 +117,29 @@ class Framework extends Field implements Dependable,Eventable {
     try{
     
       // collect all the paths we're going to use...
-      $this->compilePaths();
+      $this->handlePaths();
     
       // first handle any files the rest of the framework might depend on...
       $this->handleDependencies();
   
       // start the autoloaders...
+      // this is the first thing done because it is needed to make sure all the classes
+      // can be found
       $this->handleAutoload();
-      
-      // start the EVENT classes...
+  
+      // handle any preliminary event stuff like creating the Event Dispatcher
       $this->handleEvent();
   
       // start the START classes...
+      // this comes about as early as I can make it since it is key to making sure
+      // singletons can be created right
       $this->handleStart();
       
-      $event = new Event('framework.pre_handle');
+      // start the EVENT classes...
+      // this comes after start so the event subscribe classes can get singletons 
+      $this->handleEventSubcribe();
+      
+      $event = new Event('framework.preHandle');
       $this->broadcastEvent($event);
       
     }catch(\ReflectionException $e){
@@ -155,6 +163,9 @@ class Framework extends Field implements Dependable,Eventable {
   public function reset(){
     
     $event = new InfoEvent('Framework reset');
+    $this->broadcastEvent($event);
+    
+    $event = new Event('framework.reset');
     $this->broadcastEvent($event);
     
     // de-register all the autoloaders this instance started...
@@ -182,10 +193,10 @@ class Framework extends Field implements Dependable,Eventable {
     
       $this->preHandle();
       
-      $request = $this->getRequest();
+      $request = $this->getContainer()->getRequest();
   
       // decide where the request should be forwarded to...
-      list($controller_class,$controller_method,$controller_method_params) = $this->getControllerSelect()->find(
+      list($controller_class,$controller_method,$controller_method_params) = $this->getContainer()->getControllerSelect()->find(
         $request->getHost(),
         $request->getPath()
       );
@@ -257,7 +268,7 @@ class Framework extends Field implements Dependable,Eventable {
   
     $container = $this->getContainer();
     $use_template = false;
-    $response = $this->getResponse();
+    $response = $this->getContainer()->getResponse();
   
     $event = new FilterEvent(
       'framework.filter.controller_response',
@@ -365,8 +376,8 @@ class Framework extends Field implements Dependable,Eventable {
    */
   protected function handleTemplate(){
   
-    $response = $this->getResponse();
-    $template = $this->getTemplate();
+    $response = $this->getContainer()->getResponse();
+    $template = $this->getContainer()->getTemplate();
   
     // update template with response values...
     $template->setTemplate($response->getTemplate());
@@ -397,8 +408,8 @@ class Framework extends Field implements Dependable,Eventable {
     if(!$this->hasField('asset_paths')){ return; }//if
   
     $container = $this->getContainer();
-    $request = $this->getRequest();
-    $config = $this->getConfig();
+    $request = $this->getContainer()->getRequest();
+    $config = $this->getContainer()->getConfig();
     $dest_path = new Path($config->getPublicPath(),'assets');
     
     // create the assets selector...
@@ -431,7 +442,7 @@ class Framework extends Field implements Dependable,Eventable {
     $event = $this->broadcastEvent($event);
     $assets = $event->getParam();
     
-    $template = $this->getTemplate();
+    $template = $this->getContainer()->getTemplate();
     $template->setField('assets',$assets);
   
   }//method
@@ -440,6 +451,8 @@ class Framework extends Field implements Dependable,Eventable {
    *  start all the known \Montage\Autoload\Autoloadable classes
    *  
    *  a Start class is a class that will do configuration stuff
+   *  
+   *  @return array  a list of autoload instances      
    */
   protected function handleAutoload(){
   
@@ -474,21 +487,34 @@ class Framework extends Field implements Dependable,Eventable {
     }//foreach
     
     $this->setField('autoload.instances',$instances);
+    
+    return $instances;
      
   }//method
-
+  
   /**
-   *  start all the known \Montage\Event\Subable classes
-   *     
-   *  an Event Subable class is a class that automatically can subscribe to an event
-   *  
-   *  @since  8-25-11      
+   *  handle event dispatch creation
+   *   
+   *  @since  8-25-11
+   *  @return Dispatch
    */
   protected function handleEvent(){
   
-    $instance_list = array();
+    return $this->getEventDispatch();
+  
+  }//method
+  
+  /**
+   *  start all the known \Montage\Event\Subscribeable classes
+   *     
+   *  an Event Subscribeable class is a class that automatically can subscribe to an event
+   *  
+   *  @since  10-15-11
+   *  @return array a list of Event subscribe instances   
+   */
+  protected function handleEventSubcribe(){
+  
     $container = $this->getContainer();
-    $dispatch = $this->getEventDispatch();
     
     // create the event sub selector...
     $select = $container->getInstance('\Montage\Event\Select');
@@ -497,17 +523,21 @@ class Framework extends Field implements Dependable,Eventable {
 
     foreach($class_list as $i => $class_name){
     
-      $instance_list[$i] = $container->createInstance($class_name);
-      $instance_list[$i]->register();
+      $class_list[$i] = $container->createInstance($class_name);
+      $class_list[$i]->register();
       
     }//foreach
-     
+    
+    return $class_list;
+  
   }//method
 
   /**
    *  start all the known \Montage\Start\Startable classes
    *  
    *  a Start class is a class that will do configuration stuff
+   *  
+   *  @return array a list of Start instances      
    */
   protected function handleStart(){
   
@@ -530,6 +560,8 @@ class Framework extends Field implements Dependable,Eventable {
       $instance_list[$i]->handle();
       
     }//foreach
+    
+    return $instance_list;
      
   }//method
 
@@ -735,7 +767,7 @@ class Framework extends Field implements Dependable,Eventable {
 
       if($e instanceof \Montage\Exception\InternalRedirectException){
       
-        list($controller_class,$controller_method,$controller_method_params) = $this->getControllerSelect()->find(
+        list($controller_class,$controller_method,$controller_method_params) = $this->getContainer()->getControllerSelect()->find(
           $request->getHost(),
           $e->getPath()
         );
@@ -745,7 +777,7 @@ class Framework extends Field implements Dependable,Eventable {
       
       }else if($e instanceof \Montage\Exception\RedirectException){
       
-        $response = $this->getResponse();
+        $response = $this->getContainer()->getResponse();
         $redirect_url = $e->getUrl();
         $wait_time = $e->getWait();
         
@@ -783,7 +815,7 @@ class Framework extends Field implements Dependable,Eventable {
         
       }else{
         
-        list($controller_class,$controller_method,$controller_method_params) = $this->getControllerSelect()->findException($e);
+        list($controller_class,$controller_method,$controller_method_params) = $this->getContainer()->getControllerSelect()->findException($e);
         
         $event = new InfoEvent(
           sprintf('Exception Controller: %s::%s',$controller_class,$controller_method)
@@ -879,44 +911,6 @@ class Framework extends Field implements Dependable,Eventable {
     return $container;
     
   }//method
-
-  /**
-   *  create the controller selector
-   *  
-   *  @return Montage\Controller\Select
-   */
-  protected function getControllerSelect(){
-  
-    $container = $this->getContainer();
-    return $container->getControllerSelect();
-  
-  }//method
-  
-  /**
-   *  get the request instance
-   *  
-   *  @since  6-29-11
-   *  @return Montage\Request\Requestable
-   */
-  protected function getRequest(){
-  
-    $container = $this->getContainer();
-    return $container->getRequest();
-  
-  }//method
-  
-  /**
-   *  get the response instance
-   *  
-   *  @since  6-29-11
-   *  @return Montage\Response\Response
-   */
-  public function getResponse(){
-  
-    $container = $this->getContainer();
-    return $container->getResponse();
-  
-  }//method
   
   /**
    *  get the event dispatcher
@@ -925,7 +919,8 @@ class Framework extends Field implements Dependable,Eventable {
    */
   public function setEventDispatch(\Montage\Event\Dispatch $dispatch){
   
-    $this->instance_map['event_dispatch'] = $dispatch;
+    $container = $this->getContainer();
+    $container->setInstance('event_dispatch',$dispatch);
   
   }//method
   
@@ -937,14 +932,9 @@ class Framework extends Field implements Dependable,Eventable {
    */
   public function getEventDispatch(){
   
-    // canary...
-    if(isset($this->instance_map['event_dispatch'])){ return $this->instance_map['event_dispatch']; }//if
-  
     $container = $this->getContainer();
-    $this->instance_map['event_dispatch'] = $container->getEventDispatch();
+    return $container->getEventDispatch();
      
-    return $this->instance_map['event_dispatch'];
-  
   }//method
   
   /**
@@ -1007,32 +997,6 @@ class Framework extends Field implements Dependable,Eventable {
   }//method
   
   /**
-   *  get the template object that corresponds to the template file found in $response
-   *
-   *  @since  7-7-11
-   *  @return Montage\Response\Template         
-   */
-  protected function getTemplate(){
-    
-    $container = $this->getContainer();
-    return $container->getTemplate();
-    
-  }//method
-  
-  /**
-   *  return the framework config
-   *  
-   *  @since  9-26-11      
-   *  @return Montage\Config\FrameworkConfig
-   */
-  protected function getConfig(){
-    
-    $container = $this->getContainer();
-    return $container->getConfig();
-    
-  }//method
-  
-  /**
    *  compile all the important framework paths
    *
    *  @todo this could be cached by saving the lists and then pulling them in and
@@ -1041,7 +1005,7 @@ class Framework extends Field implements Dependable,Eventable {
    *      
    *  @since  6-27-11
    */
-  protected function compilePaths(){
+  protected function handlePaths(){
   
     // canary...
     $app_path = $this->getField('app_path');
@@ -1153,11 +1117,6 @@ class Framework extends Field implements Dependable,Eventable {
    *  @see  handleDependencies()
    *  @return array
    */
-  protected function getIncludes(){
-  
-    $path_list = array();
-    return $path_list;
-  
-  }//method
-  
+  protected function getIncludes(){ return array(); }//method
+   
 }//method
