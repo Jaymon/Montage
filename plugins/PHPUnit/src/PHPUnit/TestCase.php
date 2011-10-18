@@ -131,12 +131,58 @@ abstract class TestCase extends PHPUnit_Framework_TestCase {
       
     }catch(\Exception $e){
     
-      if(!is_string($test_map['out']) || !($e instanceof $test_map['out'])){
+      if(!($e instanceof \PHPUnit_Framework_ExpectationFailedException)){
+  
+        if(is_string($test_map['out'])){
+
+          $this->assertInstanceOf($test_map['out'],$e);
+        
+        }else{
+        
+          throw $e;
+        
+        }//if/else
+        
+      }else{
+      
         throw $e;
-      }//if
+      
+      }//if/else
     
     }//try/catch
   
   }//method
+  
+  /**
+   *  this will be called before the class is initalized, so override if you want
+   *  to do global test specific configuration
+   *  
+   *  @link http://www.phpunit.de/manual/current/en/fixtures.html#fixtures.more-setup-than-teardown
+   */
+  public static function setUpBeforeClass(){}//method
+ 
+  /**
+   *  this will be called after the class is done running tests, so override if you want
+   *  to do global test specific finish work
+   *  
+   *  @link http://www.phpunit.de/manual/current/en/fixtures.html#fixtures.more-setup-than-teardown
+   */
+  public static function tearDownAfterClass(){}//method
+  
+  /**
+   *  this will be called before each test is run, so override if you want to do pre 
+   *  individual test stuff   
+   *  
+   *  @link http://www.phpunit.de/manual/current/en/fixtures.html#fixtures.more-setup-than-teardown
+   */
+  public function setUp(){}//method
+  
+  /**
+   *  this will be called after each test is run, so override if you want to do post 
+   *  individual test finishing work
+   *  
+   *  @link http://www.phpunit.de/manual/current/en/fixtures.html#fixtures.more-setup-than-teardown
+   */
+  public function tearDown(){}//method
 
 }//class

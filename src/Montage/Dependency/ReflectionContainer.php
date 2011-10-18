@@ -48,34 +48,8 @@ class ReflectionContainer extends Container {
   
     // canary...
     if(!is_object($instance)){ throw new \InvalidArgumentException('$instance was empty'); }//if
-  
-    $reflection = $this->getReflection();
-    $instance_name = get_class($instance);
-    
-    $class_list = array();
-    
-    if($reflection->hasClass($instance_name)){
-    
-      $class_map = $reflection->getClassInfo($instance_name);
-      $class_list = $class_map['dependencies'];
-      $class_list[] = $instance_name;
-    
-    }else{
-    
-      // since the internal reflection object doesn't know about this instance, we'll have to build
-      // the dependency list the old fashioned way
-    
-      $class = $instance_name;
-      
-      // add all parent classes...
-      for($class_list[] = $class; $class = get_parent_class($class); $class_list[] = $class);
-      
-      // add all interfaces...
-      if($interface_list = class_implements($instance_name)){
-        $class_list = array_merge($class_list,$interface_list);
-      }//if
-      
-    }//if/else
+
+    $class_list = $this->getDependencies(get_class($instance));
     
     // add the class name key...
     if(!empty($class_name)){ $class_list[] = $class_name; }//if
@@ -154,8 +128,7 @@ class ReflectionContainer extends Container {
   protected function handleOnCreate($class_key,array $params){
   
     $reflection = $this->getReflection();
-    $class_map = $reflection->getClassInfo($class_key);
-    $cb_class_list = $class_map['dependencies'];
+    $cb_class_list = $this->getDependencies($class_key);
     $cb_class_list[] = $class_key;
     
     foreach($cb_class_list as $cb_class_name){
@@ -179,8 +152,7 @@ class ReflectionContainer extends Container {
   protected function handleOnCreated($class_key,$instance){
     
     $reflection = $this->getReflection();
-    $class_map = $reflection->getClassInfo($class_key);
-    $cb_class_list = $class_map['dependencies'];
+    $cb_class_list = $this->getDependencies($class_key);
     $cb_class_list[] = $class_key;
     
     foreach($cb_class_list as $cb_class_name){
@@ -304,6 +276,39 @@ class ReflectionContainer extends Container {
     parent::reset();
     $this->setInstance('reflection',$this->reflection);
   
+  }//method
+  
+  protected function getDependencies($class_name){
+    
+    $class_list = array();
+    $reflection = $this->getReflection();
+    if($reflection->hasClass($class_name)){
+    
+      $class_list = $reflection->getDependencies($class_name);
+      
+    }else{
+    
+      // build the dependency list...
+    
+      $class = $class_name;
+      
+      // add all parent classes...
+      for($class_list[] = $class; $class = get_parent_class($class); $class_list[] = $class);
+      
+      // add all interfaces...
+      if($interface_list = class_implements($class_name)){
+        $class_list = array_merge($class_list,array_values($interface_list));
+      }//if
+      
+      // save the dependency list for the future...
+      $reflection->addClassInfo($class_name,array('dependencies' => $class_list));
+      
+    }//if/else
+    
+    $class_list[] = $class_name;
+    
+    return $class_list;
+    
   }//method
 
 }//class

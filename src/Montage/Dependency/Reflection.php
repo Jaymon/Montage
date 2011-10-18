@@ -57,7 +57,7 @@ class Reflection extends ObjectCache implements \Reflector {
   protected $parent_class_map = array();
   
   /**
-   *  holds the cache for all the known absolute children of classes
+   *  holds the cache for all the known absolute children/descendants of classes
    * 
    *  @see  findClassNames()
    *  @since  7-6-11
@@ -65,12 +65,70 @@ class Reflection extends ObjectCache implements \Reflector {
    */
   protected $children_class_map = array();
   
+  /**
+   *  holds the added files and folders
+   *  
+   *  @see  addPath(), addClass(), addFile()      
+   *  @var  array
+   */
   protected $path_map = array('files' => array(),'folders' => array());
   
+  /**
+   *  whether this class's cache has been reloaded or not
+   *  
+   *  @see  reload()
+   *  @var  boolean
+   */
   protected $reloaded = false;
   
-  public static function export(){ return ''; }//method
+  public static function export(){ return serialize($this); }//method
   public function __toString(){ return spl_object_hash($this); }//method
+
+  /**
+   *  get all the classes the $class_name is dependant on
+   *  
+   *  @since  10-17-11   
+   *  @param  string  $class_name
+   *  @return array a list of class names
+   */
+  public function getDependencies($class_name){
+  
+    $ret_list = array();
+    $class_map = $this->getClassInfo($class_name);
+
+    if(isset($class_map['info']['dependencies'])){
+    
+      $ret_list = $class_map['info']['dependencies'];
+    
+    }else{
+  
+      if(isset($class_map['parents'])){
+      
+        foreach($class_map['parents'] as $parent_class_name){
+        
+          $ret_list[] = $parent_class_name;
+        
+          $parent_list = $this->getDependencies($parent_class_name);
+          if(!empty($parent_list)){
+          
+            $ret_list = array_merge($ret_list,$parent_list);
+            
+          }//if
+        
+        }//foreach
+        
+        // guarantee uniqueness, not sure this is needed since there should never be dupes
+        /// $ret_list = array_unique($ret_list);
+        
+        $this->addClassInfo($class_name,array('dependencies' => $ret_list));
+      
+      }//if
+      
+    }//if/else
+  
+    return $ret_list;
+  
+  }//method
 
   /**
    *  format the class key
@@ -470,7 +528,8 @@ class Reflection extends ObjectCache implements \Reflector {
     // canary...
     if(!isset($this->class_map[$class_key])){
       // @todo  I think an exception might be too dramatic, just return array()?
-      throw new \InvalidArgumentException(sprintf('$class_name (%s) is not known',$class_name));
+      //throw new \InvalidArgumentException(sprintf('$class_name (%s) is not known',$class_name));
+      return array();
     }//if
     if($this->isChangedClass($class_key)){
       $this->reload();
@@ -677,11 +736,10 @@ class Reflection extends ObjectCache implements \Reflector {
     
     $extend_list = isset($class_info_map['extends']) ? $class_info_map['extends'] : array();
     $implement_list = isset($class_info_map['implements']) ? $class_info_map['implements'] : array();
-    $parent_list = array_merge($extend_list,$implement_list);
-    $dependency_list = $parent_list; // will be added to
+    $class_map['parents'] = array_merge($extend_list,$implement_list);
     
-    // add class as child to all its parent classes...
-    foreach($parent_list as $parent_class){
+     // add class as child to all its parent classes...
+    foreach($class_map['parents'] as $parent_class){
       
       $parent_key = $this->normalizeClassName($parent_class);
       
@@ -691,18 +749,9 @@ class Reflection extends ObjectCache implements \Reflector {
         
       }//if
     
-      if(!empty($this->class_map[$parent_key]['dependencies'])){
-      
-        $dependency_list = array_merge($dependency_list,$this->class_map[$parent_key]['dependencies']);
-        $dependency_list[] = $parent_class;
-        
-      }//if
-    
       $this->parent_class_map[$parent_key][] = $key;
     
     }//if
-    
-    $class_map['dependencies'] = $dependency_list;
     
     // respect any previous info added with {@link addClassInfo()}...
     if(isset($this->class_map[$key])){

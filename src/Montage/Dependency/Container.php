@@ -178,14 +178,14 @@ abstract class Container extends Field implements Containable {
     $params = (array)$params;
   
     $class_key = $this->getKey($class_name);
-    $params = $this->handleOnCreate($class_key,$params);
-  
     $instance_class_name = $this->getClassName($class_name);
+    $params = $this->handleOnCreate($class_key,$params);
+    
     $instance_params = array();
 
     // get around absolute namespace reflection bug
     // absolute namespaced classes like \foo\bar cause all the autoloaders to fire where
-    // foo\bar doesn't. This is a bug in php...
+    // foo\bar doesn't. This is a bug in php <5.3.5ish...
     $rclass_name = $instance_class_name;
     if($rclass_name[0] === '\\'){ $rclass_name = mb_substr($rclass_name,1); }//if
     $rclass = new ReflectionClass($rclass_name);
@@ -196,7 +196,7 @@ abstract class Container extends Field implements Containable {
     if(empty($rconstructor)){
       
       if(!empty($params)){
-        
+
         throw new \UnexpectedValueException(
           sprintf(
             'Normalizing "%s" constructor params will fail because "%s" '
@@ -578,31 +578,32 @@ abstract class Container extends Field implements Containable {
     
         $ret_bool = true;
     
-        try{
+        if($is_inject){
         
-          if($is_inject){
+          // the valid inject syntax is: injectName(ClassName $var_name), 
+          // only methods matching that are force injected...
           
-            // the valid inject syntax is: injectName(ClassName $var_name), 
-            // only methods matching that are force injected...  
+          $instance->{$method_name}($this->getInstance($class_name));
             
-            $instance->{$method_name}($this->getInstance($class_name));
-              
-          }else if($is_set){
+        }else if($is_set){
+        
+          try{
           
             // the valid setter syntax is: setName(ClassName $var_name), 
-            // only methods matching that are set...
+            // only methods matching that are set if the class exists...
           
             if($this->hasInstance($class_name)){
               
               $instance->{$method_name}($this->getInstance($class_name));
               
             }//if
-              
-          }//if/else if
-          
-        }catch(\Exception $e){
-          // exceptions aren't fatal, just don't set the dependency
-        }//try/catch
+            
+          }catch(\Exception $e){
+            // exceptions aren't fatal, just don't set the dependency
+          }//try/catch
+            
+        }//if/else if
+        
         
       }//if
     
