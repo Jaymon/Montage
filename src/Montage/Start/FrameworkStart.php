@@ -32,9 +32,9 @@ class FrameworkStart extends Start {
       '\Montage\Config\FrameworkConfig',
       function($container,$instance){
 
-        // the framework config should be our Single Point of Truth from here on
+        // the framework config should be our Single Point of Truth from here on out
         // http://teddziuba.com/2011/06/most-important-concept-systems-design.html
-        $framework = $container->getInstance('Montage\Framework');
+        $framework = $container->getFramework();
         $instance->setField('env',$framework->getField('env'));
         $instance->setField('debug_level',$framework->getField('debug_level'));
         $instance->setField('app_path',$framework->getField('app_path'));
@@ -45,14 +45,13 @@ class FrameworkStart extends Start {
       }
     );
 
-    $this->framework_config = $container->getInstance('\Montage\Config\FrameworkConfig');
+    $this->framework_config = $container->getConfig();
 
     error_reporting($this->framework_config->getErrorLevel());
     ///error_reporting(E_ALL ^ E_USER_NOTICE);
     mb_internal_encoding($this->framework_config->getCharset());
     date_default_timezone_set($this->framework_config->getTimezone());
 
-    // since debug isn't on let's not display the errors to the user and rely on logging...
     ini_set('display_errors',$this->framework_config->showErrors() ? 'on' : 'off'); 
     
     $container->onCreate(
@@ -96,7 +95,7 @@ class FrameworkStart extends Start {
       'Montage\Url',
       function($container,array $params = array()){
 
-        $request = $container->getInstance('Montage\Request\Requestable');
+        $request = $container->getRequest();
         
         // set the values for the url instance on creation...
         $ret_map = array(
@@ -113,7 +112,7 @@ class FrameworkStart extends Start {
       '\Montage\Response\Template',
       function($container,$instance){
 
-        $framework = $container->getInstance('Montage\Framework');
+        $framework = $container->getFramework();
         $instance->addPaths($framework->getField('view_paths'));
         
       }
@@ -136,21 +135,13 @@ class FrameworkStart extends Start {
         if(!($instance instanceof \Montage\Form\Form)){ return; }//if
       
         $container = $event->getField('container');
-        $request = $container->getInstance('Montage\Request\Requestable');
+        $request = $container->getRequest();
         
         $form_name = $instance->getName();
 
         if($form_field_map = $request->getField($form_name)){
         
           $instance->set($form_field_map);
-        
-        }//if
-        
-        // set the current url...
-        if(!$instance->hasUrl()){
-        
-          $url = $container->getInstance('Montage\Url');
-          $instance->setUrl($url->getCurrent());
         
         }//if
         

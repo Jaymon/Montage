@@ -41,14 +41,14 @@ abstract class Common {
    *  @param  array $attr_map pass in attributes (key => val pairs) to override default values   
    *  @return string
    */
-  abstract public function out(array $attr_map = array());
+  abstract public function render(array $attr_map = array());
   
   /**
    *  uses the instance's defined {@link out()} method to output the class
    *  
    *  @return string
    */
-  public function __toString(){ return $this->out(); }//method
+  public function __toString(){ return $this->render(); }//method
 
   /**#@+
    *  access methods for the name of the form field/element       
@@ -80,7 +80,7 @@ abstract class Common {
   public function setError($val){ $this->error = $val; }//method
   public function hasError(){ return !empty($this->error); }//method
   public function getError(){ return $this->error; }//method
-  public function outError(){
+  public function renderError(){
   
     // canary...
     if(!$this->hasError()){ return ''; }//if  
@@ -222,7 +222,7 @@ abstract class Common {
    *  @param  array $attr_map pass in attributes (key => val pairs) to override default values    
    *  @return string
    */       
-  public function outAttr($attr_map = array()){
+  public function renderAttr($attr_map = array()){
     
     // favor passed in values over previously set ones...
     $attr_map = array_merge($this->attr_map,$attr_map);

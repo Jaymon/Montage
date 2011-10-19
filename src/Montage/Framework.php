@@ -192,7 +192,7 @@ class Framework extends Field implements Dependable,Eventable {
     try{
     
       $this->preHandle();
-      
+
       $request = $this->getContainer()->getRequest();
   
       // decide where the request should be forwarded to...

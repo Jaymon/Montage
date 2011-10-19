@@ -42,7 +42,7 @@ abstract class Field extends Common {
   public function setLabel($val){ $this->label = $val; }//method
   public function hasLabel(){ return !empty($this->label); }//method
   public function getLabel(){ return $this->label; }//method
-  public function outLabel(){
+  public function renderLabel(){
   
     // canary...
     if(!$this->hasLabel()){ return ''; }//if
@@ -61,7 +61,7 @@ abstract class Field extends Common {
   public function setDesc($val){ $this->desc = $val; }//method
   public function hasDesc(){ return !empty($this->desc); }//method
   public function getDesc(){ return $this->desc; }//method
-  public function outDesc(){
+  public function renderDesc(){
   
     // canary...
     if(!$this->hasDesc()){ return ''; }//if

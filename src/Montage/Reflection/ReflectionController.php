@@ -13,7 +13,7 @@
  *  @package montage
  *  @subpackage Controller
  ******************************************************************************/
-namespace Montage\Controller;
+namespace Montage\Reflection;
 
 use ReflectionClass;
 

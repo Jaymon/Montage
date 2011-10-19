@@ -1,7 +1,7 @@
 <?php
 
 /**
- *  the object that represents an <textarea> html element
+ *  the object that represents a <textarea> html element
  *   
  *  @version 0.1
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -15,7 +15,7 @@ use Montage\Form\Field\Field;
 
 class Textarea extends Field {
   
-  public function out(array $attr_map = array()){
+  public function render(array $attr_map = array()){
   
     $ret_str = '';
     $orig_val = $this->getVal();
@@ -30,7 +30,7 @@ class Textarea extends Field {
     
     $this->clearVal();
   
-    $ret_str = sprintf('<textarea%s>%s</textarea>',$this->outAttr($attr_map),$val);
+    $ret_str = sprintf('<textarea%s>%s</textarea>',$this->renderAttr($attr_map),$val);
     
     $this->setVal($orig_val);
     return $ret_str;

@@ -543,12 +543,12 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
     
   }//method
   
-  public function out(array $attr_map = array()){
+  public function render(array $attr_map = array()){
     
-    $ret_str = $this->outStart($attr_map);
+    $ret_str = $this->renderStart($attr_map);
     
     if($this->hasError()){
-      $ret_str .= $this->outError();
+      $ret_str .= $this->renderError();
     }//if
     
     foreach($this as $field){
@@ -558,40 +558,40 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
       
       if($field->hasLabel()){
         $format_str .= '%s:<br>';
-        $format_vals[] = $field->outLabel();
+        $format_vals[] = $field->renderLabel();
       }//if
       
       if($field->hasError()){
         $format_str .= '%s<br>';
-        $format_vals[] = $field->outError();
+        $format_vals[] = $field->renderError();
       }//if
       
       $format_str .= '%s<br>';
-      $format_vals[] = $field->out();
+      $format_vals[] = $field->render();
       
       if($field->hasDesc()){
         $format_str .= '%s<br>';
-        $format_vals[] = $field->outDesc();
+        $format_vals[] = $field->renderDesc();
       }//if
       
       $ret_str .= vsprintf($format_str,$format_vals);
     
     }//foreach
     
-    $ret_str .= $this->outStop();
+    $ret_str .= $this->renderStop();
     return $ret_str;
     
   }//method
   
-  public function outStart(array $attr_map = array()){
+  public function renderStart(array $attr_map = array()){
   
     $this->setMethod($this->getMethod());
     $this->setEncoding($this->getEncoding());
   
-    return sprintf('<form%s>',$this->outAttr($attr_map));
+    return sprintf('<form%s>',$this->renderAttr($attr_map));
     
   }//method
-  public function outStop(){ return '</form>'; }//method
+  public function renderStop(){ return '</form>'; }//method
   
   /**
    *  finds and outputs all the hidden input fields
@@ -602,7 +602,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
    *  @since  2-6-10   
    *  @return string
    */
-  public function outHidden(){
+  public function renderHidden(){
   
     $ret_str = '';
   
@@ -610,7 +610,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
     
       if($field instanceof Input){
         if($field->isType(Input::TYPE_HIDDEN)){
-          $ret_str .= $field->out();
+          $ret_str .= $field->render();
         }//if
       }//if
     

@@ -13,6 +13,34 @@ namespace Montage\Dependency;
 class FrameworkContainer extends ReflectionContainer {
 
   /**
+   *  get the Session 
+   *
+   *  @since  10-18-11
+   *  @return Montage\Session
+   */
+  public function getSession($params = array()){
+  
+    return $this->findInstance('session','Montage\Session',$params);
+  
+  }//method
+
+  /**
+   *  get the framework
+   *  
+   *  framework will almost always exist, the only time it won't is if you are
+   *  creating this class outside of the Montage environment, in which case, you're
+   *  on your own            
+   *
+   *  @since  10-18-11
+   *  @return Montage\Framework      
+   */
+  public function getFramework($params = array()){
+  
+    return $this->findInstance('framework','Montage\Framework',$params);
+  
+  }//method
+
+  /**
    *  return the framework config
    *    
    *  @return Montage\Url

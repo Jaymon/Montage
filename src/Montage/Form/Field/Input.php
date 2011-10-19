@@ -93,7 +93,7 @@ class Input extends Field {
   public function getPlaceholder(){ return $this->getAttr('placeholder'); }//method
   /**#@-*/
   
-  public function out(array $attr_map = array()){
+  public function render(array $attr_map = array()){
   
     // make sure the value is safe...
     if(isset($attr_map['value'])){
@@ -102,7 +102,7 @@ class Input extends Field {
       $attr_map['value'] = $this->getSafe($this->getVal());
     }//if/else
   
-    return sprintf('<input%s/>',$this->outAttr($attr_map));
+    return sprintf('<input%s/>',$this->renderAttr($attr_map));
     
   }//method
 

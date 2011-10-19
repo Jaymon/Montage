@@ -13,7 +13,7 @@
 namespace Montage\Controller;
 
 use Montage\Controller\Controller;
-use Montage\Controller\ReflectionController;
+use Montage\Reflection\ReflectionController;
 
 class CliController extends Controller {
 
