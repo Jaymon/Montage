@@ -7,7 +7,7 @@ use Montage\Reflection\ReflectionDocBlock;
 
 class ReflectionFileTest extends FrameworkTestCase {
 
-  public function testParseSimple(){
+  public function testParse(){
   
     /* 
     $test_map_prototype = array(
@@ -24,15 +24,29 @@ class ReflectionFileTest extends FrameworkTestCase {
   
     $test_list = array();
     $test_list[] = array(
-      'in' => '/** 
-      *
-      *
-      *       
-      */',
+      'in' => '/'.'** 
+      * this will be the multi-line long description
+      * and here is the second line
+      * and the third            
+      *'.'/',
       'out' => array()
     );
     $test_list[] = array(
-      'in' => '/** */',
+      'in' => '/'.'** 
+      * this will be the short description
+      *'.'/',
+      'out' => array()
+    );
+    $test_list[] = array(
+      'in' => '/'.'** 
+      *
+      *
+      *       
+      *'.'/',
+      'out' => array()
+    );
+    $test_list[] = array(
+      'in' => '/'.'** *'.'/',
       'out' => array()
     );
     
@@ -40,6 +54,7 @@ class ReflectionFileTest extends FrameworkTestCase {
     foreach($test_list as $i => $test_map){
     
       $rdc = new ReflectionDocBlock($test_map['in']);
+      return;
       
       ///$this->assertEquals($test_map['out'],$rfile->getClasses(),$i);
     
