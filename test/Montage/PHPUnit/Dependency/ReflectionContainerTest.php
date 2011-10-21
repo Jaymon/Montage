@@ -8,26 +8,26 @@
  ******************************************************************************/
 namespace Montage\PHPUnit {
   
-  $base = realpath(__DIR__.'/../../../../src');
+  $base = realpath(__DIR__.'/../../../../');
   
-  require_once($base.'/Montage/Path.php');
+  require_once($base.'/plugins/Utilities/src/Path.php');
   
-  require_once($base.'/Montage/Field/GetFieldable.php');
-  require_once($base.'/Montage/Field/SetFieldable.php');
-  require_once($base.'/Montage/Field/Fieldable.php');
-  require_once($base.'/Montage/Field/Field.php');
+  require_once($base.'/src/Montage/Field/GetFieldable.php');
+  require_once($base.'/src/Montage/Field/SetFieldable.php');
+  require_once($base.'/src/Montage/Field/Fieldable.php');
+  require_once($base.'/src/Montage/Field/Field.php');
   
-  require_once($base.'/Montage/Cache/Cacheable.php');
-  require_once($base.'/Montage/Cache/Cache.php');
-  require_once($base.'/Montage/Cache/ObjectCache.php');
-  require_once($base.'/Montage/Cache/PHPCache.php');
+  require_once($base.'/src/Montage/Cache/Cacheable.php');
+  require_once($base.'/src/Montage/Cache/Cache.php');
+  require_once($base.'/src/Montage/Cache/ObjectCache.php');
+  require_once($base.'/src/Montage/Cache/PHPCache.php');
   
-  require_once($base.'/Montage/Dependency/ReflectionFile.php');
-  require_once($base.'/Montage/Dependency/Reflection.php');
+  require_once($base.'/src/Montage/Dependency/ReflectionFile.php');
+  require_once($base.'/src/Montage/Dependency/Reflection.php');
   
-  require_once($base.'/Montage/Dependency/Containable.php');
-  require_once($base.'/Montage/Dependency/Container.php');
-  require_once($base.'/Montage/Dependency/ReflectionContainer.php');
+  require_once($base.'/src/Montage/Dependency/Containable.php');
+  require_once($base.'/src/Montage/Dependency/Container.php');
+  require_once($base.'/src/Montage/Dependency/ReflectionContainer.php');
   
   require_once('out_class.php');
   
@@ -92,6 +92,19 @@ namespace Montage\PHPUnit {
       $this->assertTrue($instance instanceof \Montage\Test\Fixtures\Dependency\FooBar);
       $this->assertFalse($instance->che instanceof \Che);
       $this->assertTrue($instance->bong instanceof \Bong);
+      
+    }//method
+    
+    /**
+     *  setter injection should add dependencies through publi parameters
+     *
+     *  @since  6-15-11
+     */
+    public function testParamInjection(){
+    
+      $instance = $this->container->getInstance('Montage\Test\Fixtures\Dependency\ParamInjected');
+      $this->assertTrue($instance instanceof \Montage\Test\Fixtures\Dependency\ParamInjected);
+      $this->assertTrue($instance->che instanceof \Che);
       
     }//method
     
@@ -207,6 +220,15 @@ namespace Montage\PHPUnit {
 }//namespace
 
 namespace Montage\Test\Fixtures\Dependency {
+
+  class ParamInjected {
+  
+    /**
+     *  @var  \Che
+     */
+    public $che = null;
+  
+  }//class
 
   class Bar extends Foo {
   

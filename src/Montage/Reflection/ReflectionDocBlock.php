@@ -61,9 +61,59 @@ class ReflectionDocBlock implements \Reflector {
     $this->parseDocBlock($docblock);
   
   }//method
+
+  /**
+   *  get the short description
+   *
+   *  @return string   
+   */
+  public function getShortDesc(){ return $this->getField('short_desc',''); }//method
+  
+  /**
+   *  get the long description
+   *
+   *  @return string   
+   */
+  public function getLongDesc(){ return $this->getField('long_desc',''); }//method
+  
+  /**
+   *  get the tag
+   *
+   *  @return string   
+   */
+  public function getTag($name){ return $this->getField($name,''); }//method
+  
+  /**
+   *  true if the tag exists
+   *
+   *  @return boolean
+   */
+  public function hasTag($name){
+  
+    return isset($this->field_map[$name]);
+  
+  }//method
   
   public static function export(){ return serialize($this); }//method
   public function __toString(){ return $this->docblock; }//method
+
+  /**
+   *  get the field from field_map
+   *  
+   *  @param  string  $name
+   *  @param  mixed $default_val
+   *  $return mixed usually a string, but could be an array
+   */
+  protected function getField($name,$default_val = ''){
+  
+    $ret_str = $default_val;
+    if(isset($this->field_map[$name])){
+      $ret_str = $this->field_map[$name];
+    }//if
+    
+    return $ret_str;
+  
+  }//method
 
   /**
    *  bookmarks the index so parsing can try again on failure

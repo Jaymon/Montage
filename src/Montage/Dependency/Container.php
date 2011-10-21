@@ -16,7 +16,8 @@
 namespace Montage\Dependency;
 
 use Montage\Dependency\Containable;
-use ReflectionObject, ReflectionClass, ReflectionMethod, ReflectionParameter;
+use ReflectionObject, ReflectionClass, ReflectionMethod, ReflectionParameter, ReflectionProperty;
+use Montage\Reflection\ReflectionDocBlock;
 use Montage\Field\Field;
 
 abstract class Container extends Field implements Containable {
@@ -222,6 +223,7 @@ abstract class Container extends Field implements Containable {
       // http://www.php.net/manual/en/reflectionclass.newinstanceargs.php#95137
       $ret_instance = empty($instance_params) ? new $class_name() : $rclass->newInstanceArgs($instance_params);
       $ret_instance = $this->methodInjection($ret_instance,$rclass);
+      $ret_instance = $this->paramInjection($ret_instance,$rclass);
       
     }else{
     
@@ -638,8 +640,6 @@ abstract class Container extends Field implements Containable {
     if(empty($instance)){ throw new \InvalidArgumentException('$instance was empty'); }//if
     if(empty($rclass)){ $rclass = new ReflectionObject($instance); }//if
   
-    $ret_count = 0;
-    
     $rmethod_list = $rclass->getMethods(ReflectionMethod::IS_PUBLIC);
     foreach($rmethod_list as $rmethod){
 
@@ -647,7 +647,83 @@ abstract class Container extends Field implements Containable {
 
     }//foreach
   
-    ///return $ret_count;
+    return $instance;
+  
+  }//method
+  
+  /**
+   *  handle injecting singletons via public class properties
+   *  
+   *  @example
+   *    class Foo {
+   *      / **
+   *       *  this docblock will be used to inject if the full namespaced class name
+   *       *  is given in the var tag   
+   *       *
+   *       *  @var  \Full\Namespaced\ClassName   
+   *       * /     
+   *      public Bar = null; // this will get a \Full\Namespaced\ClassName instance
+   *    }
+   *
+   *  @since  10-20-11
+   *  @param  object  $instance the object instance to be injected
+   *  @param  ReflectionClass $rclass the reflection object of the given $instance      
+   *  @return object  $instance with its setters injected    
+   */
+  protected function paramInjection($instance,\ReflectionClass $rclass = null){
+  
+    // canary...
+    if(empty($instance)){ throw new \InvalidArgumentException('$instance was empty'); }//if
+    if(empty($rclass)){ $rclass = new ReflectionObject($instance); }//if
+    
+    $rparam_list = $rclass->getProperties(ReflectionProperty::IS_PUBLIC);
+    foreach($rparam_list as $rparam){
+      
+      $param_name = $rparam->getName();
+      $val = null;
+      
+      if($rparam->isStatic()){
+      
+        $val = $instance::$$param_name;
+      
+      }else{
+      
+        $val = $instance->{$param_name};
+      
+      }//if/else
+      
+      
+      if($val === null){
+        
+        $docblock = $rparam->getDocComment();
+        $rdocblock = new ReflectionDocBlock($docblock);
+
+        if($rdocblock->hasTag('var')){
+        
+          if($class_name = $rdocblock->getTag('var')){
+            
+            if($class_name[0] === '\\'){
+            
+              if($rparam->isStatic()){
+      
+                $instance::$$param_name = $this->getInstance($class_name);
+              
+              }else{
+              
+                $instance->{$param_name} = $this->getInstance($class_name);
+              
+              }//if/else
+            
+            }//if
+            
+          }//if
+        
+        }//if
+        
+      }//if
+    
+    }//foreach
+  
     return $instance;
   
   }//method
