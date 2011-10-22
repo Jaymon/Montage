@@ -15,13 +15,16 @@ namespace Montage\Form;
 use Montage\Form\Common;
 use Montage\Form\Field\Field;
 use Montage\Form\Field\Input;
-use ReflectionObject;
+
+use ReflectionObject,ReflectionProperty;
+use Montage\Reflection\ReflectionDocBlock;
+
 use ArrayIterator;
 use ArrayAccess,IteratorAggregate;
 
-use Montage\Field\Fieldable;
+use Montage\Field\GetFieldable;
 
-abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fieldable {
+abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetFieldable {
 
   const METHOD_POST = 'post';
   const METHOD_GET = 'get';
@@ -36,12 +39,6 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
   const ENCODING_FILE = 'multipart/form-data';
   const ENCODING_POST = 'application/x-www-form-urlencoded';
   /**#@-*/
-
-  /**
-   *  the name of this form
-   *  @var  string
-   */
-  ///protected $form_name = '';
   
   /**
    *  the form fields this form contains
@@ -49,9 +46,13 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
    */
   protected $field_map = array();
   
+  protected $form_field_map = array(
+    'Textarea' => 'Montage\Form\Field\Textarea',
+    'Input' => 'Montage\Form\Field\Input'
+  );
+  
   /**
-   *  this  cannot be overriden to make things consistent, all class instantiation
-   *  (eg, adding fields to the form) should go into {@link start()}
+   *  create a Form
    *  
    *  @param  array $field_map  if you want to set values from an array into this instance, you can
    *                            pass them (key/val) here, otherwise, you can call {@link set()} at any time             
@@ -72,12 +73,84 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
    *  populate the fields of this form
    *  
    *  this is like a schema building method, basically, you would create Field instances
-   *  and set their names in this method. And set any other valuesthat should be default
+   *  and set their names in this method. And set any other values that should be default
    *  on the form   
    *  
    *  @since  6-28-11
    */
-  abstract protected function populate();
+  protected function populate(){
+  
+    $rthis = new ReflectionObject($this);
+    $rparam_list = $rthis->getProperties(ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_PROTECTED);
+
+    foreach($rparam_list as $rparam){
+    
+      $rparam->setAccessible(true);
+      $val = $rparam->getValue($this);
+      /// $val = $rparam->isStatic() ? $rparam->getValue() : $rparam->getValue($this);
+      $docblock = $rparam->getDocComment();
+
+      if(($val === null) && !empty($docblock)){
+        
+        $rdocblock = new ReflectionDocBlock($docblock);
+
+        if($rdocblock->hasTag('var')){
+        
+          if($class_name = $rdocblock->getTag('var')){
+            
+            if($class_name[0] !== '\\'){
+            
+              foreach($this->form_field_map as $form_field => $form_field_class_name){
+              
+                if(preg_match(sprintf('#%s$#i',$form_field),$class_name)){
+                
+                  $class_name = $form_field_class_name;
+                  break;
+                
+                }//if
+              
+              }//foreach
+            
+            }//if/else
+            
+            $name_map = $this->getNameInfo($rparam->getName());
+            
+            $instance = new $class_name();
+            $instance->setName($name_map['form_name']);
+            $instance->setLabel($name_map['name']);
+            
+            if($desc = $rdocblock->getShortDesc()){
+            
+              $instance->setDesc($desc);
+            
+            }//if
+            
+            $rparam->setValue(
+              $rparam->isStatic() ? null : $this,
+              $instance
+            );
+            
+            $this->field_map[$name_map['name']] = $instance;
+            
+          }//if
+        
+        }//if
+        
+      }else{
+      
+        if($val instanceof Field){
+        
+          $name_map = $this->getNameInfo($val->getName());
+          $val->setName($name_map['form_name']);
+          $this->field_map[$name_map['name']] = $val;
+        
+        }//if
+      
+      }//if/else
+    
+    }//foreach
+  
+  }//method
 
   /**
    *  returns true if form contains valid values
@@ -153,21 +226,9 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
     
       try{
       
-        if(is_array($val)){
-        
-          foreach($val as $index => $index_val){
-            $this->setField(
-              sprintf('%s[%s]',$name,$index),
-              $index_val
-            );
-          }//foreach
-        
-        }else{
-        
-          $this->setField($name,$val);
-        
-        }//if/else
-        
+        $field = $this->getField($name);
+        $field->setVal($val);
+      
       }catch(\InvalidArgumentException $e){
         // just ignore non-existent names
       }//try/catch
@@ -177,166 +238,29 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
   }//method
   
   /**
-   *  add a field to this form
-   *  
-   *  a field is an html element that the user can interact with (eg, <input>, <textarea>)
-   *  
-   *  @param  mixed $args,... different param cominations:
-   *                            1 - montage_form_field - a field instance
-   *                            2 - string, mixed - $name,$value where value is either the string value, or a
-   *                                                field instance           
-   */
-  public function setField($name,$val = null){
-  
-    $args = func_get_args();
-    
-    if(!empty($args)){
-    
-      if($args[0] instanceof Field){
-      
-        $field = $args[0];
-      
-        // update the field's name to become an array for this form, this keeps all the form vals namespaced...
-        $name_info_map = $this->getNameInfo($field->getName());
-        $field->setName($name_info_map['form_name']);
-        
-        // if the field is a file, update the encoding...
-        if($field instanceof Input){
-          if($field->isType(Input::TYPE_FILE)){
-            $this->setEncoding(self::ENCODING_FILE);
-          }//if
-        }//if
-        
-        if($name_info_map['is_array']){ // name has multiple values
-        
-          if(!isset($this->field_map[$name_info_map['namespace']])){
-            $this->field_map[$name_info_map['namespace']] = array();
-          }//if
-        
-          if($name_info_map['index'] === null){ // name[]
-          
-            $this->field_map[$name_info_map['namespace']][] = $field;
-          
-          }else{ // name[index]
-          
-            $this->field_map[$name_info_map['namespace']][$name_info_map['index']] = $field;
-          
-          }//if/else
-        
-        }else{ // name
-        
-          $this->field_map[$name_info_map['namespace']] = $field;
-        
-        }//if/else
-        
-      }else{
-      
-        if(isset($args[1])){
-        
-          if($args[1] instanceof Field){
-          
-            $args[1]->setName($args[0]);
-            $this->setField($args[1]);
-          
-          }else{
-          
-            $name_info_map = $this->getNameInfo($args[0]);
-            
-            if(is_array($this->field_map[$name_info_map['namespace']])){
-            
-              // canary...
-              if(empty($name_info_map['is_array'])){
-                throw new \UnexpectedValueException(
-                  sprintf(
-                    'you are trying to turn an array field %s into a non array field',
-                    $name_info_map['namespace']
-                  )
-                );
-              }//if
-              
-              $field = end($this->field_map[$name_info_map['namespace']]);
-              $field = clone $field;
-              $field->setRandomId();
-              $field->setLabel('');
-              $field->setDesc('');
-              $field->setName($name_info_map['name']);
-              $field->setVal($args[1]);
-              $this->setField($field);
-            
-            }else{
-            
-              if(isset($this->field_map[$args[0]])){
-            
-                $this->field_map[$args[0]]->setVal($args[1]);
-              
-              }else{
-              
-                throw new \InvalidArgumentException(
-                  sprintf(
-                    'you tried to update $name %s with a new $val %s, but %s isn\'t a defined form element',
-                    $args[0],
-                    $args[1],
-                    $args[0]
-                  )
-                );
-              
-              }//if/else
-
-            }//if/else
-          
-          }//if/else
-        
-        }else{
-        
-          throw new \InvalidArgumentException(
-            sprintf(
-              'you need ($name,$val), you passed in $name, but no $val: (%s)',
-              join(',',$args)
-            )
-          );
-        
-        }//if/else
-      
-      }//if/else
-      
-    }//if
-  
-  }//method
-  
-  /**
    *  return the value of $key, return $default_val if key doesn't exist
    *
    *  @param  string  $key
    *  @param  mixed $default_val  here for compatibality with Fieldable interface, not used
-   *  @return mixed
+   *  @return Field
    */
   public function getField($name,$default_val = null){
   
-    $ret_mixed = null;
+    $ret_field = null;
     $name_map = $this->getNameInfo($name);
-
-    $name = $name_map['namespace'];
+    $name = $name_map['name'];
 
     if(isset($this->field_map[$name])){
       
-      $ret_mixed = $this->field_map[$name];
-      $is_arr = is_array($ret_mixed);
-      
-      if($name_map['is_array']){
-      
-        if(!$is_arr){ $ret_mixed = array($ret_mixed); }//if
-        
-      }//if
+      $ret_field = $this->field_map[$name];
       
     }else{
     
-      $ret_mixed = $name_map['is_array'] ? array() : null;
-      
-      // @todo  should this thrown an \InvalidArgumentException() ?
+      throw new \InvalidArgumentException(sprintf('%s field does not exist',$name));
       
     }//if/else
     
-    return $ret_mixed;
+    return $ret_field;
     
   }//method
   
@@ -361,24 +285,10 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
   
     $ret_bool = false;
     $name_map = $this->getNameInfo($name);
-    $name = $name_map['namespace'];
+    $name = $name_map['name'];
   
-    if(isset($this->field_map[$name])){
+    return isset($this->field_map[$name]);
     
-      if($name_map['is_array']){
-      
-        $ret_bool = is_array($this->field_map[$name]);
-      
-      }else{
-      
-        $ret_bool = true;
-      
-      }//if/else
-      
-    }//if
-  
-    return $ret_bool;
-  
   }//method
   
   /**
@@ -388,74 +298,6 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
    *  @return  boolean
    */
   public function existsField($name){ return $this->hasField($name); }//method
-  
-  /**
-   *  remove $key and its value from the map
-   *  
-   *  @param  string  $key
-   *  @return object  the class instance for fluid interface
-   */
-  public function killField($name){
-  
-    $name_map = $this->getNameInfo($name);
-    $name = $name_map['namespace'];
-    
-    if(isset($this->field_map[$name])){
-    
-      if($name_map['is_array'] && !empty($name_map['index'])){
-      
-        unset($this->field_map[$name][$name_map['index']]);
-      
-      }else{
-      
-        unset($this->field_map[$name]);
-      
-      }//if/else
-    
-    }//if
-    
-    return $this;
-    
-  }//method
-  
-  /**
-   *  bump the field at $name by $count
-   *  
-   *  @since  5-26-10
-   *      
-   *  @param  string  $name  the name
-   *  @param  integer $count  the value to increment $name
-   *  @return integer the incremented value now stored at $name
-   */
-  public function bumpField($name,$count = 1){
-  
-    $ret_count = 0;
-  
-    if($field = $this->getField($name)){
-    
-      if(is_array($field)){
-      
-        foreach($field as $f){
-        
-          $field_val = $f->getVal();
-          $ret_count += ((int)$field_val + (int)$count);
-          $f->setVal($ret_count);
-        
-        }//foreach
-      
-      }else{
-      
-        $field_val = $field->getVal();
-        $ret_count = (int)$field_val + (int)$count;
-        $field->setVal($ret_count);
-        
-      }//if/else
-      
-    }//if
-    
-    return $ret_count;
-  
-  }//method
   
   /**
    *  return true if there are fields
@@ -477,38 +319,11 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
     $ret_bool = false;
   
     if($field = $this->getField($name)){
-      $ret_bool = ($val === $field->getVal());
+      $ret_bool = ($field instanceof $val);
     }//if
     
     return $ret_bool;
   
-  }//method
-  
-  /**
-   *  add all the fields in $field_map to the instance field_map
-   *  
-   *  $field_map takes precedence, it will overwrite previously set values
-   *      
-   *  @param  array $field_map      
-   *  @return object  the class instance for fluid interface
-   */
-  public function addFields(array $field_map){
-  
-    $this->field_map = array_merge($this->field_map,$field_map);
-    return $this;
-  
-  }//method
-  
-  /**
-   *  set all the fields in $field_map to the instance field_map
-   *  
-   *  @since  6-3-11   
-   *  @param  array $field_map      
-   *  @return object  the class instance for fluid interface
-   */
-  public function setFields(array $field_map){
-    $this->form_map = $field_map;
-    return $this;
   }//method
   
   /**
@@ -628,12 +443,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
    *  Set a value given it's key e.g. $A['title'] = 'foo';
    */
   public function offsetSet($name,$val){
-    
-    // if they are trying to do a $obj[] = $val let's append the $val
-    // via: http://www.php.net/manual/en/class.arrayobject.php#93100
-    
-    $this->setField($name,$val);
-    
+    throw new \BadMethodCallException('Array set is not supported on this object');
   }//method
   /**
    *  Return a value given it's key e.g. echo $A['title'];
@@ -642,7 +452,9 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
   /**
    *  Unset a value by it's key e.g. unset($A['title']);
    */
-  public function offsetUnset($name){ $this->killField($name); }//method
+  public function offsetUnset($name){
+    throw new \BadMethodCallException('Array unset is not supported on this object');
+  }//method
   /**
    *  Check value exists, given it's key e.g. isset($A['title'])
    */
@@ -654,18 +466,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
    *
    *  @return ArrayIterator allows this class to be iteratable by going throught he main array
    */
-  public function getIterator(){
-    $ret_list = array();
-    foreach($this->field_map as $name => $value){
-      if(is_array($value)){
-        $ret_list = array_merge($ret_list,$value);
-      }else{
-        $ret_list[$name] = $value;
-      }//if/else
-    }//foreach
-    
-    return new ArrayIterator($ret_list);
-  }//spl method
+  public function getIterator(){ return new ArrayIterator($this->field_map); }//spl method
 
   /**
    *  gets the form specific name of the given $name, also normalizes $name
@@ -674,6 +475,12 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
    *  handy because it would return namespace "foo" if you passed in "foo[]" so you could get
    *  the key that it would be in the array   
    *  
+   *  name - the actual input name, this is the raw name, so it would be foo if the name was   
+   *  
+   *  name should be the full name so if array, foo[]
+   *  shortname - if name was foo[] then it should be foo
+   *  formname - would be Formname[foo]      
+   *      
    *  @param  string  $name
    *  @return array array($name,$form_name,$is_array). $is_array will be set to true if
    *                [] was found in $name   
@@ -681,7 +488,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
   protected function getNameInfo($name){
     
     $ret_map = array();
-    $ret_map['name'] = $ret_map['namespace'] = $name;
+    $ret_map['name'] = $ret_map['full_name'] = $name;
     $ret_map['is_array'] = false;
     $ret_map['index'] = '';
     
@@ -693,17 +500,17 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,Fiel
       // form_name[$name][] works, form_name[$name[]] does not.
           
       $postfix = mb_substr($name,$index);
-      $ret_map['namespace'] = mb_substr($name,0,$index);
+      $ret_map['full_name'] = mb_substr($name,0,$index);
       $ret_map['index'] = trim($postfix,'[]');
       if($ret_map['index'] === ''){ $ret_map['index'] = null; }//if
       $ret_map['is_array'] = true;
       
     }//if
 
-    $ret_map['namespace'] = mb_strtolower($ret_map['namespace']);
+    $ret_map['full_name'] = mb_strtolower($ret_map['full_name']);
     $ret_map['name'] = mb_strtolower($ret_map['name']);
 
-    $ret_map['form_name'] = sprintf('%s[%s]%s',$this->getName(),$ret_map['namespace'],$postfix);
+    $ret_map['form_name'] = sprintf('%s[%s]%s',$this->getName(),$ret_map['name'],$postfix);
 
     return $ret_map;
     

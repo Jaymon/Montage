@@ -1,22 +1,22 @@
 <?php
 namespace Montage\Test\PHPUnit;
 
-require_once('out_class.php');
-require_once(__DIR__.'/../Test.php');
-
-require_once(__DIR__.'/../../../Field/Fieldable.php');
-require_once(__DIR__.'/../../../Form/Common.php');
-require_once(__DIR__.'/../../../Form/Form.php');
-require_once(__DIR__.'/../../../Form/Field/Field.php');
-require_once(__DIR__.'/../../../Form/Field/Input.php');
-require_once(__DIR__.'/../../../Form/Field/Textarea.php');
+use PHPUnit\TestCase;
 
 use Montage\Form\Form;
 use Montage\Form\Field\Input;
 use Montage\Form\Field\Textarea;
-use out;
 
-class FieldTest extends Test {
+class FormTest extends TestCase {
+
+  public function testDocBlockPopulate(){
+  
+    $f = new TestForm();
+    
+    ///\out::i($f);
+  
+  
+  }//method
 
   /**
    *  tests some form stuff
@@ -65,6 +65,18 @@ class FieldTest extends Test {
 
 class TestForm extends Form {
 
-  protected function populate(){}//method
+  /**
+   *  Foo - this will be the label
+   *   
+   *  @var  Input
+   */
+  protected $foo = null;
+  
+  /**
+   *  Bar - this will be the label
+   *   
+   *  @var  Textarea
+   */
+  protected $bar = null;
 
 }//class

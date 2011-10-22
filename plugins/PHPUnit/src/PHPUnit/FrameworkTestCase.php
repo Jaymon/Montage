@@ -18,12 +18,27 @@ use PHPUnit\FrameworkBrowser;
 
 abstract class FrameworkTestCase extends TestCase {
   
+  /**
+   *  hold a copyt of the Framework
+   *  
+   *  @var  \Montage\Framework
+   */
   static protected $framework = null;
   
+  /**
+   *  set the framework instance
+   *  
+   *  @param  \Montage\Framework  $framework
+   */
   public static function setFramework(Framework $framework){
     self::$framework = $framework;
   }//method
   
+  /**
+   *  get this class's Framework instance
+   *  
+   *  @return \Montage\Framework
+   */
   public function getFramework(){ return self::$framework; }//method
 
   /**
@@ -34,8 +49,7 @@ abstract class FrameworkTestCase extends TestCase {
    */
   public function getClient(){
   
-    // get a copy of the already running framework...
-    $framework = clone $this->getFramework();
+    $framework = clone $this->getFramework(); // use a copy of the already running framework
     return new FrameworkClient($framework);
   
   }//method
