@@ -665,6 +665,8 @@ abstract class Container extends Field implements Containable {
    *      public Bar = null; // this will get a \Full\Namespaced\ClassName instance
    *    }
    *
+   *  @link http://www.php.net/manual/en/language.oop5.properties.php   
+   *      
    *  @since  10-20-11
    *  @param  object  $instance the object instance to be injected
    *  @param  ReflectionClass $rclass the reflection object of the given $instance      
@@ -678,20 +680,9 @@ abstract class Container extends Field implements Containable {
     
     $rparam_list = $rclass->getProperties(ReflectionProperty::IS_PUBLIC);
     foreach($rparam_list as $rparam){
-      
+
       $param_name = $rparam->getName();
-      $val = null;
-      
-      if($rparam->isStatic()){
-      
-        $val = $instance::$$param_name;
-      
-      }else{
-      
-        $val = $instance->{$param_name};
-      
-      }//if/else
-      
+      $val = $rparam->getValue($instance);
       
       if($val === null){
         
@@ -700,20 +691,36 @@ abstract class Container extends Field implements Containable {
 
         if($rdocblock->hasTag('var')){
         
-          if($class_name = $rdocblock->getTag('var')){
+          if($type = $rdocblock->getTag('var')){
             
-            if($class_name[0] === '\\'){
+            // var tags can be in the form: type desc, so get rid of the desc...
+            $type = preg_split('#\s+#',$type,2);
+            $type = $type[0];
             
-              if($rparam->isStatic()){
-      
-                $instance::$$param_name = $this->getInstance($class_name);
+            // only check values that aren't or'ed...
+            if(mb_strpos($type,'|') === false){
               
-              }else{
+              // only check non-primitive types...
+              $regex = '#^(bool(?:ean)?|int(?:eger)?|float|double|string|array|object|resource|mixed|null|callback)$#i';
               
-                $instance->{$param_name} = $this->getInstance($class_name);
+              if(!preg_match($regex,$type)){
+                
+                $class_name = $type;
+                
+                // fix namespace...
+                if($class_name[0] !== '\\'){
+                
+                  $class_name = sprintf('%s\\%s',$rclass->getNamespaceName(),$class_name);
+                
+                }//if
+                
+                $rparam->setValue(
+                  $rparam->isStatic() ? null : $instance,
+                  $this->getInstance($class_name)
+                );
+                
+              }//if
               
-              }//if/else
-            
             }//if
             
           }//if

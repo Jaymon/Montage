@@ -5,7 +5,9 @@
  *  @link https://wiki.php.net/rfc/docblockparser
  *  @link http://stackoverflow.com/questions/5604587/php-annotations-addendum-or-doctrine-annotation
  *  @link http://www.doctrine-project.org/projects/common/2.0/docs/reference/annotations/en  
- *  
+ *  @link https://github.com/mvriel/Docblox/blob/master/src/DocBlox/Reflection/DocBlock.php  
+ *  @link http://stackoverflow.com/questions/2531085/are-there-any-php-docblock-parser-tools-available 
+ * 
  *  @version 0.1
  *  @author Jay Marcyes
  *  @since 10-18-11
@@ -52,6 +54,30 @@ class ReflectionDocBlock implements \Reflector {
   protected $field_map = array();
 
   /**
+   *  the built-in types
+   *  
+   *  this is currently not used, but I had some ideas for the future and I figured 
+   *  I would keep this here for now 
+   *      
+   *  @link http://us.php.net/manual/en/language.types.intro.php
+   *  @var  array   
+   */
+  protected $primitive_types = array(
+    'bool',
+    'boolean',
+    'integer',
+    'float',
+    'double',
+    'string',
+    'array',
+    'object',
+    'resource',
+    'mixed',
+    'null',
+    'callback'
+  );
+
+  /**
    *  create the object
    *  
    *  @param  string  $docblock the docblock to be reflected
@@ -79,6 +105,7 @@ class ReflectionDocBlock implements \Reflector {
   /**
    *  get the tag
    *
+   *  @param  string  $name a tag name   
    *  @return string   
    */
   public function getTag($name){ return $this->getField($name,''); }//method
@@ -86,6 +113,7 @@ class ReflectionDocBlock implements \Reflector {
   /**
    *  true if the tag exists
    *
+   *  @param  string  $name a tag name   
    *  @return boolean
    */
   public function hasTag($name){

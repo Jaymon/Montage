@@ -96,15 +96,20 @@ namespace Montage\PHPUnit {
     }//method
     
     /**
-     *  setter injection should add dependencies through publi parameters
+     *  setter injection should add dependencies through public parameters
      *
      *  @since  6-15-11
      */
     public function testParamInjection(){
     
       $instance = $this->container->getInstance('Montage\Test\Fixtures\Dependency\ParamInjected');
+      
       $this->assertTrue($instance instanceof \Montage\Test\Fixtures\Dependency\ParamInjected);
       $this->assertTrue($instance->che instanceof \Che);
+      $this->assertTrue(\Montage\Test\Fixtures\Dependency\ParamInjected::$bong instanceof \Bong);
+      $this->assertNull($instance->che2);
+      $this->assertTrue($instance->c instanceof \Montage\Test\Fixtures\Dependency\C);
+      
       
     }//method
     
@@ -224,9 +229,33 @@ namespace Montage\Test\Fixtures\Dependency {
   class ParamInjected {
   
     /**
+     *  @var  \Bong this is static for no reason
+     */
+    public static $bong = null;
+  
+    /**
      *  @var  \Che
      */
     public $che = null;
+    
+    /**
+     *  this should fail the param injection
+     *         
+     *  @var  string|\Che
+     */
+    public $che2 = null;
+    
+    /**
+     *  @var  string  a string value that isn't a class
+     */
+    public $not_a_class = null;
+  
+    /**
+     *  this should get the full namespaced C class
+     *     
+     *  @var  C
+     */
+    public $c = null;
   
   }//class
 
