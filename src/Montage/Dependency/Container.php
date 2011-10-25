@@ -17,7 +17,7 @@ namespace Montage\Dependency;
 
 use Montage\Dependency\Containable;
 use ReflectionObject, ReflectionClass, ReflectionMethod, ReflectionParameter, ReflectionProperty;
-use Montage\Reflection\ReflectionDocBlock;
+use Montage\Annotation;
 use Montage\Field\Field;
 
 abstract class Container extends Field implements Containable {
@@ -683,49 +683,29 @@ abstract class Container extends Field implements Containable {
 
       $param_name = $rparam->getName();
       $val = $rparam->getValue($instance);
-      
-      if($val === null){
-        
-        $docblock = $rparam->getDocComment();
-        $rdocblock = new ReflectionDocBlock($docblock);
+      $docblock = $rparam->getDocComment();
 
-        if($rdocblock->hasTag('var')){
+      if(($val === null) && !empty($docblock)){
         
-          if($type = $rdocblock->getTag('var')){
-            
-            // var tags can be in the form: type desc, so get rid of the desc...
-            $type = preg_split('#\s+#',$type,2);
-            $type = $type[0];
-            
-            // only check values that aren't or'ed...
-            if(mb_strpos($type,'|') === false){
-              
-              // only check non-primitive types...
-              $regex = '#^(bool(?:ean)?|int(?:eger)?|float|double|string|array|object|resource|mixed|null|callback)$#i';
-              
-              // make sure the var type is a class name...
-              if((mb_strpos($type,'\\') !== false) || !preg_match($regex,$type)){
-                
-                $class_name = $type;
-                
-                // fix namespace...
-                if($class_name[0] !== '\\'){
-                
-                  $class_name = sprintf('%s\\%s',$rclass->getNamespaceName(),$class_name);
-                
-                }//if
-                
-                $rparam->setValue(
-                  $rparam->isStatic() ? null : $instance,
-                  $this->getInstance($class_name)
-                );
-                
-              }//if
-              
-            }//if
-            
+        $class_name = '';
+
+        $annotation = new Annotation($rparam);
+        $class_name = $annotation->getClassName();
+          
+        if(!empty($class_name)){
+          
+          // fix namespace...
+          if($class_name[0] !== '\\'){
+          
+            $class_name = sprintf('%s\\%s',$rclass->getNamespaceName(),$class_name);
+          
           }//if
-        
+          
+          $rparam->setValue(
+            $rparam->isStatic() ? null : $instance,
+            $this->getInstance($class_name)
+          );
+          
         }//if
         
       }//if

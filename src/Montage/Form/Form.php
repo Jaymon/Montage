@@ -17,7 +17,7 @@ use Montage\Form\Field\Field;
 use Montage\Form\Field\Input;
 
 use ReflectionObject,ReflectionProperty;
-use Montage\Reflection\ReflectionDocBlock;
+use Montage\Annotation;
 
 use ArrayIterator;
 use ArrayAccess,IteratorAggregate;
@@ -100,45 +100,36 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
 
       if(($val === null) && !empty($docblock)){
         
-        $rdocblock = new ReflectionDocBlock($docblock);
-
-        if($rdocblock->hasTag('var')){
-        
-          if($class_name = $rdocblock->getTag('var')){
+        $annotation = new Annotation($rparam);
+        if($class_name = $annotation->getClassName()){
+          
+          if($class_name[0] !== '\\'){
+          
+            foreach($this->form_field_map as $form_field => $form_field_class_name){
             
-            // var tags can be in the form: type desc, so get rid of the desc...
-            $class_name = preg_split('#\s+#',$class_name,2);
-            $class_name = $class_name[0];
-            
-            if($class_name[0] !== '\\'){
-            
-              foreach($this->form_field_map as $form_field => $form_field_class_name){
+              if(preg_match(sprintf('#%s$#i',$form_field),$class_name)){
               
-                if(preg_match(sprintf('#%s$#i',$form_field),$class_name)){
-                
-                  $class_name = $form_field_class_name;
-                  break;
-                
-                }//if
+                $class_name = $form_field_class_name;
+                break;
               
-              }//foreach
+              }//if
             
-            }//if
-            
-            if(class_exists($class_name) && is_subclass_of($class_name,$this->field_parent_class_name)){
-            
-              $instance = $this->createField($class_name,$rparam,$rdocblock);
-            
-              $rparam->setValue(
-                $rparam->isStatic() ? null : $this,
-                $instance
-              );
-              
-              $this->field_map[$rparam->getName()] = $instance;
-            
-            }//if
-            
+            }//foreach
+          
           }//if
+          
+        }//if
+        
+        if(class_exists($class_name) && is_subclass_of($class_name,$this->field_parent_class_name)){
+        
+          $instance = $this->createField($class_name,$rparam,$rdocblock);
+        
+          $rparam->setValue(
+            $rparam->isStatic() ? null : $this,
+            $instance
+          );
+          
+          $this->field_map[$rparam->getName()] = $instance;
         
         }//if
         

@@ -54,30 +54,6 @@ class ReflectionDocBlock implements \Reflector {
   protected $field_map = array();
 
   /**
-   *  the built-in types
-   *  
-   *  this is currently not used, but I had some ideas for the future and I figured 
-   *  I would keep this here for now 
-   *      
-   *  @link http://us.php.net/manual/en/language.types.intro.php
-   *  @var  array   
-   */
-  protected $primitive_types = array(
-    'bool',
-    'boolean',
-    'integer',
-    'float',
-    'double',
-    'string',
-    'array',
-    'object',
-    'resource',
-    'mixed',
-    'null',
-    'callback'
-  );
-
-  /**
    *  create the object
    *  
    *  @param  string  $docblock the docblock to be reflected
