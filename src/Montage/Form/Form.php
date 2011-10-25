@@ -46,9 +46,18 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
    */
   protected $field_map = array();
   
+  /**
+   *  hold the parent class that will be used to {@link populate()} the fields
+   *  
+   *  @since  10-24-11   
+   *  @var  string  the full namespaced class
+   */
+  protected $field_parent_class_name = 'Montage\\Form\\Field\\Field';
+  
   protected $form_field_map = array(
-    'Textarea' => 'Montage\Form\Field\Textarea',
-    'Input' => 'Montage\Form\Field\Input'
+    'Textarea' => 'Montage\\Form\\Field\\Textarea',
+    'Input' => 'Montage\\Form\\Field\\Input',
+    'Submit' => 'Montage\\Form\\Field\\Submit'
   );
   
   /**
@@ -87,7 +96,6 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
     
       $rparam->setAccessible(true);
       $val = $rparam->getValue($this);
-      /// $val = $rparam->isStatic() ? $rparam->getValue() : $rparam->getValue($this);
       $docblock = $rparam->getDocComment();
 
       if(($val === null) && !empty($docblock)){
@@ -97,6 +105,10 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
         if($rdocblock->hasTag('var')){
         
           if($class_name = $rdocblock->getTag('var')){
+            
+            // var tags can be in the form: type desc, so get rid of the desc...
+            $class_name = preg_split('#\s+#',$class_name,2);
+            $class_name = $class_name[0];
             
             if($class_name[0] !== '\\'){
             
@@ -111,26 +123,20 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
               
               }//foreach
             
-            }//if/else
-            
-            $name_map = $this->getNameInfo($rparam->getName());
-            
-            $instance = new $class_name();
-            $instance->setName($name_map['form_name']);
-            $instance->setLabel($name_map['name']);
-            
-            if($desc = $rdocblock->getShortDesc()){
-            
-              $instance->setDesc($desc);
-            
             }//if
             
-            $rparam->setValue(
-              $rparam->isStatic() ? null : $this,
-              $instance
-            );
+            if(class_exists($class_name) && is_subclass_of($class_name,$this->field_parent_class_name)){
             
-            $this->field_map[$name_map['name']] = $instance;
+              $instance = $this->createField($class_name,$rparam,$rdocblock);
+            
+              $rparam->setValue(
+                $rparam->isStatic() ? null : $this,
+                $instance
+              );
+              
+              $this->field_map[$rparam->getName()] = $instance;
+            
+            }//if
             
           }//if
         
@@ -140,15 +146,40 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
       
         if($val instanceof Field){
         
-          $name_map = $this->getNameInfo($val->getName());
-          $val->setName($name_map['form_name']);
-          $this->field_map[$name_map['name']] = $val;
+          $this->field_map[$rparam->getName()] = $val;
         
         }//if
       
       }//if/else
     
     }//foreach
+  
+  }//method
+  
+  /**
+   *  create the field instance
+   *  
+   *  @param  string  $class_name the field class to be created
+   *  @param  \ReflectionProperty $rparam the class property that was found to conain a field class
+   *  @param  ReflectionDocBlock  $rdocblock  the property's docblock      
+   *  @return Field a field instance
+   */
+  protected function createField($class_name,ReflectionProperty $rparam,ReflectionDocBlock $rdocblock){
+  
+    $name = $rparam->getName();
+    
+    $instance = new $class_name();
+    $instance->setName($name);
+    $instance->setLabel($name);
+    $instance->setForm($this);
+    
+    if($desc = $rdocblock->getShortDesc()){
+    
+      $instance->setDesc($desc);
+    
+    }//if
+  
+    return $instance;
   
   }//method
 
@@ -247,8 +278,6 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
   public function getField($name,$default_val = null){
   
     $ret_field = null;
-    $name_map = $this->getNameInfo($name);
-    $name = $name_map['name'];
 
     if(isset($this->field_map[$name])){
       
@@ -281,15 +310,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
    *  @param  string  $key   
    *  @return  boolean
    */
-  public function hasField($name){
-  
-    $ret_bool = false;
-    $name_map = $this->getNameInfo($name);
-    $name = $name_map['name'];
-  
-    return isset($this->field_map[$name]);
-    
-  }//method
+  public function hasField($name){ return isset($this->field_map[$name]); }//method
   
   /**
    *  check if $key exists
@@ -400,10 +421,22 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
   
   public function renderStart(array $attr_map = array()){
   
+    $ret_str = '';
+  
     $this->setMethod($this->getMethod());
     $this->setEncoding($this->getEncoding());
   
-    return sprintf('<form%s>',$this->renderAttr($attr_map));
+    if($attr_str = $this->renderAttr($attr_map)){
+    
+      $ret_str = sprintf('<form %s>',$attr_str);
+    
+    }else{
+    
+      $ret_str = '<form>';
+    
+    }//if/else
+  
+    return $ret_str;
     
   }//method
   public function renderStop(){ return '</form>'; }//method
@@ -467,53 +500,5 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
    *  @return ArrayIterator allows this class to be iteratable by going throught he main array
    */
   public function getIterator(){ return new ArrayIterator($this->field_map); }//spl method
-
-  /**
-   *  gets the form specific name of the given $name, also normalizes $name
-   *  
-   *  basically, this converts a normal name like "foo" to form_name[foo], it is also
-   *  handy because it would return namespace "foo" if you passed in "foo[]" so you could get
-   *  the key that it would be in the array   
-   *  
-   *  name - the actual input name, this is the raw name, so it would be foo if the name was   
-   *  
-   *  name should be the full name so if array, foo[]
-   *  shortname - if name was foo[] then it should be foo
-   *  formname - would be Formname[foo]      
-   *      
-   *  @param  string  $name
-   *  @return array array($name,$form_name,$is_array). $is_array will be set to true if
-   *                [] was found in $name   
-   */
-  protected function getNameInfo($name){
-    
-    $ret_map = array();
-    $ret_map['name'] = $ret_map['full_name'] = $name;
-    $ret_map['is_array'] = false;
-    $ret_map['index'] = '';
-    
-    $postfix = '';
-    $index = mb_strpos($name,'[');
-    if($index !== false){
-
-      // $name is an array itself so we need to compensate to namespace it with the form name also...
-      // form_name[$name][] works, form_name[$name[]] does not.
-          
-      $postfix = mb_substr($name,$index);
-      $ret_map['full_name'] = mb_substr($name,0,$index);
-      $ret_map['index'] = trim($postfix,'[]');
-      if($ret_map['index'] === ''){ $ret_map['index'] = null; }//if
-      $ret_map['is_array'] = true;
-      
-    }//if
-
-    $ret_map['full_name'] = mb_strtolower($ret_map['full_name']);
-    $ret_map['name'] = mb_strtolower($ret_map['name']);
-
-    $ret_map['form_name'] = sprintf('%s[%s]%s',$this->getName(),$ret_map['name'],$postfix);
-
-    return $ret_map;
-    
-  }//method
 
 }//class     

@@ -703,7 +703,8 @@ abstract class Container extends Field implements Containable {
               // only check non-primitive types...
               $regex = '#^(bool(?:ean)?|int(?:eger)?|float|double|string|array|object|resource|mixed|null|callback)$#i';
               
-              if(!preg_match($regex,$type)){
+              // make sure the var type is a class name...
+              if((mb_strpos($type,'\\') !== false) || !preg_match($regex,$type)){
                 
                 $class_name = $type;
                 

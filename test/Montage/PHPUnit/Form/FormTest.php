@@ -13,51 +13,13 @@ class FormTest extends TestCase {
   
     $f = new TestForm();
     
-    ///\out::i($f);
-  
-  
-  }//method
-
-  /**
-   *  tests some form stuff
-   */
-  public function testAddSimpleFieldToForm(){
-  
-    $form = new TestForm();
+    $field = $f->getField('foo');
+    $this->assertInstanceOf('Montage\Form\Field\Input',$field);
+    $this->assertTrue($field->hasDesc());
     
-    $field = new Input('test','blah');
-    
-    $form->setField($field);
-    
-    $this->assertSame('blah',$form->getField('test')->getVal());
-    
-    ///out::e($form);
-    
-  
-  }//method
-  
-  /**
-   *  tests some form stuff
-   */
-  public function testAddArrayFieldToForm(){
-  
-    $form = new TestForm();
-    
-    $field = new Input('test[]','foo');
-    $form->setField($field);
-    
-    $field = new Input('test[]','bar');
-    $form->setField($field);
-    
-    $this->assertSame(2,count($form->getField('test')));
-    
-    $field = new Input('test[che]','che');
-    $form->setField($field);
-    
-    $fields = $form->getField('test');
-    foreach(array(0,1,'che') as $key){
-      $this->assertArrayHasKey($key,$fields);
-    }//foreach
+    $field = $f->getField('bar');
+    $this->assertInstanceOf('Montage\Form\Field\Textarea',$field);
+    $this->assertTrue($field->hasDesc());
   
   }//method
 

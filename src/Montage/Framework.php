@@ -1097,6 +1097,9 @@ class Framework extends Field implements Dependable,Eventable {
   
     $path = new Path($app_path,'assets');
     if($path->exists()){ $assets_path_list[] = $path; }//if
+    
+    $path = new Path($framework_path,'view');
+    if($path->exists()){ $view_path_list[] = $path; }//if
   
     $this->setField('reflection_paths',$reflection_path_list);
     $this->setField('view_paths',$view_path_list);

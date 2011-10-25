@@ -102,7 +102,19 @@ class Input extends Field {
       $attr_map['value'] = $this->getSafe($this->getVal());
     }//if/else
   
-    return sprintf('<input%s/>',$this->renderAttr($attr_map));
+    $ret_str = '';
+  
+    if($attr_str = $this->renderAttr($attr_map)){
+    
+      $ret_str = sprintf('<input %s>',$attr_str);
+    
+    }else{
+    
+      $ret_str = '<input>';
+    
+    }//if/else
+  
+    return $ret_str;
     
   }//method
 

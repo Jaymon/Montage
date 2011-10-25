@@ -54,26 +54,26 @@ http://www.w3schools.com/html5/tag_doctype.asp
   
   <body>
   
-    <?php if($this->hasField('header')): ?>
+    <?php if($this->hasField('header_template')): ?>
   
       <div id="header" class="container">
-        <?php $this->out($this->getField('header')); flush(); ?>
+        <?php $this->out($this->getField('header_template')); flush(); ?>
       </div>
       
     <?php endif; ?>
       
-    <?php if($this->hasField('content')): ?>
+    <?php if($this->hasField('content_template')): ?>
         
       <div id="content" class="container">
-        <?php $this->out($this->getField('content')); flush() ?>
+        <?php $this->out($this->getField('content_template')); flush() ?>
       </div>
     
     <?php endif; ?>
     
-    <?php if($this->hasField('footer')): ?>
+    <?php if($this->hasField('footer_template')): ?>
       
       <div id="footer" class="container">
-        <?php $this->out($this->getField('footer')); flush(); ?>
+        <?php $this->out($this->getField('footer_template')); flush(); ?>
       </div>
       
     <?php endif; ?>

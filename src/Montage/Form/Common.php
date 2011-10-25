@@ -3,7 +3,7 @@
 /**
  *  the base for the form and any form element     
  *   
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 1-1-10
  *  @package montage
@@ -186,17 +186,13 @@ abstract class Common {
   public function getAttr($name,$default_val = ''){ return $this->hasAttr($name) ? $this->attr_map[$name] : $default_val; }//method
 
   /**
-   *  clears an attibute from the list
+   *  removes an attibute from the list
    *  
    *  @param  string  $name the name of the attribute
    *  @param  string  $val  the attributes value      
    *  @return boolean
    */
-  public function clearAttr($name){
-    if($this->hasAttr($name)){
-      unset($this->attr_map[$name]);
-    }//if
-  }//method
+  public function killAttr($name){ unset($this->attr_map[$name]); }//method
 
   /**#@+
    *  access methods for the form's charset     
@@ -222,7 +218,7 @@ abstract class Common {
    *  @param  array $attr_map pass in attributes (key => val pairs) to override default values    
    *  @return string
    */       
-  public function renderAttr($attr_map = array()){
+  public function renderAttr(array $attr_map = array()){
     
     // favor passed in values over previously set ones...
     $attr_map = array_merge($this->attr_map,$attr_map);
@@ -230,11 +226,13 @@ abstract class Common {
     // canary...
     if(empty($attr_map)){ return ''; }//if
   
-    $ret_str = ' ';
+    $ret_str = '';
+    
     foreach($attr_map as $attr_name => $attr_val){
       $ret_str .= sprintf('%s="%s" ',$attr_name,$attr_val);
     }//foreach
-    return $ret_str;
+    
+    return rtrim($ret_str);
     
   }//method
 
@@ -244,6 +242,17 @@ abstract class Common {
    *  @param  string  $val  the value to be "cleansed"
    *  @return string      
    */
-  protected function getSafe($val){ return htmlspecialchars($val,ENT_COMPAT,$this->charset,false); }//method 
+  protected function getSafe($val){ return htmlspecialchars($val,ENT_COMPAT,$this->charset,false); }//method
+  
+  /**
+   *  get a random id
+   */
+  protected function getRandomId($prefix = ''){
+  
+    if(empty($prefix)){ $prefix = 'id'; }//if
+  
+    return sprintf('%s%s',$prefix,rand(0,500000));
+    
+  }//method
 
 }//class     

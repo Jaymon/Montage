@@ -19,6 +19,7 @@ class Textarea extends Field {
   
     $ret_str = '';
     $orig_val = $this->getVal();
+    $val = '';
   
     // make sure the value is safe and not considered an attribute...
     if(isset($attr_map['value'])){
@@ -28,11 +29,24 @@ class Textarea extends Field {
       $val = $this->getSafe($this->getVal());
     }//if/else
     
-    $this->clearVal();
+    $this->killVal();
+    
+    $ret_str = '';
   
-    $ret_str = sprintf('<textarea%s>%s</textarea>',$this->renderAttr($attr_map),$val);
+    if($attr_str = $this->renderAttr($attr_map)){
+    
+      $ret_str = sprintf('<textarea %s>',$attr_str);
+    
+    }else{
+    
+      $ret_str = '<textarea>';
+    
+    }//if/else
+  
+    $ret_str .= $val.'</textarea>';
     
     $this->setVal($orig_val);
+    
     return $ret_str;
     
   }//method
