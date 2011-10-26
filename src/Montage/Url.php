@@ -22,35 +22,82 @@ class Url extends Field {
   const SCHEME_SECURE = 'https';
   
   /**
-   *  urls using //host.com/blah will use the SCHEME of the last request 
+   *  urls using //host.com/blah will use the SCHEME of the current request 
    *
    *  @since  7-23-11      
    */
   const SCHEME_RELATIVE = '//';
   
+  /**
+   *  the default scheme
+   *
+   *  @var  string   
+   */
   protected $scheme = self::SCHEME_NORMAL;
+  
+  /**
+   *  the current url that was requested
+   *
+   *  @var  string   
+   */
+  protected $current_url = '';
+  
+  /**
+   *  the base url
+   *  
+   *  if your site is hosted at the root of a domain, then this will be just that domain,
+   *  if your site is hosted in a folder of a domain, then this will be the domain and the folder path
+   *  
+   *  @example
+   *    example.com/ <- site is hosted in root folder
+   *    example.com/foo/bar <- site is hosted in the folder foo/bar of example.com                        
+   *
+   *  @var  string   
+   */
+  protected $base_url = '';
+  
+  /**
+   *  whether or not to use the domain when generating the urls or not
+   *
+   *  if false then the generated urls will being with just /, if true then they will begin
+   *  with {@link $base_url}
+   *  
+   *  @var  boolean            
+   */
+  protected $use_domain = true;
 
   /**
    *  create object instance
    *  
    *  @param  string  $current_url  the current url
-   *  @param  string  $base_url the url that will be used as the default base               
+   *  @param  string  $base_url the url that will be used as the default base 
+   *  @param  boolean $use_domain                 
    */
-  public function __construct($current_url = '',$base_url = ''){
+  public function __construct($current_url = '',$base_url = '',$use_domain = true){
   
-    ///\out::e($current_url,$base_url);
+    \out::e($current_url,$base_url);
   
     $this->setCurrent($current_url);
     $this->setBase($base_url);
+    $this->useDomain($use_domain);
     
   }//method
+  
+  /**
+   *  set to true to have generated urls use the domain, false to have them use
+   *  absolute paths without the domain
+   *  
+   *  @since  10-25-11
+   *  @param  boolean $bool
+   */
+  public function useDomain($bool){ $this->use_domain = (bool)$use_domain; }//method
   
   /**
    *  set the current url that will be used in {@link getCurrent()}
    *  
    *  @param  string  $url  the current requested url   
    */
-  public function setCurrent($url){ $this->setField('Url.current_url',$this->trimSlash($url)); }//method
+  public function setCurrent($url){ $this->current_url = $this->trimSlash($url); }//method
   
   /**
    *  set the base url that will be used as the default if no other url is passed into
@@ -58,7 +105,7 @@ class Url extends Field {
    *
    *  @param  string  $url  the url that will be used as the default base
    */
-  public function setBase($url){ $this->setField('Url.base_url',$this->trimSlash($url)); }//method
+  public function setBase($url){ $this->base_url = $this->trimSlash($url); }//method
 
   /**
    *  get a url
@@ -131,9 +178,9 @@ class Url extends Field {
   
     $args = func_get_args();
     // get the base url...
-    $current_url = $this->getField('Url.current_url',null);
+    $current_url = $this->current_url;
     if(empty($current_url)){
-      $current_url = $this->getField('Url.base_url','');
+      $current_url = $this->base_url;
     }//if
     
     $url_map = $this->normalize($args);
@@ -515,7 +562,7 @@ class Url extends Field {
     
     if($total_args === 1){
     
-      $base_url = $this->getField('Url.base_url','');
+      $base_url = $this->base_url;
       $ret_str = $args[0];
       
       $this->setField($field,$this->assemble('',$base_url,$ret_str));
@@ -559,7 +606,7 @@ class Url extends Field {
   
     if(empty($args)){
     
-      $ret_map['url'] = $this->getField('Url.base_url','');
+      $ret_map['url'] = $this->base_url;
       
     }else{
       
@@ -587,7 +634,7 @@ class Url extends Field {
       
       }else{
       
-        $url = $this->getField('Url.base_url','');
+        $url = $this->base_url;
       
       }//if/else
       
@@ -613,7 +660,7 @@ class Url extends Field {
     
     if(empty($base)){
     
-      $base = $this->getField('Url.base_url','');
+      $base = $this->base_url;
     
     }//if/else
     

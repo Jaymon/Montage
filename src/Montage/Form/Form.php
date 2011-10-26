@@ -122,7 +122,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
         
         if(class_exists($class_name) && is_subclass_of($class_name,$this->field_parent_class_name)){
         
-          $instance = $this->createField($class_name,$rparam,$rdocblock);
+          $instance = $this->createField($class_name,$rparam,$annotation);
         
           $rparam->setValue(
             $rparam->isStatic() ? null : $this,
@@ -152,12 +152,13 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
    *  
    *  @param  string  $class_name the field class to be created
    *  @param  \ReflectionProperty $rparam the class property that was found to conain a field class
-   *  @param  ReflectionDocBlock  $rdocblock  the property's docblock      
+   *  @param  Annotation  $rdocblock  the property's docblock      
    *  @return Field a field instance
    */
-  protected function createField($class_name,ReflectionProperty $rparam,ReflectionDocBlock $rdocblock){
+  protected function createField($class_name,ReflectionProperty $rparam,Annotation $annotation){
   
     $name = $rparam->getName();
+    $rdocblock = $annotation->getDocBlock();
     
     $instance = new $class_name();
     $instance->setName($name);
