@@ -18,21 +18,20 @@ use Montage\Response\Template;
 
 class PHPUnitController extends CliController {
 
-  protected $framework = null;
+  /**
+   *  @var  \Montage\Framework
+   */
+  public $framework = null;
 
-  protected $framework_config = null;
+  /**
+   *  @var  \Montage\Config\FrameworkConfig
+   */
+  public $framework_config = null;
   
-  protected $tmpl = null;
-
-  public function __construct(Framework $framework,FrameworkConfig $framework_config,Template $tmpl){
-  
-    $this->framework = $framework;
-  
-    $this->framework_config = $framework_config;
-    
-    $this->tmpl = $tmpl;
-  
-  }//method
+  /**
+   *  @var  \Montage\Response\Template
+   */
+  public $tmpl = null;
 
   /**
    *  default command is to print out help

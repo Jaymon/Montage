@@ -1,19 +1,11 @@
 <?php
 namespace Montage\Test\PHPUnit;
 
-require_once('out_class.php');
-require_once(__DIR__.'/Test.php');
-
-require_once(__DIR__.'/../../Field/GetFieldable.php');
-require_once(__DIR__.'/../../Field/SetFieldable.php');
-require_once(__DIR__.'/../../Field/Fieldable.php');
-require_once(__DIR__.'/../../Field/Field.php');
-require_once(__DIR__.'/../../Url.php');
-
 use ReflectionClass;
 use Montage\Url;
+use PHPUnit\TestCase;
 
-class PathTest extends Test {
+class UrlTest extends TestCase {
 
   protected $url = null;
 
@@ -128,46 +120,65 @@ class PathTest extends Test {
     $test_list = array();
     $test_list[] = array(
       'in' => array(''),
-      'out' => 'http://example.com/'
+      'out' => 'http://example.com/',
+      'out2' => '/'
     );
     $test_list[] = array(
       'in' => array(' '),
-      'out' => 'http://example.com/'
+      'out' => 'http://example.com/',
+      'out2' => '/'
     );
     $test_list[] = array(
       'in' => array('http://app.com',array('get' => 2)),
-      'out' => 'http://app.com/?get=2'
+      'out' => 'http://app.com/?get=2',
+      'out2' => 'http://app.com/?get=2'
     );
     $test_list[] = array(
       'in' => array('http://app.com','foo','bar',array('get' => 2)),
-      'out' => 'http://app.com/foo/bar/?get=2'
+      'out' => 'http://app.com/foo/bar/?get=2',
+      'out2' => 'http://app.com/foo/bar/?get=2'
     );
     $test_list[] = array(
       'in' => array('http://app.com','foo','bar'),
-      'out' => 'http://app.com/foo/bar/'
+      'out' => 'http://app.com/foo/bar/',
+      'out2' => 'http://app.com/foo/bar/'
     );
     $test_list[] = array(
       'in' => array('foo/bar'),
-      'out' => 'http://example.com/foo/bar/'
+      'out' => 'http://example.com/foo/bar/',
+      'out2' => '/foo/bar/'
     );
     $test_list[] = array(
       'in' => array('foo','bar'),
-      'out' => 'http://example.com/foo/bar/'
+      'out' => 'http://example.com/foo/bar/',
+      'out2' => '/foo/bar/'
     );
     $test_list[] = array(
       'in' => array('http://localhost:8080','foo','bar'),
-      'out' => 'http://localhost:8080/foo/bar/'
+      'out' => 'http://localhost:8080/foo/bar/',
+      'out2' => 'http://localhost:8080/foo/bar/'
     );
     $test_list[] = array(
       'in' => array('http://user:pass@localhost:8080','foo','bar'),
-      'out' => 'http://user:pass@localhost:8080/foo/bar/'
+      'out' => 'http://user:pass@localhost:8080/foo/bar/',
+      'out2' => 'http://user:pass@localhost:8080/foo/bar/'
     );
     $test_list[] = array(
       'in' => array('http://user:pass@app.com','foo',array('bar' => 1)),
-      'out' => 'http://user:pass@app.com/foo/?bar=1'
+      'out' => 'http://user:pass@app.com/foo/?bar=1',
+      'out2' => 'http://user:pass@app.com/foo/?bar=1'
     );
     
     $this->assertCalls($this->url,'get',$test_list);
+  
+    $this->url->useDomain(false);
+  
+    foreach($test_list as $key => $test_map){
+    
+      $test_map['out'] = $test_map['out2'];
+      $this->assertCall($this->url,'get',$test_map,$key);
+    
+    }//foreach
   
   }//method
   
@@ -179,26 +190,40 @@ class PathTest extends Test {
     $test_list = array();
     $test_list[] = array(
       'in' => array(''),
-      'out' => 'http://example.com/current/'
+      'out' => 'http://example.com/current/',
+      'out2' => '/current/'
     );
     $test_list[] = array(
       'in' => array(' '),
-      'out' => 'http://example.com/current/'
+      'out' => 'http://example.com/current/',
+      'out2' => '/current/'
     );
     $test_list[] = array(
       'in' => array(array('get' => 2)),
-      'out' => 'http://example.com/current/?get=2'
+      'out' => 'http://example.com/current/?get=2',
+      'out2' => '/current/?get=2'
     );
     $test_list[] = array(
       'in' => array('foo/bar'),
-      'out' => 'http://example.com/current/foo/bar/'
+      'out' => 'http://example.com/current/foo/bar/',
+      'out2' => '/current/foo/bar/'
     );
     $test_list[] = array(
       'in' => array('foo','bar'),
-      'out' => 'http://example.com/current/foo/bar/'
+      'out' => 'http://example.com/current/foo/bar/',
+      'out2' => '/current/foo/bar/'
     );
     
     $this->assertCalls($this->url,'getCurrent',$test_list);
+    
+    $this->url->useDomain(false);
+  
+    foreach($test_list as $key => $test_map){
+    
+      $test_map['out'] = $test_map['out2'];
+      $this->assertCall($this->url,'getCurrent',$test_map,$key);
+    
+    }//foreach
   
   }//method
 

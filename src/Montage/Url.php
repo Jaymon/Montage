@@ -57,6 +57,15 @@ class Url extends Field {
   protected $base_url = '';
   
   /**
+   *  hold the base urls
+   *
+   *  @see  normalizeBase()
+   *  @since  10-26-11
+   *  @var  array         
+   */
+  protected $base_map = array();
+  
+  /**
    *  whether or not to use the domain when generating the urls or not
    *
    *  if false then the generated urls will being with just /, if true then they will begin
@@ -75,8 +84,6 @@ class Url extends Field {
    */
   public function __construct($current_url = '',$base_url = '',$use_domain = true){
   
-    \out::e($current_url,$base_url);
-  
     $this->setCurrent($current_url);
     $this->setBase($base_url);
     $this->useDomain($use_domain);
@@ -90,7 +97,7 @@ class Url extends Field {
    *  @since  10-25-11
    *  @param  boolean $bool
    */
-  public function useDomain($bool){ $this->use_domain = (bool)$use_domain; }//method
+  public function useDomain($bool){ $this->use_domain = (bool)$bool; }//method
   
   /**
    *  set the current url that will be used in {@link getCurrent()}
@@ -158,12 +165,9 @@ class Url extends Field {
     $args = func_get_args();
     
     $url_map = $this->normalize($args);
-    $current_url_map = $this->split($this->getCurrent());
-    
-    
     list($url,$current_query) = $this->split($this->getCurrent());
     
-    return $this->build($base_url,$path_list,$field_map);
+    return $this->build($this->normalizeBase($url),$url_map['path'],$url_map['query']);
   
   }//method
   
@@ -178,9 +182,10 @@ class Url extends Field {
   
     $args = func_get_args();
     // get the base url...
-    $current_url = $this->current_url;
+    $current_url = $this->normalizeBase($this->current_url);
+    
     if(empty($current_url)){
-      $current_url = $this->base_url;
+      $current_url = $this->normalizeBase($this->base_url);
     }//if
     
     $url_map = $this->normalize($args);
@@ -606,7 +611,7 @@ class Url extends Field {
   
     if(empty($args)){
     
-      $ret_map['url'] = $this->base_url;
+      $ret_map['url'] = $this->normalizeBase($this->base_url);
       
     }else{
       
@@ -634,7 +639,7 @@ class Url extends Field {
       
       }else{
       
-        $url = $this->base_url;
+        $url = $this->normalizeBase($this->base_url);
       
       }//if/else
       
@@ -836,6 +841,34 @@ class Url extends Field {
     }//if/else
   
     return $val;
+  
+  }//method
+  
+  /**
+   *  normalize the base url
+   *  
+   *  basically, this class has 2 base url states: with domain and without, when not using
+   *  a domain, the base domains need to be changed to get rid of the scheme://domain
+   *
+   *  @since  10-26-11
+   *  @param  string  $url
+   *  @return string  the normalized url with or without the scheme and domain      
+   */
+  protected function normalizeBase($url){
+  
+    // canary...
+    if(empty($url)){ return '/'; }//if
+    if($this->use_domain){ return $url; }//if
+    if(isset($this->base_map[$url])){ return $this->url_map[$url]; }//if
+    
+    $base_bits = parse_url($url);
+    $ret_str = empty($base_bits['path']) ? '/' : $base_bits['path'];
+    $ret_str .= empty($base_bits['query']) ? '' : '?'.$base_bits['query'];
+    $ret_str .= empty($base_bits['fragment']) ? '' : '#'.$base_bits['fragment'];
+    
+    $this->base_map[$url] = $ret_str;
+    
+    return $ret_str;
   
   }//method
 

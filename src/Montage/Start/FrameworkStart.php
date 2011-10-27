@@ -55,7 +55,7 @@ class FrameworkStart extends Start {
     ini_set('display_errors',$this->framework_config->showErrors() ? 'on' : 'off'); 
     
     $container->onCreate(
-      'Montage\Session',
+      '\Montage\Session',
       function($container,array $params = array()){
       
         if(!isset($params['storage']) && !isset($params[0])){
@@ -73,7 +73,7 @@ class FrameworkStart extends Start {
     
     // set up some lazy load dependency resolves...
     $container->onCreate(
-      'Montage\Request\Requestable',
+      '\Montage\Request\Requestable',
       function($container,array $params = array()){
       
         // set the values for the url instance on creation...
@@ -92,7 +92,7 @@ class FrameworkStart extends Start {
     );
     
     $container->onCreate(
-      'Montage\Url',
+      '\Montage\Url',
       function($container,array $params = array()){
 
         $request = $container->getRequest();
@@ -100,7 +100,8 @@ class FrameworkStart extends Start {
         // set the values for the url instance on creation...
         $ret_map = array(
           'current_url' => $request->getUrl(),
-          'base_url' => $request->getBase()
+          'base_url' => $request->getBase(),
+          'use_domain' => $request->isCli()
         );
         
         return array_merge($ret_map,$params);

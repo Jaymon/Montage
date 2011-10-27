@@ -19,11 +19,20 @@ use Montage\Url;
 
 abstract class Controller extends Field implements Controllable {
 
-  protected $request = null;
+  /**
+   *  @var  \Montage\Request\Request
+   */
+  public $request = null;
   
-  protected $response = null;
+  /**
+   *  @var  \Montage\Response\Response
+   */
+  public $response = null;
   
-  protected $url = null;
+  /**
+   *  @var  \Montage\Url
+   */
+  public $url = null;
 
   /**
    *  override to allow your controller to do stuff right before any handle method is called
@@ -34,29 +43,5 @@ abstract class Controller extends Field implements Controllable {
    *  override to allow your controller to do stuff right after the handle method is called
    */
   public function postHandle(){}//method
-  
-  /**
-   *  set the request object if it is available
-   *
-   *  @since  7-26-11
-   *  @param  Request $request      
-   */
-  public function setRequest(Request $request){ $this->request = $request; }//method
-  
-  /**
-   *  set the response object if it is available
-   *
-   *  @since  7-26-11
-   *  @param  Response  $response      
-   */
-  public function injectResponse(Response $response){ $this->response = $response; }//method
-  
-  /**
-   *  set the Url object if it is available
-   *
-   *  @since  7-26-11
-   *  @param  Url $url      
-   */
-  public function injectUrl(Url $url){ $this->url = $url; }//method
   
 }//class

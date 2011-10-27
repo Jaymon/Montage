@@ -127,7 +127,7 @@ abstract class TestCase extends PHPUnit_Framework_TestCase {
       if(!is_array($test_map['in'])){ $test_map['in'] = (array)$test_map['in']; }//if
     
       $ret = call_user_func_array(array($instance,$method),$test_map['in']);
-      $this->assertEquals($test_map['out'],$ret,$msg);
+      $this->assertEquals($test_map['out'],$ret,(string)$msg);
       
     }catch(\Exception $e){
     
@@ -175,7 +175,7 @@ abstract class TestCase extends PHPUnit_Framework_TestCase {
    *  
    *  @link http://www.phpunit.de/manual/current/en/fixtures.html#fixtures.more-setup-than-teardown
    */
-  public function setUp(){}//method
+  protected function setUp(){}//method
   
   /**
    *  this will be called after each test is run, so override if you want to do post 
@@ -183,6 +183,6 @@ abstract class TestCase extends PHPUnit_Framework_TestCase {
    *  
    *  @link http://www.phpunit.de/manual/current/en/fixtures.html#fixtures.more-setup-than-teardown
    */
-  public function tearDown(){}//method
+  protected function tearDown(){}//method
 
 }//class
