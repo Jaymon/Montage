@@ -273,6 +273,7 @@ abstract class Container extends Field implements Containable {
     $index = $rparam->getPosition();
   
     // first try and resolve numeric keys, then do string keys...
+    // we use array_key_exists because values could be null
     if(array_key_exists($index,$params)){
     
       $ret_param = $params[$index];

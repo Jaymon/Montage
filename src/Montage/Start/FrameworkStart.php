@@ -26,33 +26,16 @@ class FrameworkStart extends Start {
 
   public function handle(){
 
+    $this->createFrameworkConfig();
+
     $container = $this->getContainer();
-      
-    $container->onCreated(
-      '\Montage\Config\FrameworkConfig',
-      function($container,$instance){
-
-        // the framework config should be our Single Point of Truth from here on out
-        // http://teddziuba.com/2011/06/most-important-concept-systems-design.html
-        $framework = $container->getFramework();
-        $instance->setField('env',$framework->getField('env'));
-        $instance->setField('debug_level',$framework->getField('debug_level'));
-        $instance->setField('app_path',$framework->getField('app_path'));
-        $instance->setField('framework_path',$framework->getField('framework_path'));
-        $instance->setField('plugin_paths',$framework->getField('plugin_paths',array()));
-        $instance->setField('cache_path',$framework->getField('cache_path'));
-        
-      }
-    );
-
-    $this->framework_config = $container->getConfig();
-
-    error_reporting($this->framework_config->getErrorLevel());
-    ///error_reporting(E_ALL ^ E_USER_NOTICE);
+    
+    $this->handleError();
+    
     mb_internal_encoding($this->framework_config->getCharset());
     date_default_timezone_set($this->framework_config->getTimezone());
-
-    ini_set('display_errors',$this->framework_config->showErrors() ? 'on' : 'off'); 
+    
+    $this->response->setTemplate('page.php'); 
     
     $container->onCreate(
       '\Montage\Session',
@@ -119,9 +102,6 @@ class FrameworkStart extends Start {
       }
     );
     
-    // start/register the error handler if it hasn't been started...
-    $container->getInstance('Montage\Error');
-    
     // set some events...
     $dispatch = $this->getEventDispatch();
     
@@ -151,6 +131,58 @@ class FrameworkStart extends Start {
       }
     );
   
+  }//method
+  
+  /**
+   *  handle setting up all the error stuff
+   *
+   *  @since  10-28-11   
+   */
+  protected function handleError(){
+    
+    $container = $this->getContainer();
+    
+    error_reporting($this->framework_config->getErrorLevel());
+    ///error_reporting(E_ALL ^ E_USER_NOTICE);
+    
+    ini_set('display_errors',$this->framework_config->showErrors() ? 'on' : 'off');
+    
+    // start/register the error handler if it hasn't been started...
+    $container->getInstance('Montage\Error');
+  
+  }//method
+  
+  /**
+   *  create the framework config
+   *
+   *  @see  http://teddziuba.com/2011/06/most-important-concept-systems-design.html
+   *    the framework config should be our Single Point of Truth from here on out   
+   *  
+   *  @since  10-28-11
+   */
+  protected function createFrameworkConfig(){
+
+    $container = $this->getContainer();
+      
+    $container->onCreated(
+      '\Montage\Config\FrameworkConfig',
+      function($container,$instance){
+
+        // the framework config should be our Single Point of Truth from here on out
+        // http://teddziuba.com/2011/06/most-important-concept-systems-design.html
+        $framework = $container->getFramework();
+        $instance->setField('env',$framework->getField('env'));
+        $instance->setField('debug_level',$framework->getField('debug_level'));
+        $instance->setField('app_path',$framework->getField('app_path'));
+        $instance->setField('framework_path',$framework->getField('framework_path'));
+        $instance->setField('plugin_paths',$framework->getField('plugin_paths',array()));
+        $instance->setField('cache_path',$framework->getField('cache_path'));
+        
+      }
+    );
+
+    $this->framework_config = $container->getConfig();
+
   }//method
 
 }//class

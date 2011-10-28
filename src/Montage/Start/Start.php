@@ -29,24 +29,31 @@ abstract class Start extends Field implements Startable, Dependable, Eventable {
   /**
    *  the framework configuration object
    *  
-   *  @var  Montage\Config\FrameworkConfig
+   *  @see  __construct()
+   *  @var  \Montage\Config\FrameworkConfig
    */
   protected $framework_config = null;
 
   /**
    *  the dependency injection container
    *  
-   *  @var  Montage\Dependency\Containable
+   *  @see  setContainer(), getContainer()   
+   *  @var  \Montage\Dependency\Containable
    */
   protected $container = null;
   
   /**
    *  the event dispatcher
    *
-   *  @see  setDispatch(), getDispatch()
-   *  @var  Montage\Event\Dispatch      
+   *  @see  setEventDispatch(), getEventDispatch()
+   *  @var  \Montage\Event\Dispatch 
    */
-  protected $dispatch = null;
+  protected $event_dispatch = null;
+  
+  /**
+   *  @var  \Montage\Request\Requestable
+   */
+  public $request = null;
 
   public function __construct(FrameworkConfig $framework_config = null){
   
@@ -62,14 +69,14 @@ abstract class Start extends Field implements Startable, Dependable, Eventable {
    *
    *  @Param  Dispatch  $dispatch   
    */
-  public function setEventDispatch(Dispatch $dispatch){ $this->dispatch = $dispatch; }//method
+  public function setEventDispatch(Dispatch $event_dispatch){ $this->event_dispatch = $event_dispatch; }//method
   
   /**
    *  get the event dispatcher
    *
    *  @return Dispatch   
    */
-  public function getEventDispatch(){ return $this->dispatch; }//method
+  public function getEventDispatch(){ return $this->event_dispatch; }//method
   
   /**
    *  just to make it a little easier to broadcast the event, and to also be able to 
@@ -80,8 +87,8 @@ abstract class Start extends Field implements Startable, Dependable, Eventable {
    */
   public function broadcastEvent(Event $event){
   
-    $dispatch = $this->getEventDispatch();
-    return empty($dispatch) ? $event : $dispatch->broadcast($event);
+    $event_dispatch = $this->getEventDispatch();
+    return empty($event_dispatch) ? $event : $event_dispatch->broadcast($event);
   
   }//method
   
