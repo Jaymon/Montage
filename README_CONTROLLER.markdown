@@ -18,7 +18,7 @@ Notice that `foo` gets converted to `\Controller\FooController` and the method g
 
 ## How are controller namespaces resolved?
 
-Montage will first check the `\Controller\` namespace, and if it doesn't find a match, it will check the `\Montage\Controller\` namespace. If it still doesn't find a match it will check all other Controller classes looking for the shortname match. (Using the above example, that would meant that if `\Controller\FooController` and `Montage\Controller\FooController` didn't exist, Montage would then search for just `FooController` with any namespace).
+Montage will first check the `\Controller\` namespace, and if it doesn't find a match, it will check the `\Montage\Controller\` namespace. If it still doesn't find a match it will check all other Controller classes looking for the shortname match. (Using the above example, that would meant that if `\Controller\FooController` and `Montage\Controller\FooController` didn't exist, Montage would then search for any controller `FooController` with any namespace).
 
 ## What about default controllers and methods?
 
@@ -36,7 +36,7 @@ Default controller is \Controller\IndexController and default method is: `handle
     \Montage\Controller\IndexController::handleFoo($bar,$baz,$che);
     \Montage\Controller\IndexController::handleIndex($foo,$bar,$baz,$che);
 
-## WHat about catch alls or extra url path bits we don't care about?
+## What about catch alls or extra url path bits we don't care about?
 
 Say we have a request like this:
 
@@ -71,31 +71,24 @@ By declaring the variable after $id to be an array, we are telling Montage to ju
 
 ## What about Get and Post variables?
 
-both get and post variables can be handled 2 ways:
+Say you had the url:
 
     http://app.com/blog/1234/?foo=bar&baz=che
 
-### 1 - Pass the variables into the method:
+You can get access to `foo` and `baz` through the request object:
 
-    \Controller\BlogController::handleIndex($id,array $params = array('foo' => ''));
-    
-Now, if `foo` was present in the url, it will be passed into the $params url:
-
-    echo $params['foo']; // bar
-
-Otherwise it would be an empty string (since that was the default value set.
-
-### 2 - Get the variables through the request object:
-
-    \Controller\BlogController::handleIndex($id,array $params = array(),\Montage\Request\Request $request);
+    \Controller\BlogController::handleIndex($id,array $params = array());
 
 Now, in the method body:
 
-    echo $request->getField('foo'); // bar
+    echo $this->request->getField('foo'); // bar
 
 ## Command line request?
 
 Montage has a handy CLI controller `\Montage\Controller\CliController` with some handy CLI specific methods to make command line script controllers that extend it easier to use, but any Controller can be called using the CLI syntax:
 
-    > php path/to/montage.php ControllerClass/method --var1=val1 [--var2=val2 ...]
+    > php path/to/montage.php controller/method --var1=val1 [--var2=val2 ...][-var3 val3...]
 
+So if I wanted to call the foo/bar task from the command line, I could do:
+
+    > php path/to/montage.php foo/bar --foo=bar -baz che

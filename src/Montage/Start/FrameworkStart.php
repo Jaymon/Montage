@@ -15,6 +15,7 @@
 namespace Montage\Start;
 
 use Montage\Start\Start;
+use Montage\Event\Event;
 
 class FrameworkStart extends Start {
 
@@ -27,10 +28,14 @@ class FrameworkStart extends Start {
   public function handle(){
 
     $container = $this->getContainer();
-      
-    $container->onCreated(
-      '\Montage\Config\FrameworkConfig',
-      function($container,$instance){
+    $event_dispatch = $this->getEventDispatch();
+    
+    $event_dispatch->listen(
+      'framework.filter.created:\Montage\Config\FrameworkConfig',
+      function(\Montage\Event\FilterEvent $event){
+
+        $instance = $event->getParam();
+        $container = $event->getField('container');
 
         // the framework config should be our Single Point of Truth from here on out
         // http://teddziuba.com/2011/06/most-important-concept-systems-design.html
@@ -54,9 +59,11 @@ class FrameworkStart extends Start {
 
     ini_set('display_errors',$this->framework_config->showErrors() ? 'on' : 'off'); 
     
-    $container->onCreate(
-      '\Montage\Session',
-      function($container,array $params = array()){
+    $event_dispatch->listen(
+      'framework.filter.create:\Montage\Session',
+      function(\Montage\Event\FilterEvent $event){
+
+        $params = $event->getParam();
       
         if(!isset($params['storage']) && !isset($params[0])){
         
@@ -66,15 +73,17 @@ class FrameworkStart extends Start {
         
         }//if
       
-        return $params;
+        $event->setParam($params);
         
       }
     );
     
     // set up some lazy load dependency resolves...
-    $container->onCreate(
-      '\Montage\Request\Requestable',
-      function($container,array $params = array()){
+    $event_dispatch->listen(
+      'framework.filter.create:\Montage\Request\Requestable',
+      function(\Montage\Event\FilterEvent $event){
+      
+        $params = $event->getParam();
       
         // set the values for the url instance on creation...
         $ret_map = array(
@@ -86,14 +95,17 @@ class FrameworkStart extends Start {
           'server' => $_SERVER
         );
         
-        return array_merge($ret_map,$params);
+        $event->setParam(array_merge($ret_map,$params));
         
       }
     );
     
-    $container->onCreate(
-      '\Montage\Url',
-      function($container,array $params = array()){
+    $event_dispatch->listen(
+      'framework.filter.create:\Montage\Url',
+      function(\Montage\Event\FilterEvent $event){
+      
+        $params = $event->getParam();
+        $container = $event->getField('container');
 
         $request = $container->getRequest();
         
@@ -104,14 +116,17 @@ class FrameworkStart extends Start {
           'use_domain' => $request->isCli()
         );
         
-        return array_merge($ret_map,$params);
+        $event->setParam(array_merge($ret_map,$params));
         
       }
     );
     
-    $container->onCreated(
-      '\Montage\Response\Template',
-      function($container,$instance){
+    $event_dispatch->listen(
+      'framework.filter.created:\Montage\Response\Template',
+      function(\Montage\Event\FilterEvent $event){
+
+        $instance = $event->getParam();
+        $container = $event->getField('container');
 
         $framework = $container->getFramework();
         $instance->addPaths($framework->getField('view_paths'));
@@ -122,11 +137,8 @@ class FrameworkStart extends Start {
     // start/register the error handler if it hasn't been started...
     $container->getInstance('Montage\Error');
     
-    // set some events...
-    $dispatch = $this->getEventDispatch();
-    
     // allow form objects in the controller method to be populated with submitted values
-    $dispatch->listen(
+    $event_dispatch->listen(
       'framework.filter.controller_param_created',
       function(\Montage\Event\FilterEvent $event){
       

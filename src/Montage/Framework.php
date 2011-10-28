@@ -10,6 +10,14 @@
  *  a Cache and Reflection instance to pass in here to resolve all the dependencies).
  *  see: http://misko.hevery.com/2008/07/08/how-to-think-about-the-new-operator/ for how
  *  I'm wrong about this, but for me, convenience trumps rightness in this instance.
+ *  
+ *  The classes this class creates, that means these classes are harder to override and make
+ *  the child class be automatically picked up, this is because 3 of those classes are used
+ *  to make the Dependency Injection Container work:
+ *    \Montage\Dependency\Reflection
+ *    \Montage\Event\Dispatch
+ *    \Montage\Cache\Cache
+ *    \Montage\Dependency\Container      
  *   
  *  @version 0.8
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -37,6 +45,7 @@ use Montage\Event\Event;
 use Montage\Event\InfoEvent;
 use Montage\Event\FilterEvent;
 use Montage\Event\Eventable;
+use Montage\Event\Dispatch as EventDispatch;
 
 require_once(__DIR__.'/../../plugins/Utilities/src/Path.php');
 
@@ -494,7 +503,9 @@ class Framework extends Field implements Dependable,Eventable {
   
   /**
    *  handle event dispatch creation
-   *   
+   *  
+   *  this just makes sure that the event dispatcher is created
+   *      
    *  @since  8-25-11
    *  @return Dispatch
    */
@@ -902,9 +913,14 @@ class Framework extends Field implements Dependable,Eventable {
     if(isset($this->instance_map['container'])){ return $this->instance_map['container']; }//if
   
     $this->preHandle();
+    
+    $event_dispatch = $this->getEventDispatch();
     $reflection = $this->getReflection();
     $container_class_name = $reflection->findClassName('Montage\Dependency\FrameworkContainer');
     $container = new $container_class_name($reflection);
+    
+    // set the container's dependencies...
+    $container->setEventDispatch($event_dispatch);
     
     $this->setContainer($container);
   
@@ -915,13 +931,12 @@ class Framework extends Field implements Dependable,Eventable {
   /**
    *  get the event dispatcher
    *
-   *  @Param  Dispatch  $dispatch   
+   *  @Param  \Montage\Event\Dispatch $dispatch   
    */
   public function setEventDispatch(\Montage\Event\Dispatch $dispatch){
   
-    $container = $this->getContainer();
-    $container->setInstance('event_dispatch',$dispatch);
-  
+    $this->instance_map['event_dispatch'] = $dispatch;
+    
   }//method
   
   /**
@@ -932,9 +947,14 @@ class Framework extends Field implements Dependable,Eventable {
    */
   public function getEventDispatch(){
   
-    $container = $this->getContainer();
-    return $container->getEventDispatch();
-     
+    // canary...
+    if(isset($this->instance_map['event_dispatch'])){ return $this->instance_map['event_dispatch']; }//if
+  
+    $event_dispatch = new EventDispatch();
+    $this->setEventDispatch($event_dispatch);
+    
+    return $event_dispatch;
+  
   }//method
   
   /**

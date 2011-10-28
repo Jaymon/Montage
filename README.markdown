@@ -1,8 +1,8 @@
 # Montage
 
-Montage is a near zero configuration Request Framework for PHP containing only the necessary pieces to get you up an running fast while being flexible with external libraries you want to use and being easy to extend and override in the future.
+Montage is a low configuration Request Framework for PHP containing only the necessary pieces to get you up an running fast while being flexible with external libraries you want to use and being easy to extend and override in the future.
 
-Montage is still very beta and is really just a test to see if the ideas I've had kicking around my head about my perfect framework are actually practical.
+Montage is still very beta and is really just a test to see if some of the ideas I've had kicking around my head about my perfect framework are actually practical.
 
 ## What is a Request Framework?
 
@@ -26,9 +26,9 @@ But doesn't contain things like:
   
 Since there are popular readily available projects that you are most likely more familiar with and probably want to use instead of some half-baked, half-supported core Framework object that isn't as good.
 
-## How is Montage Near Zero Configuration?
+## How is Montage Low Configuration?
 
-By choosing convention over configuration and using Reflection wherever possible to infer how things should work. I say near zero because sometime Montage will infer wrong and will need to be configured in order to make the right choice.
+By choosing convention over configuration and using Reflection wherever possible to infer how things should work. I say low configuration because sometime Montage will infer wrong and will need to be properly configured in order to make the right choice.
 
 ## How is a Montage App Structured?
 
@@ -85,11 +85,11 @@ For example, let's say you want to override Montage's Request object to have a d
     
     }//class
     
-Now, when another class wants the Request object it will automatically get your custom Request object, and your custom object will automatically have Foo injected, and you didn't have to do anything except create the new class and override the constructor to take a Foo instance.
+Now, when another class wants the Request object it will automatically use your custom Request class instead of the default Montage Request class, and your custom object will automatically have Foo injected, and you didn't have to do anything except create the new class and override the constructor to take a Foo instance.
 
 ## Using Montage
 
-Montage requires php >= 5.3 because it uses Closures and namespaces. To run the tests you'll need PHPUnit >= 3.5.0. Also, you'll need a high tolerance for the unknown since there isn't any documentation, so you'll have to spend a lot of time looking at the code.
+Montage requires php >= 5.3 because it uses Closures and namespaces. To run the tests you'll need PHPUnit >= 3.5.0. Also, you'll need a high tolerance for the unknown since there isn't much formal documentation, so you'll have to spend a lot of time looking at the code.
 
 ## License
 

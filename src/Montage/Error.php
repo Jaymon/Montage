@@ -194,6 +194,8 @@ class Error implements Eventable {
    */
   protected function handleError(array $error_map){
   
+    \out::e($error_map);
+  
     // broadcast the error to anyone that is listening...
     $event = new Event('framework.error',$error_map);
     $this->broadcastEvent($event);

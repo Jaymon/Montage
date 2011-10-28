@@ -10,7 +10,10 @@
  ******************************************************************************/
 namespace Montage\Dependency;
 
-class FrameworkContainer extends ReflectionContainer {
+use Montage\Event\Eventable;
+use Montage\Event\FilterEvent;
+
+class FrameworkContainer extends ReflectionContainer implements Eventable {
 
   /**
    *  get the Session 
@@ -65,6 +68,17 @@ class FrameworkContainer extends ReflectionContainer {
   
   /**
    *  get the event dispatcher
+   *
+   *  @Param  Dispatch  $dispatch   
+   */
+  public function setEventDispatch(\Montage\Event\Dispatch $dispatch){
+  
+    $this->setInstance('event_dispatch',$dispatch);
+  
+  }//method
+  
+  /**
+   *  get the event dispatcher
    *  
    *  @since  8-25-11
    *  @return \Montage\Event\Dispatch
@@ -72,6 +86,23 @@ class FrameworkContainer extends ReflectionContainer {
   public function getEventDispatch($params = array()){
   
     return $this->findInstance('event_dispatch','\Montage\Event\Dispatch',$params);
+  
+  }//method
+  
+  /**
+   *  broadcast the $event
+   *
+   *  honestly, I put this in the interface so there would be an easy method to check if
+   *  the event dispatcher was actually set and broadcast the message, the only reason this
+   *  is public is because you have to make interface methods public, otherwise I would make
+   *  this protected         
+   *      
+   *  @param  Event $event   
+   */
+  public function broadcastEvent(\Montage\Event\Event $event){
+  
+    $event_dispatch = $this->getEventDispatch();
+    return $event_dispatch->broadcast($event);
   
   }//method
   
@@ -140,6 +171,101 @@ class FrameworkContainer extends ReflectionContainer {
     
     return $this->instance_map[$name];
   
+  }//method
+  
+  /**
+   *  handle actually running the onCreate callback
+   *  
+   *  @since  8-25-11
+   *  @param  string  $class_name
+   *  @param  array $params            
+   *  @return array the same $params filtered through the callback
+   */
+  protected function handleOnCreate($class_name,array $params){
+  
+    $reflection = $this->getReflection();
+    $cb_class_list = $this->getDependencies($class_name);
+    $cb_class_list[] = $class_name;
+    
+    foreach($cb_class_list as $cb_class_name){
+    
+      $cb_class_key = $this->getEventKey('create',$cb_class_name);
+      $event = new FilterEvent($cb_class_key,$params,array('container' => $this));
+      $event = $this->broadcastEvent($event);
+      $params = $event->getParam();
+    
+    }//foreach
+  
+    return $params;
+  
+  }//method
+  
+  /**
+   *  handle actually running the onCreated callback
+   *  
+   *  @since  8-25-11
+   *  @param  string  $class_name
+   *  @param  object  $instance the newly created instance   
+   */
+  protected function handleOnCreated($class_name,$instance){
+    
+    $reflection = $this->getReflection();
+    $cb_class_list = $this->getDependencies($class_name);
+    $cb_class_list[] = $class_name;
+    
+    foreach($cb_class_list as $cb_class_name){
+    
+      $cb_class_key = $this->getEventKey('created',$cb_class_name);
+      $event = new FilterEvent($cb_class_key,$instance,array('container' => $this));
+      $event = $this->broadcastEvent($event);
+      $instance = $event->getParam();
+    
+    }//foreach
+    
+    return $instance;
+    
+  }//method
+  
+  /**
+   *  get the event key
+   *  
+   *  @param  string  $prefix
+   *  @param  string  $class_name         
+   *  @return string
+   */
+  protected function getEventKey($prefix,$class_name){
+  
+    // prepend the absolute namespace...
+    if($class_name[0] !== '\\'){ $class_name = '\\'.$class_name; }//if
+  
+    return sprintf('framework.filter.%s:%s',$prefix,$class_name);
+  
+  }//method
+  
+  /**
+   *  not used for this version of the container
+   *  
+   *  @see  parent::onCreate()
+   */
+  public function onCreate($class_name,$callback){
+  
+    throw new \BadMethodCallException(
+      sprintf('Please Subscribe to the event "%s"',$this->getEventKey('create',$class_name))
+    );
+  
+  }//method
+  
+  /**
+   *  not used for this version of the container
+   *  
+   *  @see  parent::onCreated()
+   */
+  public function onCreated($class_name,$callback){
+  
+    throw new \BadMethodCallException(
+      sprintf('Please Subscribe to the event "%s"',$this->getEventKey('created',$class_name))
+    );
+
   }//method
 
 }//class
