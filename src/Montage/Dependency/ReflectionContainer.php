@@ -1,10 +1,10 @@
 <?php
 /**
- *  the Dependancy Injection Container is like a service locator  
- * 
- *  @todo injectPublicParams() - inject instances via a public param, the problem
- *  is you would have to docblock the param with a @var field telling what object
- *  you want, and that would have to use the full namespaced class name   
+ *  this Container uses reflection to decide what class to create
+ *  
+ *  usually, when using this class you will pass in the wanted class's full namespaced
+ *  name and this class will then use reflection to get the absolute child and create that
+ *  instead of the parent class you passed in.        
  *  
  *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -121,20 +121,19 @@ class ReflectionContainer extends Container {
    *  handle actually running the onCreate callback
    *  
    *  @since  8-25-11
-   *  @param  string  $class_key
+   *  @param  string  $class_name
    *  @param  array $params            
    *  @return array the same $params filtered through the callback
    */
-  protected function handleOnCreate($class_key,array $params){
+  protected function handleOnCreate($class_name,array $params){
   
     $reflection = $this->getReflection();
-    $cb_class_list = $this->getDependencies($class_key);
-    $cb_class_list[] = $class_key;
+    $cb_class_list = $this->getDependencies($class_name);
+    if(!in_array($class_name,$cb_class_list)){ $cb_class_list[] = $class_name; }//if
     
     foreach($cb_class_list as $cb_class_name){
     
-      $cb_class_key = $this->getKey($cb_class_name);
-      $params = parent::handleOnCreate($cb_class_key,$params);
+      $params = parent::handleOnCreate($cb_class_name,$params);
     
     }//foreach
   
@@ -146,19 +145,18 @@ class ReflectionContainer extends Container {
    *  handle actually running the onCreated callback
    *  
    *  @since  8-25-11
-   *  @param  string  $class_key
+   *  @param  string  $class_name
    *  @param  object  $instance the newly created instance   
    */
-  protected function handleOnCreated($class_key,$instance){
+  protected function handleOnCreated($class_name,$instance){
     
     $reflection = $this->getReflection();
-    $cb_class_list = $this->getDependencies($class_key);
-    $cb_class_list[] = $class_key;
+    $cb_class_list = $this->getDependencies($class_name);
+    if(!in_array($class_name,$cb_class_list)){ $cb_class_list[] = $class_name; }//if
     
     foreach($cb_class_list as $cb_class_name){
     
-      $cb_class_key = $this->getKey($cb_class_name);
-      $params = parent::handleOnCreated($cb_class_key,$instance);
+      $params = parent::handleOnCreated($cb_class_name,$instance);
     
     }//foreach
     

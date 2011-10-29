@@ -665,10 +665,17 @@ class Reflection extends ObjectCache implements \Reflector {
   
     // canary...
     if(!file_exists($this->class_map[$class_key]['path'])){
-      ///throw new \UnexpectedValueException(
-      throw new \ReflectionException(
-        sprintf('%s does not exist anymore',$this->class_map[$class_key]['path'])
-      );
+      $e_msg = '';
+      if(isset($this->class_map[$class_key])){
+        if(isset($this->class_map[$class_key]['path'])){
+          $e_msg = sprintf('%s does not exist anymore',$this->class_map[$class_key]['path']);
+        }else{
+          $e_msg = sprintf('info on class %s is incomplete',$class_key);
+        }//if/else
+      }else{
+        $e_msg = sprintf('class %s does not exist in %s',$class_key,get_class($this));
+      }//if/else
+      throw new \ReflectionException($e_msg);
     }//if
   
     $old = $this->class_map[$class_key]['hash'];

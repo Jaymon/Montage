@@ -859,7 +859,7 @@ class Url extends Field {
     // canary...
     if(empty($url)){ return '/'; }//if
     if($this->use_domain){ return $url; }//if
-    if(isset($this->base_map[$url])){ return $this->url_map[$url]; }//if
+    if(isset($this->base_map[$url])){ return $this->base_map[$url]; }//if
     
     $base_bits = parse_url($url);
     $ret_str = empty($base_bits['path']) ? '/' : $base_bits['path'];

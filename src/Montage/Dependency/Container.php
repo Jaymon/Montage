@@ -4,9 +4,7 @@
  *  
  *  This is the base container for any custom containers. Though this could be entirely
  *  side-stepped in favor of a completely custom container that implements Containable
- *  (that's more theory than practice because I haven't tried to use a different container, and
- *  if I did, Montage\Framework still uses class names as the keys, so that would have to be
- *  dealt with)   
+ *  (that's more theory than practice because I haven't tried to use a different container
  *     
  *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -180,7 +178,7 @@ abstract class Container extends Field implements Containable {
   
     $class_key = $this->getKey($class_name);
     $instance_class_name = $this->getClassName($class_name);
-    $params = $this->handleOnCreate($class_key,$params);
+    $params = $this->handleOnCreate($class_name,$params);
     
     $instance_params = array();
 
@@ -233,7 +231,7 @@ abstract class Container extends Field implements Containable {
     
     }//if/else
     
-    $this->handleOnCreated($class_key,$ret_instance);
+    $this->handleOnCreated($class_name,$ret_instance);
   
     return $ret_instance;
   
@@ -398,11 +396,13 @@ abstract class Container extends Field implements Containable {
    *  handle actually running the onCreate callback
    *  
    *  @since  8-25-11
-   *  @param  string  $class_key
+   *  @param  string  $class_name
    *  @param  array $params            
    *  @return array the same $params filtered through the callback
    */
-  protected function handleOnCreate($class_key,array $params){
+  protected function handleOnCreate($class_name,array $params){
+  
+    $class_key = $this->getKey($class_name);
   
     // handle on create...
     if(isset($this->on_create_map[$class_key])){
@@ -425,10 +425,12 @@ abstract class Container extends Field implements Containable {
    *  handle actually running the onCreated callback
    *  
    *  @since  8-25-11
-   *  @param  string  $class_key
+   *  @param  string  $class_name
    *  @param  object  $instance the newly created instance   
    */
-  protected function handleOnCreated($class_key,$instance){
+  protected function handleOnCreated($class_name,$instance){
+    
+    $class_key = $this->getKey($class_name);
     
     // handle on created...
     if(isset($this->on_created_map[$class_key])){

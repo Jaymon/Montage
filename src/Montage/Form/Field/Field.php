@@ -60,15 +60,27 @@ abstract class Field extends Common {
   public function setLabel($val){ $this->label = $val; }//method
   public function hasLabel(){ return !empty($this->label); }//method
   public function getLabel(){ return $this->label; }//method
-  public function renderLabel(){
+  public function renderLabel($label = '',array $attr_map = array()){
   
-    // canary...
-    if(!$this->hasLabel()){ return ''; }//if
-    if(!$this->hasId()){
-      $prefix = $this->hasForm() ? $this->getForm()->getName() : '';
-      $this->setId($this->getRandomId($prefix));
+    $ret_str = '';
+    
+    if(empty($label)){ $label = $this->getLabel(); }//if
+    
+    if(!empty($label)){
+      
+      if(!$this->hasId()){
+        $prefix = $this->hasForm() ? $this->getForm()->getName() : '';
+        $this->setId($this->getRandomId($prefix));
+      }//if
+      
+      if($attr_str = parent::renderAttr($attr_map)){ $attr_str = ' '.$attr_str; }//if
+      
+      
+      $ret_str = sprintf('<label for="%s"%s>%s</label>',$this->getId(),$attr_str,$label);
+      
     }//if
-    return sprintf('<label for="%s">%s</label>',$this->getId(),$this->getLabel());
+    
+    return $ret_str;
   
   }//method
   /**#@-*/

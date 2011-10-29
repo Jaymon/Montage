@@ -49,11 +49,6 @@ abstract class Start extends Field implements Startable, Dependable, Eventable {
    *  @var  \Montage\Event\Dispatch 
    */
   protected $event_dispatch = null;
-  
-  /**
-   *  @var  \Montage\Request\Requestable
-   */
-  public $request = null;
 
   public function __construct(FrameworkConfig $framework_config = null){
   

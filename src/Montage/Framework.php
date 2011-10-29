@@ -10,6 +10,16 @@
  *  a Cache and Reflection instance to pass in here to resolve all the dependencies).
  *  see: http://misko.hevery.com/2008/07/08/how-to-think-about-the-new-operator/ for how
  *  I'm wrong about this, but for me, convenience trumps rightness in this instance.
+ *  
+ *  The classes this class creates, that means these classes are harder to override and make
+ *  the child class be automatically picked up, this is because 3 of those classes are used
+ *  to make the Dependency Injection Container work:
+ *    \Montage\Dependency\Reflection
+ *    \Montage\Event\Dispatch
+ *    \Montage\Cache\Cache
+ *    \Montage\Dependency\Container
+ *    \Path
+ *    \Profile     
  *   
  *  @version 0.8
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -20,6 +30,7 @@ namespace Montage;
 
 use Montage\Cache\PHPCache;
 use Path;
+use Profile;
 use Montage\Field\Field;
 
 use Montage\Dependency\Reflection;
@@ -37,8 +48,10 @@ use Montage\Event\Event;
 use Montage\Event\InfoEvent;
 use Montage\Event\FilterEvent;
 use Montage\Event\Eventable;
+use Montage\Event\Dispatch as EventDispatch;
 
 require_once(__DIR__.'/../../plugins/Utilities/src/Path.php');
+require_once(__DIR__.'/../../plugins/Utilities/src/Profile.php');
 
 // load the Framework autoloader, this will handle all other dependencies to load this class
 // so I don't have to have a ton of includes() right here...
@@ -50,6 +63,19 @@ $fal->register();
 
 class Framework extends Field implements Dependable,Eventable {
 
+  const DEBUG_OFF = 0;
+  const DEBUG = 1;
+  const DEBUG_PROFILE = 2;
+  
+  /**
+   *  turn on all debugging
+   *  
+   *  this should be the sum of all the DEBUG_* constants
+   *  
+   *  @see  __construct()   
+   *  @var  integer
+   */
+  const DEBUG_ALL = 3;
 
   /**
    *  holds any important internal instances this class is going to use
@@ -67,6 +93,13 @@ class Framework extends Field implements Dependable,Eventable {
    *  @var  boolean
    */
   protected $is_ready = false;
+  
+  /**
+   *  hold the debug level
+   *  
+   *  @var  integer
+   */
+  protected $debug_level = self::DEBUG_OFF;
 
   /**
    *  create this object
@@ -87,7 +120,9 @@ class Framework extends Field implements Dependable,Eventable {
     
     $this->setField('app_path',$app_path);
     $this->setField('env',$env);
-    $this->setField('debug_level',$debug_level);
+    
+    $this->debug_level = (int)$debug_level;
+    $this->setField('debug_level',$this->debug_level);
     
   }//method
   
@@ -106,6 +141,8 @@ class Framework extends Field implements Dependable,Eventable {
   
     // canary...
     if($this->is_ready){ return true; }//if
+  
+    $this->profileStart('Handle preHandle');
   
     $ret_mixed = true;
   
@@ -126,7 +163,7 @@ class Framework extends Field implements Dependable,Eventable {
       // this is the first thing done because it is needed to make sure all the classes
       // can be found
       $this->handleAutoload();
-  
+      
       // handle any preliminary event stuff like creating the Event Dispatcher
       $this->handleEvent();
   
@@ -150,6 +187,8 @@ class Framework extends Field implements Dependable,Eventable {
       $ret_mixed = $this->preHandle();
       
     }//try/catch
+    
+    $this->profileStop();
   
     return $ret_mixed;
   
@@ -189,6 +228,8 @@ class Framework extends Field implements Dependable,Eventable {
    */
   public function handle(){
   
+    $this->profileStart('Handle');
+  
     try{
     
       $this->preHandle();
@@ -219,12 +260,17 @@ class Framework extends Field implements Dependable,Eventable {
 
       $controller_response = $this->handleController($controller_class,$controller_method,$controller_method_params);
       $ret_mixed = $this->handleResponse($controller_response);
+      
+      $event = new Event('framework.handle.stop');
+      $this->broadcastEvent($event);
     
     }catch(\Exception $e){
     
       $ret_mixed = $this->handleException($e);
     
     }//try/catch
+    
+    $this->profileStop();
     
     return $ret_mixed;
   
@@ -410,6 +456,7 @@ class Framework extends Field implements Dependable,Eventable {
     $container = $this->getContainer();
     $request = $this->getContainer()->getRequest();
     $config = $this->getContainer()->getConfig();
+    
     $dest_path = new Path($config->getPublicPath(),'assets');
     
     // create the assets selector...
@@ -419,6 +466,7 @@ class Framework extends Field implements Dependable,Eventable {
     $assets = $container->getInstance($select->findCatchAll());
     
     $assets->setDestPath($dest_path);
+    
     $assets->setPrefixPath(
       new Path(
         $request->getBasePath(),
@@ -494,7 +542,9 @@ class Framework extends Field implements Dependable,Eventable {
   
   /**
    *  handle event dispatch creation
-   *   
+   *  
+   *  this just makes sure that the event dispatcher is created
+   *      
    *  @since  8-25-11
    *  @return Dispatch
    */
@@ -888,6 +938,7 @@ class Framework extends Field implements Dependable,Eventable {
     // just in case, container should know about this instance for circular-dependency goodness...
     $container->setInstance('framework',$this);
     $container->setInstance('cache',$this->getCache());
+    $container->setInstance('profile',$this->getProfile());
     
   }//method
   
@@ -902,9 +953,14 @@ class Framework extends Field implements Dependable,Eventable {
     if(isset($this->instance_map['container'])){ return $this->instance_map['container']; }//if
   
     $this->preHandle();
+    
+    $event_dispatch = $this->getEventDispatch();
     $reflection = $this->getReflection();
     $container_class_name = $reflection->findClassName('Montage\Dependency\FrameworkContainer');
     $container = new $container_class_name($reflection);
+    
+    // set the container's dependencies...
+    $container->setEventDispatch($event_dispatch);
     
     $this->setContainer($container);
   
@@ -915,13 +971,12 @@ class Framework extends Field implements Dependable,Eventable {
   /**
    *  get the event dispatcher
    *
-   *  @Param  Dispatch  $dispatch   
+   *  @Param  \Montage\Event\Dispatch $dispatch   
    */
   public function setEventDispatch(\Montage\Event\Dispatch $dispatch){
   
-    $container = $this->getContainer();
-    $container->setInstance('event_dispatch',$dispatch);
-  
+    $this->instance_map['event_dispatch'] = $dispatch;
+    
   }//method
   
   /**
@@ -932,9 +987,32 @@ class Framework extends Field implements Dependable,Eventable {
    */
   public function getEventDispatch(){
   
-    $container = $this->getContainer();
-    return $container->getEventDispatch();
-     
+    // canary...
+    if(isset($this->instance_map['event_dispatch'])){ return $this->instance_map['event_dispatch']; }//if
+  
+    $event_dispatch = new EventDispatch();
+    $this->setEventDispatch($event_dispatch);
+    
+    return $event_dispatch;
+  
+  }//method
+  
+  /**
+   *  get the profile instance
+   *  
+   *  @see  profileStart(), profileStop()   
+   *  @since  10-28-11   
+   *  @return \Profile
+   */
+  public function getProfile(){
+  
+    if(isset($this->instance_map['profile'])){ return $this->instance_map['profile']; }//if
+    
+    $profile = new Profile();
+    $this->instance_map['profile'] = $profile;
+    
+    return $profile;
+  
   }//method
   
   /**
@@ -1121,5 +1199,38 @@ class Framework extends Field implements Dependable,Eventable {
    *  @return array
    */
   protected function getIncludes(){ return array(); }//method
+  
+  /**
+   *  start profiling a block of code
+   *  
+   *  @see  profileStop()   
+   *  @since  10-28-11
+   *  @param  string  $title  the name of the profiled block of code   
+   *  @return boolean
+   */
+  protected function profileStart($title){
+  
+    if(($this->debug_level & self::DEBUG_PROFILE) === 0){ return false; }//if 
+  
+    $profiler = $this->getProfile();
+    return $profiler->start($title);
+  
+  }//method
+  
+  /**
+   *  stop profiling a block of code
+   *  
+   *  @see  profileStart()   
+   *  @since  10-28-11   
+   *  @return boolean
+   */
+  protected function profileStop(){
+  
+    if(($this->debug_level & self::DEBUG_PROFILE) === 0){ return false; }//if
+    
+    $profiler = $this->getProfile();
+    return $profiler->stop();
+  
+  }//method
    
 }//method

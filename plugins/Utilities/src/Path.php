@@ -636,6 +636,9 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
    */
   public function kill(){
   
+    // canary...
+    if(!$this->exists()){ return true; }//if
+  
     $ret_count = $this->clear();
     if($this->isDir()){
     

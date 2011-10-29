@@ -92,6 +92,8 @@ class Dispatch {
    *  
    *  if one of the callbacks returns non-null then the remaining callbacks will not be called
    *  and that non-null value will be returned   
+   *  
+   *  could also be called: emit
    *      
    *  @param  string  $key
    *  @param  array $info_map anything you want but usually a key/value array with information
