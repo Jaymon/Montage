@@ -222,17 +222,8 @@ abstract class Common {
     
     // favor passed in values over previously set ones...
     $attr_map = array_merge($this->attr_map,$attr_map);
-  
-    // canary...
-    if(empty($attr_map)){ return ''; }//if
-  
-    $ret_str = '';
     
-    foreach($attr_map as $attr_name => $attr_val){
-      $ret_str .= sprintf('%s="%s" ',$attr_name,$attr_val);
-    }//foreach
-    
-    return rtrim($ret_str);
+    return $this->renderMap($attr_map);
     
   }//method
 
@@ -253,6 +244,33 @@ abstract class Common {
   
     return sprintf('%s%s',$prefix,rand(0,500000));
     
+  }//method
+  
+  /**
+   *  render a map of key/vals
+   *  
+   *  I don't like the name of this method, but I couldn't think of anything else
+   *  and I needed to separate building an attr string from the renderAttr() method
+   *  because renderAttr() does stuff like combining passed in and class set attributes   
+   *  and this is the best name I could come up with
+   *  
+   *  @since  10-30-11      
+   *  @param  array $map
+   *  @return string  key="val"[ key="val" ...]    
+   */
+  protected function renderMap(array $map){
+  
+    // canary...
+    if(empty($map)){ return ''; }//if
+  
+    $ret_str = '';
+    
+    foreach($map as $name => $val){
+      $ret_str .= sprintf('%s="%s" ',$name,$val);
+    }//foreach
+    
+    return rtrim($ret_str);
+  
   }//method
 
 }//class     

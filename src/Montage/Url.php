@@ -194,7 +194,7 @@ class Url extends Field {
   }//method
   
   /**
-   *  set a get field that will be included with every url built with this class
+   *  set a GET field that will be included with every url built with this class
    *  using methods like {@link append()} and {@link get()}, etc.   
    *
    *  this is a handy way to set fields that will follow a visitor around as they

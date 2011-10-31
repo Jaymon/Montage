@@ -373,10 +373,11 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
   
   public function render(array $attr_map = array()){
     
-    $ret_str = $this->renderStart($attr_map).PHP_EOL;
+    $ret_str = array();
+    $ret_str[] = $this->renderStart($attr_map);
     
     if($this->hasError()){
-      $ret_str .= $this->renderError().PHP_EOL;
+      $ret_str[] = $this->renderError();
     }//if
     
     foreach($this as $field){
@@ -384,30 +385,30 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
       $format_str = '';
       $format_vals = array();
       
-      if($field->hasLabel()){
-        $format_str .= '%s:<br>'.PHP_EOL;
-        $format_vals[] = $field->renderLabel();
+      if($field->hasLabel() && ($label = $field->renderLabel())){
+        $format_str .= '%s<br>'.PHP_EOL;
+        $format_vals[] = $label;
       }//if
       
       if($field->hasError()){
-        $format_str .= '%s<br>'.PHP_EOL;
+        $format_str .= '%s<br>';
         $format_vals[] = $field->renderError();
       }//if
       
-      $format_str .= '%s<br>'.PHP_EOL;
+      $format_str .= '%s<br>';
       $format_vals[] = $field->render();
       
       if($field->hasDesc()){
-        $format_str .= '%s<br>'.PHP_EOL;
+        $format_str .= '%s<br>';
         $format_vals[] = $field->renderDesc();
       }//if
       
-      $ret_str .= vsprintf($format_str,$format_vals);
+      $ret_str[] = vsprintf($format_str,$format_vals);
     
     }//foreach
     
-    $ret_str .= $this->renderStop().PHP_EOL;
-    return $ret_str;
+    $ret_str[] = $this->renderStop();
+    return join(PHP_EOL,$ret_str);
     
   }//method
   

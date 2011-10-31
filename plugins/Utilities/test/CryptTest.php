@@ -10,14 +10,13 @@ class CryptTest extends \PHPUnit_Framework_TestCase {
     $text = 'this is my plain text';
     $key = 'this is the password';
     
-    $c = new Crypt($key,$text);
+    $c = new Crypt();
     
-    $plain1 = $c->decrypt();
-    $cipher1 = $c->encrypt();
-    \out::e($plain1,$cipher1);
+    $cipher = $c->encrypt($key,$text);
     
-    \out::e($c->info());
-  
+    $plain = $c->decrypt($key,$cipher);
+    
+    $this->assertSame($text,$plain);
     
   }//method
   

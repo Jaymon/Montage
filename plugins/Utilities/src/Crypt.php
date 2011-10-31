@@ -1,59 +1,66 @@
 <?php
 
-/*
+/**
  *  crypt php class
  *
  *  generic encrypt decrypt class
- *
- *  @link http://mcrypt.hellug.gr/lib/mcrypt.3.html
  *  
  *  9-05-07 - initial writing of the class
  *  9-09-07 - changed it so it base64 encodes all the encryption to make it easy to
  *    transport in db and file, however, this will make the encrypted text around 33%
  *    larger   
  *  12-6-09 - huge page slowdowns because I was using the secure random to create the iv, 
- *    because I was using the secure random, see the comments:
- *    http://us2.php.net/manual/en/function.mcrypt_create_iv 
+ *    see the comments: http://www.php.net/manual/en/function.mcrypt-create-iv.php  
  *    if mcrypt_create_iv($iv_size,MCRYPT_RAND); ends up slowing down, then use
- *    the iv() method I added to the class   
- * 
-*******************************************************************************/     
-
+ *    the iv() method I added to the class
+ *    
+ *  @link http://mcrypt.hellug.gr/lib/mcrypt.3.html
+ *  
+ *  @version 0.1
+ *  @author Jay Marcyes {@link http://marcyes.com}
+ *  @since 9-5-07
+ *  @package Utilities
+ ******************************************************************************/      
 class Crypt {
   
-  // set the algorithm and the mode...
+  /**
+   *  default encryption algorithm
+   *  
+   *  @var  string      
+   */
   const CIPHER_ALGO = MCRYPT_RIJNDAEL_256;
+  
+  /**
+   *  default encryption mode
+   *  
+   *  @var  string
+   */
   const CIPHER_MODE = MCRYPT_MODE_CBC;
   
-  protected $key = '';
-  
-  protected $text = '';
-  
-  protected $cipher_text = '';
-  
+  /**
+   *  passed in encryption algorithm
+   *  
+   *  @var  string      
+   */
   protected $cipher_algo = self::CIPHER_ALGO;
   
+  /**
+   *  passed in encryption mode
+   *  
+   *  @var  string      
+   */
   protected $cipher_mode = self::CIPHER_MODE;
   
-  public function __construct($key,$text,$cipher_algo = self::CIPHER_ALGO,$cipher_mode = self::CIPHER_MODE){
+  /**
+   *  create instance of the class
+   *     
+   *  @param  string  $cipher_algo  the algorithm you want to use to encrypt/decrypt
+   *  @param  string  $cipher_mode  the mode you want to use to encrypt/decrypt
+   */
+  public function __construct($cipher_algo = self::CIPHER_ALGO,$cipher_mode = self::CIPHER_MODE){
   
-    // canary...
-    if(empty($text)){ throw new InvalidArgumentException('$text is empty'); }//if
-    if(empty($key)){ throw new InvalidArgumentException('$key is empty'); }//if
-  
-    $this->key = $key;
     $this->cipher_algo = $cipher_algo;
     $this->cipher_mode = $cipher_mode;
-  
-    if($this->isEncrypted($text)){
-    
-      $this->cipher_text = $text;
-    
-    }else{
-    
-      $this->text = $text;
-    
-    }//if/else
   
   }//method
   
@@ -64,43 +71,33 @@ class Crypt {
    *  @param  string  $text the text you want to encrypt
    *  @return string  the encrypted text
    */
-  public function encrypt(){
+  public function encrypt($key,$text){
   
-    // canary...
-    if(!empty($this->cipher_text)){ return $this->cipher_text; }//if
-
-    $this->cipher_text = $this->_encrypt(
-      $this->key,
-      $this->text,
+    return $this->_encrypt(
+      $key,
+      $text,
       $this->cipher_algo,
       $this->cipher_mode
     );
 
-    return $this->cipher_text;
-    
   }//method
   
   /**
    *  decrypt text encrypted with {@link encrypt()}
    *  
    *  @param  string  $key  the password used to encrypt the text
-   *  @param  string  $ciphertext the encrypted text
+   *  @param  string  $cipher_text the encrypted text
    *  @return string  the decrypted text
    */
-  public function decrypt(){
+  public function decrypt($key,$cipher_text){
   
-    // canary...
-    if(!empty($this->text)){ return $this->text; }//if
-  
-    $this->text = $this->_decrypt(
-      $this->key,
-      $this->cipher_text,
+    return $this->_decrypt(
+      $key,
+      $cipher_text,
       $this->cipher_algo,
       $this->cipher_mode
     );
   
-    return $this->text;
-    
   }//method
   
   /**
@@ -183,7 +180,7 @@ class Crypt {
   protected function _encrypt($key,$text,$algo,$mode){
   
     // canary...
-    if(empty($text)){ throw new UnexpectedValueException('do you really want to encrypt empty $text?'); }//if
+    if(empty($text)){ throw new UnexpectedValueException('$text is empty'); }//if
     if(empty($key)){ throw new UnexpectedValueException('$key is empty'); }//if
 
     // create the IV...
@@ -191,7 +188,7 @@ class Crypt {
     $iv_size = mcrypt_get_iv_size($algo,$mode);
     if($iv_size > 0){
       
-      srand();
+      // srand(); // needed before 5.3
       $iv = mcrypt_create_iv($iv_size,MCRYPT_RAND);
       
     }//if
@@ -247,6 +244,8 @@ class Crypt {
   /**
    *  in case you get huge slowdowns using mcrypt_create_iv() you can use this function
    *  
+   *  @link http://www.php.net/manual/en/function.mcrypt-create-iv.php#54925
+   *      
    *  @param  integer $size the iv size
    *  @return string  a random iv         
    */

@@ -21,5 +21,12 @@ class Submit extends Input {
     $this->setType(self::TYPE_SUBMIT);
   
   }//method
+  
+  /**
+   *  do submit buttons really need a label? I think not!
+   *  
+   *  @see  parent::renderLabel()      
+   */
+  public function renderLabel($label = '',array $attr_map = array()){ return ''; }//method
 
 }//class     

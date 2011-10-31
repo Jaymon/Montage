@@ -73,7 +73,7 @@ abstract class Field extends Common {
         $this->setId($this->getRandomId($prefix));
       }//if
       
-      if($attr_str = parent::renderAttr($attr_map)){ $attr_str = ' '.$attr_str; }//if
+      if($attr_str = $this->renderMap($attr_map)){ $attr_str = ' '.$attr_str; }//if
       
       
       $ret_str = sprintf('<label for="%s"%s>%s</label>',$this->getId(),$attr_str,$label);
