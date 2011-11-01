@@ -87,6 +87,83 @@ class ReflectionDocBlock implements \Reflector {
   public function getTag($name){ return $this->getField($name,''); }//method
   
   /**
+   *  get a parsed tag
+   *  
+   *  a parsed tag is a tag that is broken up into the DocBlock bits
+   *  
+   *  @link http://en.wikipedia.org/wiki/PHPDoc#Tags
+   *  
+   *  @since  10-31-11   
+   *  @param  string  $name the tag name                  
+   *  @return array a tag broken up into its respective parts
+   */
+  public function getParsedTag($name){
+  
+    //canary...
+    if(!$this->hasTag($name)){ return null; }//if
+
+    $ret_map = array();
+    
+    $val = $this->getTag($name);
+    
+    switch($name){
+    
+      case 'var':
+      case 'return':
+      
+        $bits = preg_split('#\s+#',$val,2);
+        $ret_map['type'] = $this->parseType($bits[0]);
+        $ret_map['desc'] = empty($bits[1]) ? '' : $bits[1];
+      
+        break;
+        
+      case 'param':
+      
+        $vals = (array)$val;
+        foreach($vals as $val){
+        
+          $map = array();
+        
+          $bits = preg_split('#\s+#',$val,2);
+          
+          $map['type'] = $this->parseType($bits[0]);
+          $map['varname'] = '';
+          $map['desc'] = '';
+          
+          if(isset($bits[1])){
+            
+            if($bits[1][0] === '$'){
+            
+              $bits = preg_split('#\s+#',$bits[1],2);
+              $map['varname'] = $bits[0];
+              $map['desc'] = empty($bits[1]) ? '' : $bits[1];
+            
+            }else{
+            
+              $map['desc'] = $bits[1];
+            
+            }//if/else
+            
+          }//if
+          
+          $ret_map[] = $map;
+          
+        }//foreach
+
+        break;
+        
+      default:
+      
+        $ret_map['desc'] = $val;
+        break;
+
+    }//switch
+  
+    return $ret_map;
+  
+  }//method
+  
+  /**
    *  true if the tag exists
    *
    *  @param  string  $name a tag name   
@@ -183,6 +260,23 @@ class ReflectionDocBlock implements \Reflector {
   
     $this->docblock_index += $offset;
     return $this->currentChar();
+  
+  }//method
+
+  /**
+   *  parse a tag type into each individual types
+   *  
+   *  @example
+   *    $type = 'string'; // retuns 'string'
+   *    $type = 'string|array'; // returns array('string','array')            
+   *
+   *  @param  string  $type
+   *  @return string|array      
+   */
+  protected function parseType($type){
+  
+    $types = explode('|',$type);
+    return empty($types[1]) ? $type : $types;
   
   }//method
 
