@@ -315,6 +315,12 @@ class Framework extends Field implements Dependable,Eventable {
     $container = $this->getContainer();
     $use_template = false;
     $response = $this->getContainer()->getResponse();
+    
+    // set a default title if one hasn't been set...
+    if(!$response->hasTitle()){
+      $request = $this->getContainer()->getRequest();
+      $response->setTitle(ltrim($request->getPath(),'/'));
+    }//if
   
     $event = new FilterEvent(
       'framework.filter.controller_response',
