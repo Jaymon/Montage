@@ -5,6 +5,22 @@ require_once($base.'/Path.php');
 
 class PathTest extends \PHPUnit_Framework_TestCase {
 
+  public function testSlice(){
+  
+    $path = new Path('/user/var/foo/bar/che');
+    $new_path = $path->slice(1);
+    \out::e($path,$new_path); // var/foo/bar/che
+    
+    return;
+    
+    $path = new Path('C:\user\var\foo\bar\che');
+    $new_path = $path->slice(1);
+    \out::e($path,$new_path);
+  
+  
+  
+  }//method
+
   public function testGetSibling(){
   
     $path = $this->getFixturePath('Path','foo');

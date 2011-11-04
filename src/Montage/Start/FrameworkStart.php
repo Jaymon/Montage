@@ -62,8 +62,8 @@ class FrameworkStart extends Start {
         $instance = $event->getParam();
         $container = $event->getField('container');
 
-        $framework = $container->getFramework();
-        $instance->addPaths($framework->getField('view_paths'));
+        $config = $container->getConfig();
+        $instance->addPaths($config->getField('view_paths'));
         
       }
     );
@@ -152,7 +152,6 @@ class FrameworkStart extends Start {
       
         $params = $event->getParam();
         $container = $event->getField('container');
-
         $request = $container->getRequest();
         
         // set the values for the url instance on creation...
@@ -208,13 +207,18 @@ class FrameworkStart extends Start {
         $instance = $event->getParam();
         $container = $event->getField('container');
 
+        // move all the fields from the framework into the config...
         $framework = $container->getFramework();
-        $instance->setField('env',$framework->getField('env'));
+        $instance->addFields($framework->getFields());
+        $framework->setFields(array());
+        
+        /* $instance->setField('env',$framework->getField('env'));
         $instance->setField('debug_level',$framework->getField('debug_level'));
         $instance->setField('app_path',$framework->getField('app_path'));
         $instance->setField('framework_path',$framework->getField('framework_path'));
         $instance->setField('plugin_paths',$framework->getField('plugin_paths',array()));
         $instance->setField('cache_path',$framework->getField('cache_path'));
+        */
         
       }
     );

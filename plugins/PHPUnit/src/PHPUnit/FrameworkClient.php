@@ -51,6 +51,18 @@ class FrameworkClient extends Client {
   }//method
   
   /**
+   *  print out the returned response
+   *
+   *  @since  11-1-11
+   *  @return string      
+   */
+  public function __toString(){
+  
+    return $this->getResponse()->getContent();
+  
+  }//method
+  
+  /**
    *  get the redirect history of this client
    *  
    *  @since  8-23-11      
@@ -194,7 +206,7 @@ class FrameworkClient extends Client {
     ob_end_clean();
     
     // set the captured content into the response object...
-    $response = $this->framework->getResponse();
+    $response = $this->framework->getContainer()->getResponse();
     $response->setContent($output);
     
     return $response;

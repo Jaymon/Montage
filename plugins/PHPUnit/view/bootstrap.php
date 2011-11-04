@@ -16,10 +16,14 @@ include_once('<?php echo $framework_path; ?>');
 // create and activate the framework...
 $framework = new <?php echo $this->getField('framework_class_name'); ?>(
   'test',
-  1,
   '<?php echo $this->getField('app_path'); ?>'
 );
 $framework->preHandle();
+
+// the autoloader should include the test paths also...
+$framework->getContainer()->getAutoloader()->addPaths(
+  $framework->getContainer()->getConfig()->getField('test_paths',array())
+);
 
 // set the static instance that any children can use...
 \PHPUnit\FrameworkTestCase::setFramework($framework);

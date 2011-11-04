@@ -376,8 +376,8 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
     $ret_str = array();
     $ret_str[] = $this->renderStart($attr_map);
     
-    if($this->hasError()){
-      $ret_str[] = $this->renderError();
+    if($errmsg = $this->renderError()){
+      $ret_str[] = $errmsg;
     }//if
     
     foreach($this as $field){
@@ -386,13 +386,13 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
       $format_vals = array();
       
       if($field->hasLabel() && ($label = $field->renderLabel())){
-        $format_str .= '%s<br>'.PHP_EOL;
+        $format_str .= '%s<br>';
         $format_vals[] = $label;
       }//if
       
-      if($field->hasError()){
+      if($errmsg = $field->renderError()){
         $format_str .= '%s<br>';
-        $format_vals[] = $field->renderError();
+        $format_vals[] = $errmsg;
       }//if
       
       $format_str .= '%s<br>';

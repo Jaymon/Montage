@@ -23,6 +23,14 @@ class FrameworkConfig extends Config {
   public function getEnv(){ return $this->getField('env',''); }//method
   
   /**
+   *  true if the passed in environment is the currently set environment      
+   *
+   *  @since  11-1-11   
+   *  @return boolean
+   */
+  public function isEnv($val){ return $this->isField('env',$val); }//method
+  
+  /**
    *  get the debug level the app is running under  
    *   
    *  @return integer

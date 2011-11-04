@@ -50,6 +50,7 @@ use Montage\Event\FilterEvent;
 use Montage\Event\Eventable;
 use Montage\Event\Dispatch as EventDispatch;
 
+// the files that needed to be included outside the montage specific autoloader...
 require_once(__DIR__.'/../../plugins/Utilities/src/Path.php');
 require_once(__DIR__.'/../../plugins/Utilities/src/Profile.php');
 
@@ -86,6 +87,16 @@ class Framework extends Field implements Dependable,Eventable {
   protected $instance_map = array();
   
   /**
+   *  all the values in $field_map will be transferred to the Config object when it
+   *  is created, so this map will hold values that only the framework should worry
+   *  about      
+   *
+   *  @since  11-2-11
+   *  @var  array      
+   */
+  protected $framework_field_map = array();
+  
+  /**
    *  true if instance is ready to {@link handle()} a request
    * 
    *  @since  8-15-11    
@@ -93,22 +104,15 @@ class Framework extends Field implements Dependable,Eventable {
    *  @var  boolean
    */
   protected $is_ready = false;
-  
-  /**
-   *  hold the debug level
-   *  
-   *  @var  integer
-   */
-  protected $debug_level = self::DEBUG_OFF;
 
   /**
    *  create this object
    *  
    *  @param  string  $env  the environment, usually something like "dev" or "prod"
-   *  @param  integer $debug_level  what level of debug you want
    *  @param  string  $app_path the root path for your application
+   *  @param  integer $debug_level  what level of debug you want   
    */
-  public function __construct($env,$debug_level,$app_path){
+  public function __construct($env,$app_path,$debug_level = self::DEBUG_ALL){
   
     // canary...
     if(empty($env)){
@@ -121,8 +125,12 @@ class Framework extends Field implements Dependable,Eventable {
     $this->setField('app_path',$app_path);
     $this->setField('env',$env);
     
-    $this->debug_level = (int)$debug_level;
-    $this->setField('debug_level',$this->debug_level);
+    $debug_level = (int)$debug_level;
+    $this->setField('debug_level',$debug_level);
+    
+    // set framework specific things...
+    $this->framework_field_map['framework.debug_level'] = $debug_level;
+    $this->framework_field_map['framework.recursion_max_count'] = 3;
     
   }//method
   
@@ -208,9 +216,13 @@ class Framework extends Field implements Dependable,Eventable {
     $this->broadcastEvent($event);
     
     // de-register all the autoloaders this instance started...
-    foreach($this->getField('autoload.instances',array()) as $instance){
-      $instance->unregister();
-    }//foreach
+    if(isset($this->framework_field_map['autoload.instances'])){
+      
+      foreach($this->framework_field_map['autoload.instances'] as $instance){
+        $instance->unregister();
+      }//foreach
+      
+    }//if
     
     $this->is_ready = false;
     
@@ -456,12 +468,13 @@ class Framework extends Field implements Dependable,Eventable {
    */
   protected function handleAssets(){
 
-    // canary...
-    if(!$this->hasField('asset_paths')){ return; }//if
-  
     $container = $this->getContainer();
-    $request = $this->getContainer()->getRequest();
-    $config = $this->getContainer()->getConfig();
+    $config = $container->getConfig();
+
+    // canary...
+    if(!$config->hasField('asset_paths')){ return; }//if
+  
+    $request = $container->getRequest();
     
     $dest_path = new Path($config->getPublicPath(),'assets');
     
@@ -480,7 +493,7 @@ class Framework extends Field implements Dependable,Eventable {
       )
     );
     
-    $assets->setSrcPaths($this->getField('asset_paths',array()));
+    $assets->setSrcPaths($config->getField('asset_paths',array()));
     
     // create all the "other" asset classes...
     $class_name_list = $select->find();
@@ -504,8 +517,6 @@ class Framework extends Field implements Dependable,Eventable {
   /**
    *  start all the known \Montage\Autoload\Autoloadable classes
    *  
-   *  a Start class is a class that will do configuration stuff
-   *  
    *  @return array  a list of autoload instances      
    */
   protected function handleAutoload(){
@@ -514,7 +525,7 @@ class Framework extends Field implements Dependable,Eventable {
     $instances = new \SplObjectStorage();
     
     // create the standard autoloader...
-    if($sal = $container->createInstance('\Montage\Autoload\StdAutoloader')){
+    if($sal = $container->getAutoloader()){
     
       $sal->addPaths($this->getField('reflection_paths',array()));
       $sal->addPaths($this->getField('vendor_paths',array()));
@@ -540,7 +551,7 @@ class Framework extends Field implements Dependable,Eventable {
       
     }//foreach
     
-    $this->setField('autoload.instances',$instances);
+    $this->framework_field_map['autoload.instances'] = $instances;
     
     return $instances;
      
@@ -635,19 +646,19 @@ class Framework extends Field implements Dependable,Eventable {
     $e_class_name = get_class($e);
     $e_key = sprintf('exception.%s',$e_class_name);
   
-    if($old_e = $this->getField($e_key)){
+    if(isset($this->framework_field_map[$e_key])){
         
       throw new \RuntimeException(
         sprintf(
           '%s Exception: "%s" already triggered a framework recovery and the problem was not fixed',
           $e_class_name,
-          $old_e->getMessage()
+          $this->framework_field_map[$e_key]->getMessage()
         )
       );
     
     }else{
     
-      $this->setField($e_key,$e);
+      $this->framework_field_map[$e_key] = $e;
     
     }//if/else
     
@@ -903,9 +914,12 @@ class Framework extends Field implements Dependable,Eventable {
    */
   protected function handleRecursion(\Exception $e){
   
-    $max_ir_count = $this->getField('Framework.recursion_max_count',3);
-    $ir_field = 'Framework.recursion_count'; 
-    $ir_count = $this->getField($ir_field,0);
+    $max_ir_count = $this->framework_field_map['framework.recursion_max_count'];
+    $ir_field = 'framework.recursion_count';
+    $ir_count = isset($this->framework_field_map[$ir_field]) 
+      ? $this->framework_field_map[$ir_field]
+      : 0;
+      
     if($ir_count > $max_ir_count){
 
       $e_msg = sprintf(
@@ -920,7 +934,8 @@ class Framework extends Field implements Dependable,Eventable {
       
     }else{
     
-      $ir_count = $this->bumpField($ir_field,1);
+      $ir_count += 1;
+      $this->framework_field_map[$ir_field] = $ir_count;
       
     }//if/else
     
@@ -935,7 +950,7 @@ class Framework extends Field implements Dependable,Eventable {
    *  particular class since this class will try to flush the cache and container and
    *  re do the request if it fails            
    *
-   *  @param  Montage\Dependency\Container  $container
+   *  @param  \Montage\Dependency\Container  $container
    */
   public function setContainer(\Montage\Dependency\Containable $container){
   
@@ -943,6 +958,9 @@ class Framework extends Field implements Dependable,Eventable {
     
     // just in case, container should know about this instance for circular-dependency goodness...
     $container->setInstance('framework',$this);
+    
+    // set the container's other dependencies (none of these can be created by the container)...
+    $container->setEventDispatch($this->getEventDispatch());
     $container->setInstance('cache',$this->getCache());
     $container->setInstance('profile',$this->getProfile());
     
@@ -960,13 +978,9 @@ class Framework extends Field implements Dependable,Eventable {
   
     $this->preHandle();
     
-    $event_dispatch = $this->getEventDispatch();
     $reflection = $this->getReflection();
     $container_class_name = $reflection->findClassName('Montage\Dependency\FrameworkContainer');
     $container = new $container_class_name($reflection);
-    
-    // set the container's dependencies...
-    $container->setEventDispatch($event_dispatch);
     
     $this->setContainer($container);
   
@@ -1113,6 +1127,7 @@ class Framework extends Field implements Dependable,Eventable {
     $vendor_path_list = array();
     $assets_path_list = array();
     $plugins_path_list = array();
+    $test_path_list = array();
     
     $path = new Path($framework_path,'src');
     $reflection_path_list[] = $path;
@@ -1128,6 +1143,9 @@ class Framework extends Field implements Dependable,Eventable {
     
     $path = new Path($app_path,'vendor');
     if($path->exists()){ $vendor_path_list[] = $path; }//if
+    
+    $path = new Path($app_path,'test');
+    if($path->exists()){ $test_path_list[] = $path; }//if
     
     // add the plugin paths...
     $plugin_base_path_list = array();
@@ -1170,6 +1188,9 @@ class Framework extends Field implements Dependable,Eventable {
             
             $path = new Path($plugin_path,'assets');
             if($path->exists()){ $assets_path_list[] = $path; }//if
+            
+            $path = new Path($plugin_path,'test');
+            if($path->exists()){ $test_path_list[] = $path; }//if
           
           }//if
         
@@ -1184,12 +1205,16 @@ class Framework extends Field implements Dependable,Eventable {
     
     $path = new Path($framework_path,'view');
     if($path->exists()){ $view_path_list[] = $path; }//if
+    
+    $path = new Path($framework_path,'test');
+    if($path->exists()){ $test_path_list[] = $path; }//if
   
     $this->setField('reflection_paths',$reflection_path_list);
     $this->setField('view_paths',$view_path_list);
     $this->setField('vendor_paths',$vendor_path_list);
     $this->setField('asset_paths',$assets_path_list);
     $this->setField('plugin_paths',$plugins_path_list);
+    $this->setField('test_paths',$test_path_list);
 
   }//method
   
@@ -1216,7 +1241,7 @@ class Framework extends Field implements Dependable,Eventable {
    */
   protected function profileStart($title){
   
-    if(($this->debug_level & self::DEBUG_PROFILE) === 0){ return false; }//if 
+    if(($this->framework_field_map['framework.debug_level'] & self::DEBUG_PROFILE) === 0){ return false; }//if 
   
     $profiler = $this->getProfile();
     return $profiler->start($title);
@@ -1232,7 +1257,7 @@ class Framework extends Field implements Dependable,Eventable {
    */
   protected function profileStop(){
   
-    if(($this->debug_level & self::DEBUG_PROFILE) === 0){ return false; }//if
+    if(($this->framework_field_map['framework.debug_level'] & self::DEBUG_PROFILE) === 0){ return false; }//if
     
     $profiler = $this->getProfile();
     return $profiler->stop();

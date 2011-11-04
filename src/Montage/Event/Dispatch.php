@@ -50,6 +50,16 @@ class Dispatch {
   protected $persistent_map = array();
   
   /**
+   *  the depth of the $persistent map
+   *
+   *  this is how many events will be allowed to persist before the map is trimmed
+   * 
+   *  @since  11-1-11    
+   *  @var  integer         
+   */
+  protected $persistent_size = 25;
+  
+  /**
    *  set a listener that can be broadcast to
    *  
    *  @param  string  $key  the name of the event that will trigger the $callback
@@ -167,12 +177,12 @@ class Dispatch {
     $this->persistent_map[$event_name][] = $event;
     
     // keep lists no bigger than 25...
-    if(isset($this->persistent_map[$event_name][25])){
+    if(isset($this->persistent_map[$event_name][$this->persistent_size])){
     
       array_shift($this->persistent_map[$event_name]);
     
     }//if
-  
+    
   }//method
   
   /**

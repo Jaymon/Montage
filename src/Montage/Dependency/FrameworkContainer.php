@@ -16,7 +16,19 @@ use Montage\Event\FilterEvent;
 class FrameworkContainer extends ReflectionContainer implements Eventable {
 
   /**
-   *  get the Error handler
+   *  get the Standard Autoloader
+   *
+   *  @since  10-28-11
+   *  @return \Montage\Autoload\StdAutoloader
+   */
+  public function getAutoloader($params = array()){
+  
+    return $this->findInstance('autoloader','\Montage\Autoload\StdAutoloader',$params);
+  
+  }//method
+
+  /**
+   *  get the profiler
    *
    *  @since  10-28-11
    *  @return \Profile

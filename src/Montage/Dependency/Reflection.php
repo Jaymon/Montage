@@ -237,7 +237,7 @@ class Reflection extends ObjectCache implements \Reflector {
    *  @return string  the class name of the absolute descendant of the $class_name
    */
   public function findClassName($class_name){
-
+  
     $ret_str = '';
   
     // we wrap in a try/catch so we can try to reload the class if an error state is found...
@@ -525,12 +525,14 @@ class Reflection extends ObjectCache implements \Reflector {
   public function getClassInfo($class_name){
   
     $class_key = $this->normalizeClassName($class_name);
+    
     // canary...
     if(!isset($this->class_map[$class_key])){
       // @todo  I think an exception might be too dramatic, just return array()?
       //throw new \InvalidArgumentException(sprintf('$class_name (%s) is not known',$class_name));
       return array();
     }//if
+    
     if($this->isChangedClass($class_key)){
       $this->reload();
       return $this->getClassInfo($class_name);

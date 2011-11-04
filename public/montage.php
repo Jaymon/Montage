@@ -7,7 +7,6 @@ require_once('out_class.php');
 require_once(__DIR__.'/../src/Montage/Framework.php');
 
 $env = 'cli';
-$debug = 1;
 
 // set the app path to temp directory on the system...
 $app_path = sys_get_temp_dir();
@@ -19,5 +18,5 @@ if(mb_substr($app_path,-1) !== DIRECTORY_SEPARATOR){
 
 $app_path .= 'Montage';
 
-$framework = new Montage\Framework($env,$debug,$app_path);
+$framework = new Montage\Framework($env,$app_path);
 $framework->handle();

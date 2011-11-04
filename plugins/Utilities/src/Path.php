@@ -44,9 +44,11 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     if(!isset($path[1]) && ($path[0] instanceof self)){
     
       $path = $path[0]->getPathname();
+      // @todo  $this->setAbsolute($path[0]->isAbsolute());
     
     }else{
       
+      // @todo  $this->checkAbsolute($path); checkAbsolute should check for / in linux or \S:\ in windows
       $path = $this->build($path);
       $path = $this->format($path);
       
@@ -248,6 +250,26 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     }//while
 
     return $ret_path;  
+  
+  }//method
+  
+  /**
+   *  slice the path just like array_slice
+   *
+   *  @since  11-1-11
+   *  @param  integer $offset where you want to start from the beginning
+   *  @param  integer $length how many bits you want from the $offset      
+   *  @return self
+   */
+  public function slice($offset,$length = null){
+  
+    $path_bits = explode(DIRECTORY_SEPARATOR,(string)$this);
+    $path_bits = array_slice($path_bits,$offset,$length);
+    
+    $class_name = get_class($this);
+    $ret_path = new $class_name($path_bits);
+  
+    return $ret_path;
   
   }//method
   
