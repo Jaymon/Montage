@@ -17,7 +17,7 @@ use Montage\Form\Field\Field;
 use Montage\Form\Field\Input;
 
 use ReflectionObject,ReflectionProperty;
-use Montage\Annotation;
+use Montage\Form\Annotation\FormAnnotation;
 
 use ArrayIterator;
 use ArrayAccess,IteratorAggregate;
@@ -45,20 +45,6 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
    *  @var  array
    */
   protected $field_map = array();
-  
-  /**
-   *  hold the parent class that will be used to {@link populate()} the fields
-   *  
-   *  @since  10-24-11   
-   *  @var  string  the full namespaced class
-   */
-  protected $field_parent_class_name = 'Montage\\Form\\Field\\Field';
-  
-  protected $form_field_map = array(
-    'Textarea' => 'Montage\\Form\\Field\\Textarea',
-    'Input' => 'Montage\\Form\\Field\\Input',
-    'Submit' => 'Montage\\Form\\Field\\Submit'
-  );
   
   /**
    *  create a Form
@@ -89,89 +75,8 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
    */
   protected function populate(){
   
-    $rthis = new ReflectionObject($this);
-    $rparam_list = $rthis->getProperties(ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_PROTECTED);
-
-    foreach($rparam_list as $rparam){
-    
-      $rparam->setAccessible(true);
-      $val = $rparam->getValue($this);
-      $docblock = $rparam->getDocComment();
-
-      if(($val === null) && !empty($docblock)){
-        
-        $annotation = new Annotation($rparam);
-        if($class_name = $annotation->getClassName()){
-          
-          if($class_name[0] !== '\\'){
-          
-            foreach($this->form_field_map as $form_field => $form_field_class_name){
-            
-              if(preg_match(sprintf('#%s$#i',$form_field),$class_name)){
-              
-                $class_name = $form_field_class_name;
-                break;
-              
-              }//if
-            
-            }//foreach
-          
-          }//if
-          
-        }//if
-        
-        if(class_exists($class_name) && is_subclass_of($class_name,$this->field_parent_class_name)){
-        
-          $instance = $this->createField($class_name,$rparam,$annotation);
-        
-          $rparam->setValue(
-            $rparam->isStatic() ? null : $this,
-            $instance
-          );
-          
-          $this->field_map[$rparam->getName()] = $instance;
-        
-        }//if
-        
-      }else{
-      
-        if($val instanceof Field){
-        
-          $this->field_map[$rparam->getName()] = $val;
-        
-        }//if
-      
-      }//if/else
-    
-    }//foreach
-  
-  }//method
-  
-  /**
-   *  create the field instance
-   *  
-   *  @param  string  $class_name the field class to be created
-   *  @param  \ReflectionProperty $rparam the class property that was found to conain a field class
-   *  @param  Annotation  $rdocblock  the property's docblock      
-   *  @return Field a field instance
-   */
-  protected function createField($class_name,ReflectionProperty $rparam,Annotation $annotation){
-  
-    $name = $rparam->getName();
-    $rdocblock = $annotation->getDocBlock();
-    
-    $instance = new $class_name();
-    $instance->setName($name);
-    $instance->setLabel($name);
-    $instance->setForm($this);
-    
-    if($desc = $rdocblock->getShortDesc()){
-    
-      $instance->setDesc($desc);
-    
-    }//if
-  
-    return $instance;
+    $annotation = new FormAnnotation($this);
+    $annotation->populate();
   
   }//method
 
@@ -219,6 +124,8 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
   
   /**#@+
    *  access methods for the action url that this form will post to
+   *  
+   *  use ENCODING_* attributes      
    */
   protected function setEncoding($val){
     $this->setAttr('encoding',$val);
@@ -270,10 +177,10 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
   public function getField($name,$default_val = null){
   
     $ret_field = null;
-
-    if(isset($this->field_map[$name])){
-      
-      $ret_field = $this->field_map[$name];
+    
+    if($this->$name instanceof Field){
+    
+      $ret_field = $this->$name;
       
     }else{
     
@@ -302,7 +209,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
    *  @param  string  $key   
    *  @return  boolean
    */
-  public function hasField($name){ return isset($this->field_map[$name]); }//method
+  public function hasField($name){ return isset($this->$name); }//method
   
   /**
    *  check if $key exists
@@ -318,7 +225,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
    *  @since  6-30-11   
    *  @return boolean
    */
-  public function hasFields(){ return !empty($this->field_map); }//method
+  public function hasFields(){ return true; }//method
   
   /**
    *  check's if a field exists and is equal to $val
