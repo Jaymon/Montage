@@ -726,7 +726,6 @@ class Framework extends Field implements Dependable,Eventable {
     $rfunc_params = array();
     $count = 0;
   
-    // check for Forms and populate them if there are matching passed in vars...
     foreach($rparams as $index => $rparam){
     
       try{
@@ -960,7 +959,8 @@ class Framework extends Field implements Dependable,Eventable {
     $container->setInstance('framework',$this);
     
     // set the container's other dependencies (none of these can be created by the container)...
-    $container->setEventDispatch($this->getEventDispatch());
+    // we don't use setEventDispatch() here to keep compatibility with alternate containers
+    $container->setInstance('event_dispatch',$this->getEventDispatch());
     $container->setInstance('cache',$this->getCache());
     $container->setInstance('profile',$this->getProfile());
     

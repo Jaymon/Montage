@@ -46,7 +46,7 @@ abstract class Annotation {
     'resource',
     'mixed',
     'null',
-    'callback'.
+    'callback',
     'self',
     'this'
   );

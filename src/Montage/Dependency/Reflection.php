@@ -28,7 +28,7 @@
 namespace Montage\Dependency;
 
 use ReflectionClass;
-use Montage\Dependency\ReflectionFile;
+use Montage\Reflection\ReflectionFile;
 use Path;
 use Montage\Cache\ObjectCache;
 use out;

@@ -29,7 +29,7 @@ namespace {
       require_once(self::$base_src_path.'/Cache/Cacheable.php');
       require_once(self::$base_src_path.'/Cache/ObjectCache.php');
       
-      require_once(self::$base_src_path.'/Dependency/ReflectionFile.php');
+      require_once(self::$base_src_path.'/Reflection/ReflectionFile.php');
       require_once(self::$base_src_path.'/Dependency/Reflection.php');
     
     }//method

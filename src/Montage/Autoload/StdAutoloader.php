@@ -34,7 +34,7 @@ namespace Montage\Autoload;
 use Montage\Autoload\Autoloader;
 use Path;
 use Montage\Cache\Cacheable;
-use Montage\Dependency\ReflectionFile;
+use Montage\Reflection\ReflectionFile;
 
 class StdAutoloader extends Autoloader implements Cacheable {
 

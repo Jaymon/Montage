@@ -86,6 +86,37 @@ abstract class TestCase extends PHPUnit_Framework_TestCase {
   }//method
   
   /**
+   *  assert that an Exception was thrown
+   *
+   *  @since  11-5-11
+   *  @param  string  $exception_class_name the thrown exceptions full namespaced class name
+   *  @param  callback  $callback
+   *  @param  array $callback_params  the params to pass into the $callback
+   *  @throws \PHPUnit_Framework_ExpectationFailedException               
+   */
+  public function assertException($exception_class_name,$callback,$callback_params){
+  
+    $message = '';
+    $e = null;
+  
+    try{
+    
+      call_user_func_array($callback,$callback_params);
+      $message = sprintf('Expected Exception %s but one was not thrown',$exception_class_name);
+    
+    }catch(\exception $e){
+    
+      $message = sprintf('Expected Exception %s but got %s',$exception_class_name,get_class($e));
+    
+    }//try/catch
+  
+    $this->assertInstanceOf($exception_class_name,$e,$message);
+    ///$constraint = new \PHPUnit_Framework_Constraint_IsInstanceOf($exception_class_name);
+    ///self::assertThat($e,$constraint,$message);
+  
+  }//method
+  
+  /**
    *  I noticed that I was spending a lot of time setting tests like this up, so I thought
    *  I would abstract it away
    *  

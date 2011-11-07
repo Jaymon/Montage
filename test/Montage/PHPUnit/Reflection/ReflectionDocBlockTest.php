@@ -5,7 +5,7 @@ use PHPUnit\FrameworkTestCase;
 
 use Montage\Reflection\ReflectionDocBlock;
 
-class ReflectionFileTest extends FrameworkTestCase {
+class ReflectionDocBlockTest extends FrameworkTestCase {
 
   public function testParse(){
 

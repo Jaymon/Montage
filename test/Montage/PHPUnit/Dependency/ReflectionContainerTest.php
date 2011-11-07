@@ -22,7 +22,7 @@ namespace Montage\PHPUnit {
   require_once($base.'/src/Montage/Cache/ObjectCache.php');
   require_once($base.'/src/Montage/Cache/PHPCache.php');
   
-  require_once($base.'/src/Montage/Dependency/ReflectionFile.php');
+  require_once($base.'/src/Montage/Reflection/ReflectionFile.php');
   require_once($base.'/src/Montage/Dependency/Reflection.php');
   
   require_once($base.'/src/Montage/Dependency/Containable.php');

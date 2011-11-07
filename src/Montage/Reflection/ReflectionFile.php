@@ -9,7 +9,7 @@
  *  @package montage
  *  @subpackage dependency 
  ******************************************************************************/
-namespace Montage\Dependency;
+namespace Montage\Reflection;
 
 use Reflector;
 

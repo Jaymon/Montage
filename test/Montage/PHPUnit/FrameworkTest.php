@@ -23,6 +23,25 @@ class FrameworkTest extends TestCase {
   
   }//method
 
+  public function testNormalizeControllerGetParam(){
+  
+    $func = function($one,$two,array $rest,$post_param){};
+    $rfunc = new \ReflectionFunction($func);
+    
+    // first test without post or catchall params...
+    $rfunc_params = array('one','two');
+    
+    $this->assertException(
+      'Exception',
+      array($this->framework,'normalizeControllerParams'),
+      array($rfunc,$rfunc_params)
+    );
+    
+    ///$normalized_params = $this->framework->normalizeControllerParams($rfunc,$rfunc_params);
+  
+  
+  }//method
+
    /**
    *  test passing simple controller params
    */
@@ -111,7 +130,7 @@ class FrameworkTest extends TestCase {
  *  makes protected methods public for testing purposes
  *  
  *  if I had php >= 5.3.2 
- *  $rurl = new \ReflectionObject($this->url); 
+ *  $rurl = new \ReflectionObject($instance); 
  *  $rmethod = $rurl->getMethod('parse'); 
  *  $rmethod->setAccessible(true);
  *  

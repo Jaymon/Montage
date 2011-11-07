@@ -4,7 +4,7 @@ namespace Montage\Test\PHPUnit;
 use PHPUnit\FrameworkTestCase;
 
 use ReflectionClass;
-use Montage\Dependency\ReflectionFile;
+use Montage\Reflection\ReflectionFile;
 
 class ReflectionFileTest extends FrameworkTestCase {
 

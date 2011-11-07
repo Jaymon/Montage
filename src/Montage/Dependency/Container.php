@@ -15,7 +15,7 @@ namespace Montage\Dependency;
 
 use Montage\Dependency\Containable;
 use ReflectionObject, ReflectionClass, ReflectionMethod, ReflectionParameter, ReflectionProperty;
-use Montage\Annotation;
+use Montage\Annotation\ParamAnnotation;
 use Montage\Field\Field;
 
 abstract class Container extends Field implements Containable {
@@ -316,11 +316,14 @@ abstract class Container extends Field implements Containable {
           
           }else{
           
+            $declaring_class = $rparam->getDeclaringClass();
+            $declaring_func = $rparam->getDeclaringFunction();  
+          
             throw new \UnexpectedValueException(
               sprintf(
                 'no suitable value could be found for %s::%s() param "%s"',
-                $rparam->getDeclaringClass()->getName(),
-                $rparam->getDeclaringFunction()->getName(),
+                empty($declaring_class) ? 'unknown' : $declaring_class->getName(),
+                empty($declaring_func) ? 'unkown' : $declaring_func->getName(),
                 $field_name
               )
             );
@@ -661,7 +664,7 @@ abstract class Container extends Field implements Containable {
    *    class Foo {
    *      / **
    *       *  this docblock will be used to inject if the full namespaced class name
-   *       *  is given in the var tag   
+   *       *  is given in the var tag and the property is public  
    *       *
    *       *  @var  \Full\Namespaced\ClassName   
    *       * /     
@@ -692,7 +695,7 @@ abstract class Container extends Field implements Containable {
         
         $class_name = '';
 
-        $annotation = new Annotation($rparam);
+        $annotation = new ParamAnnotation($rparam);
         $class_name = $annotation->getClassName();
           
         if(!empty($class_name)){
