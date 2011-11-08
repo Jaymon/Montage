@@ -2,7 +2,7 @@
 /**
  *  thrown for 404 HTTP errors 
  *  
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 6-14-11
  *  @package montage
@@ -10,9 +10,12 @@
  ******************************************************************************/      
 namespace Montage\Exception;
 
-use Exception;
+class NotFoundException extends HttpException {
 
-class NotFoundException extends Exception {
-
+  public function __construct($msg = ''){
+  
+    parent::__construct(404,$msg);
+  
+  }//method
   
 }//class

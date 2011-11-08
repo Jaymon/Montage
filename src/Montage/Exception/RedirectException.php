@@ -10,9 +10,7 @@
  ******************************************************************************/      
 namespace Montage\Exception;
 
-use Exception;
-
-class RedirectException extends Exception {
+class RedirectException extends HttpException {
 
   protected $url = '';
   
@@ -43,7 +41,7 @@ class RedirectException extends Exception {
   
     $this->url = $url;
     
-    parent::__construct($url,$code);
+    parent::__construct($code,$url);
   
   }//method
   

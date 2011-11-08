@@ -1,7 +1,7 @@
 <?php
 
 /**
- *  hold lots of text helper functions
+ *  hold lots of text helper methods
  *  
  *  @version 0.4
  *  @author Jay Marcyes
@@ -43,17 +43,10 @@ class Str implements \ArrayAccess, \IteratorAggregate {
     // canary...
     if(empty($str)){ throw new \InvalidArgumentException('$str was empty'); }//if
   
-    if(is_array($str)){
-  
-      $this->str = join(' ',$str);
-  
-    }else{
-  
-      $this->str = (string)$str;
-      
-    }//if/else
+    $args = func_get_args();
+    $this->str = $this->build($args);
     
-    $this->url_regex = '$\b
+    $this->url_regex = '%\b
       (                           # Capture 1: entire matched URL
         (?:
           [a-z][\w-]+:                # URL protocol and colon
@@ -78,7 +71,7 @@ class Str implements \ArrayAccess, \IteratorAggregate {
           |                                   #   or
           [^\s`!()\[\]{};:\'".,<>?«»“”‘’]        # not a space or one of these punct chars
         )
-      )$xi';
+      )%xi';
   
   }//method
   
@@ -345,13 +338,14 @@ class Str implements \ArrayAccess, \IteratorAggregate {
    *  removes certain stop words from the string
    *  
    *  @since  2-4-10
-   *  @return array $word_list with stop words removed
+   *  @return array a word list with stop words removed
    */
   public function killStopWords(){
   
-    $words_list = preg_split('#\s+#',mb_strtolower($this->str));
-    
-    $stop_words = array('i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 
+    $str = $this->getInstance(mb_strtolower($this->str));
+    $words_list = $str->getWords();
+  
+    $stop_words_list = array('i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 
       'you', 'your', 'yours', 'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 
       'she', 'her', 'hers', 'herself', 'it', 'its', 'itself', 'they', 'them', 'their', 
       'theirs', 'themselves', 'what', 'which', 'who', 'whom', 'this', 'that', 'these', 
@@ -366,7 +360,7 @@ class Str implements \ArrayAccess, \IteratorAggregate {
       'very'
     );
  
-    return array_diff($words_list, $stop_words);
+    return array_diff($words_list, $stop_words_list);
   
   }//method
   
@@ -454,9 +448,19 @@ class Str implements \ArrayAccess, \IteratorAggregate {
    */
   public function getWords(){
   
-    // first get rid of punctuation...
+    // these are all the punctuation characters that will be stripped...
     $punct = preg_quote('~`!@#$%^&*()_-+={}[]\\:|\'";<>,./?','#');
-    $ret_str = preg_replace(sprintf('#[%s]+#',$punct),' ',$this->str);
+    
+    $regex = sprintf(
+      '#'
+      .'(?:(?<=[^%s])[%s]+(?=\s|$))' // a punct char proceeded by a non-punct char and followed by a word break
+      .'|'
+      .'(?:(?<=\s|^)[%s]+(?=[^%s]))' // a puncT char proceeded by a word break and followed by a non-punct char
+      .'#',
+      $punct,$punct,$punct,$punct
+    );
+    
+    $ret_str = preg_replace($regex,' ',$this->str);
   
     return preg_split('#\s+#u',$ret_str,-1,PREG_SPLIT_NO_EMPTY);
   
@@ -612,12 +616,14 @@ class Str implements \ArrayAccess, \IteratorAggregate {
    */
   protected function cbTag($url){
       
-    $attr_map = array();
-    $attr_map['class'] = 'linkify';
-    $attr_map['title'] = $url;
-    $attr_map['href'] = $url;
-    
-    return array(sprintf('<a %s>',$this->getAttributes($attr_map)),'</a>');
+    return array(
+      sprintf(
+        '<a class="linkify" href="%" title="%s">',
+        $url,
+        $url
+      ),
+      '</a>'
+    );
   
   }//method
   
@@ -705,42 +711,6 @@ class Str implements \ArrayAccess, \IteratorAggregate {
   }//method
   
   /**
-   *  output all the attributes in a nicely formatted string
-   *     
-   *  @return string
-   */       
-  protected function getAttributes(array $attr_map){
-    
-    // canary...
-    if(empty($attr_map)){ return ''; }//if
-  
-    $ret_str = '';
-    
-    foreach($attr_map as $attr_name => $attr_val){
-      
-      if(is_array($attr_val) || is_object($attr_val)){
-      
-        $ret_str .= sprintf('%s="%s" ',$attr_name,json_encode($attr_val));
-        
-      }else{
-      
-        if(is_bool($attr_val)){
-        
-          $attr_val = $attr_val ? 'true' : 'false';
-        
-        }//if
-      
-        $ret_str .= sprintf('%s="%s" ',$attr_name,$attr_val);
-        
-      }//if/else
-      
-    }//foreach
-    
-    return trim($ret_str);
-    
-  }//method
-  
-  /**
    *  break up the words into a regex
    *
    *  @since  11-3-11
@@ -781,6 +751,39 @@ class Str implements \ArrayAccess, \IteratorAggregate {
   
     $class_name = get_class($this);
     return new $class_name($str);
+  
+  }//method
+  
+  /**
+   *  compile all the passed in $words into a string
+   *
+   *  @since  11-7-11
+   *  @param  string|array  $words
+   *  @return string         
+   */
+  protected function build($words){
+  
+    // canary...
+    if(is_string($words)){ return $words; }//if
+  
+    $ret_str = '';
+  
+    $words = (array)$words;
+    foreach($words as $word){
+      
+      if(is_array($words)){
+      
+        $ret_str[] = $this->build($word);
+      
+      }else{
+      
+        $ret_str[] = $word;
+      
+      }//if/else
+    
+    }//foreach
+  
+    return = join(' ',$ret_str);
   
   }//method
 

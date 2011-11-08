@@ -10,12 +10,16 @@
  ******************************************************************************/
 namespace Montage\Form\Annotation;
 
+use Montage\Form\Form;
+
+use Montage\Annotation\ParamAnnotation;
+
 class FieldAnnotation extends ParamAnnotation {
   
   /**
    *  the form instance that the field belongs to
    *  
-   *  @var  \Montage\Form   
+   *  @var  \Montage\Form\Form  
    */
   protected $form = null;
   
@@ -46,7 +50,7 @@ class FieldAnnotation extends ParamAnnotation {
    *  @param  \ReflectionProperty $reflection a property of $form
    *  @param  \Montage\Form\Form  $form the form of the property      
    */
-  public function __construct(\ReflectionProperty $reflection, Form $form){
+  public function __construct(\ReflectionProperty $reflection,Form $form){
   
     parent::__construct($reflection);
   
@@ -62,7 +66,7 @@ class FieldAnnotation extends ParamAnnotation {
   public function populate(){
   
     // canary...
-    $rdocbloc = $this->getDocBlock();
+    $rdocblock = $this->getDocBlock();
     if(empty($rdocblock)){ return; }//if
   
     $ret_field = null;
@@ -70,6 +74,7 @@ class FieldAnnotation extends ParamAnnotation {
     $this->reflection->setAccessible(true);
     
     $val = $this->reflection->getValue($this);
+    
     if(($val === null)){
       
       if($class_name = $this->getClassName()){
@@ -100,8 +105,8 @@ class FieldAnnotation extends ParamAnnotation {
         
           $instance = $this->createField($class_name);
         
-          $rparam->setValue(
-            $rparam->isStatic() ? null : $this,
+          $this->reflection->setValue(
+            $this->reflection->isStatic() ? null : $this->form,
             $instance
           );
           

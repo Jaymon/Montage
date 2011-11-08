@@ -11,12 +11,25 @@
 namespace Montage\Form\Annotation;
 
 use Montage\Form\Form;
+use Montage\Annotation\Annotation;
+
+use ReflectionProperty;
 
 class FormAnnotation extends Annotation {
   
+  /**
+   *  the internal form instance
+   *  
+   *  @var  Montage\Form\Form
+   */
   protected $form = null;
   
-  public function __costruct(Form $form){
+  /**
+   *  create instance
+   *  
+   *  @param  \Montage\Form\Form  $form
+   */
+  public function __construct(Form $form){
   
     $this->form = $form;
     $rform = new \ReflectionObject($form);
@@ -48,7 +61,7 @@ class FormAnnotation extends Annotation {
   
     if($method = $rdocblock->getTag('method')){
     
-      $this->setMethod($method);
+      $this->form->setMethod($method);
       
     }//if
   
@@ -57,7 +70,7 @@ class FormAnnotation extends Annotation {
     // using ENCODING_FILE, otherwise ENCODING_POST
     if($encoding = $rdocblock->getTag('encoding')){
     
-      $this->setEncoding($encoding);
+      $this->form->setEncoding($encoding);
       
     }//if
     
@@ -69,7 +82,7 @@ class FormAnnotation extends Annotation {
     // by passing it in as an attribute to renderStart(array('action' => 'url')); 
     if($url = $rdocblock->getTag('url')){
     
-      $this->setUrl($url);
+      $this->form->setUrl($url);
       
     }//if
     
@@ -84,7 +97,7 @@ class FormAnnotation extends Annotation {
     $rparam_list = $this->reflection->getProperties(ReflectionProperty::IS_PUBLIC);
     foreach($rparam_list as $rparam){
     
-      $field_annotation = new FieldAnnotation($rparam,$form);
+      $field_annotation = new FieldAnnotation($rparam,$this->form);
       $field_annotation->populate();
     
     }//foreach

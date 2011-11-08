@@ -1,9 +1,45 @@
 <?php
 
 $base = realpath(__DIR__.'/../src');
-require_once($base.'/Crypt.php');
+require_once($base.'/Str.php');
 
 class StrTest extends \PHPUnit_Framework_TestCase {
+
+  /**
+   *  @since  11-7-11
+   */
+  public function testGetWords(){
+  
+    $test_list = array();
+    $test_list['email address'] = array(
+      'in' => 'happy@example.com',
+      'out' => array('happy@example.com')
+    );
+    $test_list['punct character before word'] = array(
+      'in' => 'happy @example',
+      'out' => array('happy','example')
+    );
+    $test_list['punct character after word'] = array(
+      'in' => 'happy example.',
+      'out' => array('happy','example')
+    );
+    $test_list['multiple punct characters'] = array(
+      'in' => '(happy example.)',
+      'out' => array('happy','example')
+    );
+    $test_list['multiple punct characters in middle of string'] = array(
+      'in' => 'happy (this is the example.) and the end',
+      'out' => array('happy','this','is','the','example','and','the','end')
+    );
+  
+    foreach($test_list as $msg => $test_map){
+    
+      $s = new Str($test_map['in']);
+      $this->assertEquals($test_map['out'],$s->getWords(),(string)$msg);
+    
+    }//foreach
+  
+  }//method
 
   public function testPathify(){
   

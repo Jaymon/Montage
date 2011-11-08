@@ -851,6 +851,7 @@ class Framework extends Field implements Dependable,Eventable {
         $response->setContent('');
         $response->setStatusCode($e->getCode());
         $response->setHeader('Location',$redirect_url);
+        $controller_response = null;
       
         if(headers_sent()){
   
@@ -859,18 +860,22 @@ class Framework extends Field implements Dependable,Eventable {
             sprintf('<meta http-equiv="refresh" content="%s;url=%s">',$wait_time,$redirect_url)
           );
   
+          $controller_response = null;
+  
         }else{
         
           if($wait_time > 0){ sleep($wait_time); }//if
           
+          $controller_response = false;
+          
         }//if/else
-      
-        $ret_mixed = $this->handleResponse(null);
+        
+        $ret_mixed = $this->handleResponse($controller_response);
       
       }else if($e instanceof Montage\Exception\StopException){
         
         // don't do anything, we're done
-        $ret_mixed = $this->handleResponse(true);
+        $ret_mixed = $this->handleResponse($e->getControllerResponse());
         
       }else if($e instanceof \ReflectionException){
       

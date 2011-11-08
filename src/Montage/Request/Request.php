@@ -23,7 +23,7 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
    *  @see  parent::initialize for params      
    */
   public function initialize(array $query = array(), array $request = array(), array $attributes = array(), array $cookies = array(), array $files = array(), array $server = array(), $content = null){
-    
+
     $cli_query = null;
 
     if(!empty($server['argv'])){

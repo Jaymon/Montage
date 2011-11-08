@@ -32,13 +32,13 @@ class TestForm extends Form {
    *   
    *  @var  Input
    */
-  protected $foo = null;
+  public $foo = null;
   
   /**
    *  Bar - this will be the label
    *   
    *  @var  Textarea
    */
-  protected $bar = null;
+  public $bar = null;
 
 }//class

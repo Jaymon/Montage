@@ -154,6 +154,8 @@ class FrameworkStart extends Start {
         $container = $event->getField('container');
         $request = $container->getRequest();
         
+        \out::e($request->getBase(),$request->getUrl(),$request->getBasePath()); 
+        
         // set the values for the url instance on creation...
         $ret_map = array(
           'current_url' => $request->getUrl(),

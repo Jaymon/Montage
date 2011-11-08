@@ -707,10 +707,25 @@ abstract class Container extends Field implements Containable {
           
           }//if
           
-          $rparam->setValue(
-            $rparam->isStatic() ? null : $instance,
-            $this->getInstance($class_name)
-          );
+          try{
+          
+            $param_instance = $this->getInstance($class_name);
+          
+            $rparam->setValue(
+              $rparam->isStatic() ? null : $instance,
+              $param_instance
+            );
+          
+          
+          }catch(\exception $e){
+          
+            if(!$annotation->getDocBlock()->hasTag('optional')){
+            
+              throw $e;
+            
+            }//if
+          
+          }//try/catch
           
         }//if
         
