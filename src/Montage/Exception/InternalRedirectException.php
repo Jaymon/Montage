@@ -13,7 +13,7 @@ namespace Montage\Exception;
 
 use Exception;
 
-class InternalRedirectException extends Exception {
+class InternalRedirectException extends FrameworkException {
 
   protected $path = '';
 

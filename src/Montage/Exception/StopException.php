@@ -10,9 +10,7 @@
  ******************************************************************************/      
 namespace Montage\Exception;
 
-use Exception;
-
-class StopException extends Exception {
+class StopException extends FrameworkException {
 
   /**
    *  the ret value

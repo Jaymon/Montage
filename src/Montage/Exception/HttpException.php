@@ -10,9 +10,7 @@
  ******************************************************************************/      
 namespace Montage\Exception;
 
-use Exception;
-
-class HttpException extends Exception {
+class HttpException extends FrameworkException {
 
   /**
    *  hold the status message
