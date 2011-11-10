@@ -78,6 +78,8 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
     $annotation = new FormAnnotation($this);
     $annotation->populate();
   
+    $this->field_map = $annotation->getFields();
+  
   }//method
 
   /**
@@ -154,15 +156,13 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
     
     foreach($field_map as $name => $val){
     
-      try{
-      
+      if($this->hasField($name)){
+    
         $field = $this->getField($name);
         $field->setVal($val);
       
-      }catch(\InvalidArgumentException $e){
-        // just ignore non-existent names
-      }//try/catch
-    
+      }//if
+      
     }//foreach
   
   }//method
@@ -178,7 +178,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
   
     $ret_field = null;
     
-    if($this->$name instanceof Field){
+    if($this->hasField($name)){
     
       $ret_field = $this->$name;
       
@@ -209,7 +209,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
    *  @param  string  $key   
    *  @return  boolean
    */
-  public function hasField($name){ return isset($this->$name); }//method
+  public function hasField($name){ return isset($this->field_map[$name]); }//method
   
   /**
    *  check if $key exists
@@ -225,7 +225,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
    *  @since  6-30-11   
    *  @return boolean
    */
-  public function hasFields(){ return true; }//method
+  public function hasFields(){ return !empty($this->field_map); }//method
   
   /**
    *  check's if a field exists and is equal to $val

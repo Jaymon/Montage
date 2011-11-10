@@ -25,6 +25,14 @@ class FormAnnotation extends Annotation {
   protected $form = null;
   
   /**
+   *  hold all the fields that were created with this class
+   * 
+   *  @since  11-9-11    
+   *  @var  array      
+   */
+  protected $field_map = array();
+  
+  /**
    *  create instance
    *  
    *  @param  \Montage\Form\Form  $form
@@ -44,9 +52,17 @@ class FormAnnotation extends Annotation {
   public function populate(){
   
     $this->annotateForm();
-    $this->annotateFields();
+    $this->field_map = $this->annotateFields();
   
   }//method
+  
+  /**
+   *  return the fields that were annotated with this class
+   * 
+   *  @since  11-9-11    
+   *  @return array      
+   */
+  public function getFields(){ return $this->field_map; }//method
   
   /**
    *  Form specific annotation
@@ -89,18 +105,28 @@ class FormAnnotation extends Annotation {
   }//method
   
   /**
-   *  use docblocks of public form properties to create and set the fields of the form   
+   *  use docblocks of public form properties to create and set the fields of the form
+   *  
+   *  @return array a list of the fields that were found         
    */
   protected function annotateFields(){
+  
+    $ret_map = array();
   
     // check property specific annotations...
     $rparam_list = $this->reflection->getProperties(ReflectionProperty::IS_PUBLIC);
     foreach($rparam_list as $rparam){
     
       $field_annotation = new FieldAnnotation($rparam,$this->form);
-      $field_annotation->populate();
+      if($ret_field = $field_annotation->populate()){
+      
+        $ret_map[$rparam->getName()] = $ret_field;
+      
+      }//method
     
     }//foreach
+  
+    return $ret_map;
   
   }//method
 

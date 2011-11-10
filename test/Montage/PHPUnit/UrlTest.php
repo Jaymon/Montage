@@ -226,6 +226,24 @@ class UrlTest extends TestCase {
     }//foreach
   
   }//method
+  
+  /**
+   *  this is just to make sure that urls are created right when there is a base url
+   *  that also includes a path and url is set up to use absolute paths without domains   
+   *
+   *  @since  11-9-11   
+   */
+  public function testRelativeBase(){
+  
+    $current_url = 'http://example.com/foo/bar/';
+    $base_url = 'http://example.com/foo/bar/';
+  
+    $url = new TestUrl($current_url,$base_url,false);
+  
+    $ret = $url->get('/foo/bar');
+    $this->assertEquals('/foo/bar',$ret);
+  
+  }//method
 
 }//class
 

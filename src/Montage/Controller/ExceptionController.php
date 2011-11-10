@@ -30,23 +30,26 @@ class ExceptionController extends Controller {
   /**
    *  set to false to have DIC ignore this dependency
    *     
+   *  @optional   
    *  @var  \Montage\Request\Request
    */
-  public $request = false;
+  public $request = null;
   
   /**
    *  set to false to have DIC ignore this dependency
-   *     
+   *  
+   *  @optional      
    *  @var  \Montage\Response\Response
    */
-  public $response = false;
+  public $response = null;
   
   /**
    *  set to false to have DIC ignore this dependency
    *     
+   *  @optional   
    *  @var  \Montage\Url
    */
-  public $url = false;
+  public $url = null;
 
   /**
    *  overrides the parent to get rid of the dependencies since this could be
@@ -54,6 +57,14 @@ class ExceptionController extends Controller {
    *  since the dependencies can't be found
    */
   public function __construct(){}//method
+
+  public function handleHttpException(\Exception $e){
+  
+    \out::h();
+  
+  
+  
+  }//method
 
   /**
    *  catch-all stray errors

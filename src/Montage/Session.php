@@ -214,6 +214,17 @@ class Session extends SymfonySession implements Fieldable {
   }//method
   
   /**
+   *  delete the current session
+   *
+   *  @since  11-9-11   
+   */
+  public function kill(){
+  
+    return $this->invalidate();
+  
+  }//method
+  
+  /**
    *  restore get and post vars that could've been set with {@link setRequest()}
    */
   protected function loadRequest(){

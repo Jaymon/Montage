@@ -481,16 +481,32 @@ class Url extends Field {
   /**
    *  true if $val is a url
    *  
+   *  this takes into account settings in the class, eg, if {@link $use_domain} is
+   *  false then /foo/bar would return true   
+   *      
    *  @param  string  $val
    *  @return true if $val is a url, false otherwise
    */
-  public function isUrl($val){
+  protected function isUrl($val){
   
     // canary...
     if(empty($val)){ return false; }//if
-    if(!is_string($val)){ return false; }//i
+    
+    $ret_bool = false;
+    
+    if(!$this->use_domain){
+    
+      $ret_bool = ($val[0] === self::URL_SEP);
+    
+    }//if
+    
+    if(empty($ret_bool)){
+    
+      $ret_bool = preg_match('#^[a-zA-Z]+://\S{3,}#',$val) ? true : false;
+    
+    }//if
 
-    return preg_match('#^\w+://\S{3,}#',$val) ? true : false;
+    return $ret_bool;
     
   }//method
   

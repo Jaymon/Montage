@@ -24,6 +24,14 @@ class FieldAnnotation extends ParamAnnotation {
   protected $form = null;
   
   /**
+   *  hold the field
+   *  
+   *  @since  11-9-11   
+   *  @var  Montage\Field\Field      
+   */
+  protected $field = null;
+  
+  /**
    *  hold the parent class that will be used to {@link populate()} the fields
    *  
    *  @since  10-24-11   
@@ -118,9 +126,18 @@ class FieldAnnotation extends ParamAnnotation {
       
     }//if
     
+    $this->field = $ret_field;
     return $ret_field;
     
   }//method
+  
+  /**
+   *  return the fields that were annotated with this class
+   * 
+   *  @since  11-9-11    
+   *  @return Montage\Field\Field
+   */
+  public function getField(){ return $this->field; }//method
   
   /**
    *  create the field instance

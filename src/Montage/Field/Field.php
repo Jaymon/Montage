@@ -189,7 +189,7 @@ class Field implements Fieldable {
     
     if(empty($method_map[$key])){
     
-      throw new InvalidArgumentException(sprintf('could not find a match for $method %s with command: %s',$method,$key));
+      throw new \InvalidArgumentException(sprintf('could not find a match for $method %s with command: %s',$method,$key));
     
     }else{
     

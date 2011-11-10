@@ -46,7 +46,7 @@ class Str implements \ArrayAccess, \IteratorAggregate {
     $args = func_get_args();
     $this->str = $this->build($args);
     
-    $this->url_regex = '%\b
+    $this->url_regex = '@\b
       (                           # Capture 1: entire matched URL
         (?:
           [a-z][\w-]+:                # URL protocol and colon
@@ -71,7 +71,7 @@ class Str implements \ArrayAccess, \IteratorAggregate {
           |                                   #   or
           [^\s`!()\[\]{};:\'".,<>?«»“”‘’]        # not a space or one of these punct chars
         )
-      )%xi';
+      )@xi';
   
   }//method
   
@@ -783,7 +783,7 @@ class Str implements \ArrayAccess, \IteratorAggregate {
     
     }//foreach
   
-    return = join(' ',$ret_str);
+    return join(' ',$ret_str);
   
   }//method
 
