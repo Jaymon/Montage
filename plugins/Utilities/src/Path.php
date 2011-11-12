@@ -8,10 +8,10 @@
  *  @idea contains() could replace isParent() 
  *  @idea setRegexFilter() and setCallbackFilter() could influence an internal iterator
  *  and simplify iterating through either a file or a directory. setDepth() would be
- *  just as good for only getting the first N lines of a file, or the recurssing the 
+ *  just as good for only getting the first N lines of a file, or recursing the 
  *  first N children of a directory     
  * 
- *  @version 0.5
+ *  @version 0.6
  *  @author Jay Marcyes
  *  @since 12-6-10
  *  @package Utilities
@@ -960,9 +960,11 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
    *    $this->build(array(array('foo','baz'),'/bar/che')); // -> foo/baz/bar/che
    *  
    *  @param  array $path_bits  the path bits that will be used to build the path
+   *  @param  boolean $check_absolute true if the first character of the first real path_bit
+   *                                  should be checked for a leading slash      
    *  @return string
    */
-  protected function build(array $path_bits){
+  protected function build(array $path_bits,$check_absolute = true){
     
     $ret_list = array();
     
@@ -970,7 +972,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
       
       if(is_array($path_bit)){
 
-        $ret_list[] = $this->build($path_bit);
+        $ret_list[] = $this->build($path_bit,$check_absolute);
         
       }else if(!empty($path_bit)){
         
@@ -983,6 +985,20 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
           }//if
         
         }else{
+        
+          // if this is still true then this is the first real string bit of the path to
+          // check (ie, we've recursed down into any arrays)
+          if($check_absolute){
+          
+            if($path_bit[0] === '/'){
+            
+              $ret_list[] = ''; // so a / will be added to the front
+            
+            }//if
+          
+            $check_absolute = false;
+          
+          }//if
           
           // windows: no space before or after folder names allowed (windows will strip them automatically)
           // linux: mkdir "  foo"; cd "  foo"; is completely allowed, as is: mkdir "  "; cd "  "

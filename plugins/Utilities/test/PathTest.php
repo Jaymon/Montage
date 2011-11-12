@@ -5,6 +5,18 @@ require_once($base.'/Path.php');
 
 class PathTest extends \PHPUnit_Framework_TestCase {
 
+  /**
+   *  make sure an absolute linux path stays an absolute linux path
+   *  
+   *  @since  11-12-11      
+   */
+  public function testLinuxPath(){
+  
+    $path = new Path('/user/var/foo/bar/che/');
+    $this->assertEquals('\\user\\var\\foo\\bar\\che',(string)$path);
+  
+  }//method
+
   public function testSlice(){
   
     $path = new Path('/user/var/foo/bar/che');
