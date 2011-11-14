@@ -236,7 +236,8 @@ class Framework extends Field implements Dependable,Eventable {
    *  
    *  once this method is called, everything is taken care of for you
    *  
-   *  @return mixed usually null if left alone, but if you override anything, it could return almost anything      
+   *  @return mixed usually the Response object if left alone, but if you override {@link handleResponse()}, 
+   *                it could return almost anything      
    */
   public function handle(){
   
@@ -321,6 +322,7 @@ class Framework extends Field implements Dependable,Eventable {
    *    boolean - if false then don't output anything
    *
    *  @param  mixed $controller_response  what the controller returned
+   *  @return \Montage\Response\Response   
    */
   protected function handleResponse($controller_response = null){
   
@@ -415,7 +417,8 @@ class Framework extends Field implements Dependable,Eventable {
     
     }//if/else
     
-    $response->send(); // send headers and content
+    $response->sendHeaders();
+    ///$response->send(); // send headers and content
     
     // handle outputting using the template...
     if($use_template){
@@ -425,7 +428,11 @@ class Framework extends Field implements Dependable,Eventable {
       // if a string was returned, set that into the response object...
       if(is_string($ret_mix)){ $response->setContent($ret_mix); }//if
       
-    }//if
+    }else{
+    
+      $response->sendContent();
+    
+    }//if/else
     
     return $response;
   
