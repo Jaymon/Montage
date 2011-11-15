@@ -29,7 +29,7 @@ class PHPCache extends Cache {
     $ret_val = null;
     $path = $this->getPath($key);
     
-    if($path->exists()){
+    if($path->isFile()){
     
       $ret_val = include($path);
     

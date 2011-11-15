@@ -1140,6 +1140,7 @@ class Framework extends Field implements Dependable,Eventable {
     $assets_path_list = array();
     $plugins_path_list = array();
     $test_path_list = array();
+    $config_path_list = array();
     
     $path = new Path($framework_path,'src');
     $reflection_path_list[] = $path;
@@ -1148,7 +1149,7 @@ class Framework extends Field implements Dependable,Eventable {
     if($path->exists()){ $reflection_path_list[] = $path; }//if
     
     $path = new Path($app_path,'config');
-    if($path->exists()){ $reflection_path_list[] = $path; }//if
+    if($path->exists()){ $config_path_list[] = $path; }//if
     
     $path = new Path($app_path,'view');
     if($path->exists()){ $view_path_list[] = $path; }//if
@@ -1175,28 +1176,16 @@ class Framework extends Field implements Dependable,Eventable {
             $plugins_path_list[] = $plugin_dir;
           
             $path = new Path($plugin_path,'config');
-            if($path->exists()){
-              
-              $reflection_path_list[] = $path;
-              
-            }//if
+            if($path->exists()){ $config_path_list[] = $path; }//if
             
             $path = new Path($plugin_path,'src');
-            if($path->exists()){
-              
-              $reflection_path_list[] = $path;
-              
-            }//if 
+            if($path->exists()){ $reflection_path_list[] = $path; }//if 
           
             $path = new Path($plugin_path,'view');
             if($path->exists()){ $view_path_list[] = $path; }//if
             
             $path = new Path($plugin_path,'vendor');
-            if($path->exists()){
-              
-              $vendor_path_list[] = $path;
-            
-            }//if
+            if($path->exists()){ $vendor_path_list[] = $path; }//if
             
             $path = new Path($plugin_path,'assets');
             if($path->exists()){ $assets_path_list[] = $path; }//if
@@ -1227,6 +1216,7 @@ class Framework extends Field implements Dependable,Eventable {
     $this->setField('asset_paths',$assets_path_list);
     $this->setField('plugin_paths',$plugins_path_list);
     $this->setField('test_paths',$test_path_list);
+    $this->setField('config_paths',$config_path_list);
 
   }//method
   

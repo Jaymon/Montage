@@ -3,7 +3,11 @@
 $base = realpath(__DIR__.'/../src');
 require_once($base.'/Path.php');
 
+///require_once('/vagrant/public/out_class.php');
+
 class PathTest extends \PHPUnit_Framework_TestCase {
+
+  protected $class_name = '\\Path';
 
   /**
    *  make sure an absolute linux path stays an absolute linux path
@@ -12,8 +16,13 @@ class PathTest extends \PHPUnit_Framework_TestCase {
    */
   public function testLinuxPath(){
   
+    ///\out::e(sys_get_temp_dir());
+  
     $path = new Path('/user/var/foo/bar/che/');
-    $this->assertEquals('\\user\\var\\foo\\bar\\che',(string)$path);
+    $this->assertEquals(
+      join(DIRECTORY_SEPARATOR,array('','user','var','foo','bar','che')),
+      (string)$path
+    );
   
   }//method
 
@@ -21,19 +30,21 @@ class PathTest extends \PHPUnit_Framework_TestCase {
   
     $path = new Path('/user/var/foo/bar/che');
     $new_path = $path->slice(1);
-    \out::e($path,$new_path); // var/foo/bar/che
-    
-    return;
+    $this->assertEquals(
+      join(DIRECTORY_SEPARATOR,array('var','foo','bar','che')),
+      (string)$new_path
+    );
     
     $path = new Path('C:\user\var\foo\bar\che');
     $new_path = $path->slice(1);
-    \out::e($path,$new_path);
-  
-  
-  
+    $this->assertEquals(
+      join(DIRECTORY_SEPARATOR,array('var','foo','bar','che')),
+      (string)$new_path
+    );
+    
   }//method
 
-  public function testGetSibling(){
+  public function xtestGetSibling(){
   
     $path = $this->getFixturePath('Path','foo');
     
@@ -106,7 +117,7 @@ class PathTest extends \PHPUnit_Framework_TestCase {
     
   }//method
 
-  public function testPathStuff(){
+  public function xtestPathStuff(){
 
     ///$path = new Path('E:\Projects\sandbox\montage\_active\test\fixtures\Path');
     $path = new Path('E:\Projects\sandbox\montage\_active\test\fixtures\Path\che.txt');
@@ -174,44 +185,44 @@ class PathTest extends \PHPUnit_Framework_TestCase {
    */
   public function testCreation(){
   
-    $base = $this->getFixturePath();
+    $base = $this->getFixturePath('Path');
     
     $test_list = array();
-    $test_list[] = array(
+    $test_list['simple'] = array(
       'in' => array($base,'Path'),
       'path_str' => join(DIRECTORY_SEPARATOR,array($base,'Path'))
     );
-    $test_list[] = array(
+    $test_list['dir separator on end'] = array(
       'in' => array($base,'Path/'),
       'path_str' => join(DIRECTORY_SEPARATOR,array($base,'Path'))
     );
-    $test_list[] = array(
+    $test_list['dir separator on beginning of one bit'] = array(
       'in' => array($base,'\\Path'),
       'path_str' => join(DIRECTORY_SEPARATOR,array($base,'Path'))
     );
-    $test_list[] = array(
+    $test_list['windows dir sep on beginning of bit'] = array(
       'in' => array($base,'/Path'),
       'path_str' => join(DIRECTORY_SEPARATOR,array($base,'Path'))
     );
-    $test_list[] = array(
+    $test_list['array bit'] = array(
       'in' => array($base,array('Path','foo'),'1'),
       'path_str' => join(DIRECTORY_SEPARATOR,array($base,'Path','foo','1'))
     );
-    $test_list[] = array(
+    $test_list['another Path instance and array bit'] = array(
       'in' => array(new Path($base),array('Path','foo'),'1'),
       'path_str' => join(DIRECTORY_SEPARATOR,array($base,'Path','foo','1'))
     );
-    $test_list[] = array(
+    $test_list['double array and some empty bits'] = array(
       'in' => array($base,array(array('Path','foo')),' ','','1'),
-      'path_str' => join(DIRECTORY_SEPARATOR,array($base,'Path','foo','1'))
+      'path_str' => join(DIRECTORY_SEPARATOR,array($base,'Path','foo',' ','1'))
     );
     
-    foreach($test_list as $test_map){
+    foreach($test_list as $msg => $test_map){
     
-      $rclass = new ReflectionClass('Montage\\Path');
+      $rclass = new ReflectionClass($this->class_name);
       $instance = $rclass->newInstanceArgs($test_map['in']);
       
-      $this->assertEquals($test_map['path_str'],$instance->__toString());
+      $this->assertEquals($test_map['path_str'],$instance->__toString(),$msg);
     
     }//foreach
   
@@ -398,7 +409,7 @@ class PathTest extends \PHPUnit_Framework_TestCase {
     
     foreach($test_list as $i => $test_map){
     
-      $rpath = new ReflectionClass('Montage\Path');
+      $rpath = new ReflectionClass($this->class_name);
       $instance = $rpath->newInstanceArgs($test_map['init']);
     
       $actual = call_user_func_array(array($instance,$test_map['method']),$test_map['in']);      
@@ -495,7 +506,7 @@ class PathTest extends \PHPUnit_Framework_TestCase {
       join(DIRECTORY_SEPARATOR,$path)
     );
     
-    return realpath($path);
+    return realpath($ret_path);
   
   }//method
   

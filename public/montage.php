@@ -3,7 +3,7 @@
 /**
  *  this is the Montage command line interface
  */
-require_once('out_class.php');
+//require_once('out_class.php');
 require_once(__DIR__.'/../src/Montage/Framework.php');
 
 $env = 'cli';

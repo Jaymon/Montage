@@ -79,42 +79,6 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
   }//method
 
   /**
-   *  overrides the parent to be more like how I assumed it would be
-   *  
-   *  if the path doesn't exist then use the {@link getParent()} method to get the above
-   *  path.
-   *  
-   *  @since  9-26-11
-   *  @param  string  $class_name the class to use
-   *  @return self
-   */
-  /* public function getPathInfo($class_name = ''){
-  
-    $ret_path = null;
-  
-    if($this->exists()){
-    
-      $ret_path = parent::getPathInfo($class_name);
-    
-    }else{
-    
-      if($ret_path = $this->getParent()){
-      
-        if(!empty($class_name)){
-    
-          $ret_path = new $class_name($ret_path);
-    
-        }//if
-      
-      }//if
-    
-    }//if/else
-  
-    return $ret_path;
-  
-  }//method */
-
-  /**
    *  overrides {@link parent::getFilename()} to mimic {@link pathinfo()}
    *  
    *  @example
@@ -263,6 +227,8 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
    */
   public function slice($offset,$length = null){
   
+    if($this->isAbsolute()){ $offset++; }//if
+    
     $path_bits = explode(DIRECTORY_SEPARATOR,(string)$this);
     $path_bits = array_slice($path_bits,$offset,$length);
     
@@ -952,6 +918,18 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
   }//method
 
   /**
+   *  true if the path is an absolute file path
+   *  
+   *  @since  11-15-11
+   *  @return boolean         
+   */
+  public function isAbsolute(){
+  
+    return (preg_match('#^(?:[\\\\/]|(?:[a-zA-Z]\:[\\\\/]))#',(string)$this) === 1);
+  
+  }//method
+
+  /**
    *  given multiple path bits, build a custom path
    *  
    *  @example  
@@ -974,44 +952,57 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
 
         $ret_list[] = $this->build($path_bit,$check_absolute);
         
-      }else if(!empty($path_bit)){
+      }else{
+      
+        if(empty($path_bit)){
         
-        if($path_bit instanceof self){
-        
-          if($path_bit_str = $path_bit->__toString()){
-        
-            $ret_list[] = $path_bit->__toString();
-            
+          if($check_absolute && (DIRECTORY_SEPARATOR === '/')){
+          
+            $ret_list[] = '';
+            $check_absolute = false;
+          
           }//if
         
         }else{
         
-          // if this is still true then this is the first real string bit of the path to
-          // check (ie, we've recursed down into any arrays)
-          if($check_absolute){
+          if($path_bit instanceof self){
+        
+            if($path_bit_str = $path_bit->__toString()){
           
-            if($path_bit[0] === '/'){
-            
-              $ret_list[] = ''; // so a / will be added to the front
-            
+              $ret_list[] = $path_bit->__toString();
+              
             }//if
           
-            $check_absolute = false;
+          }else{
           
-          }//if
-          
-          // windows: no space before or after folder names allowed (windows will strip them automatically)
-          // linux: mkdir "  foo"; cd "  foo"; is completely allowed, as is: mkdir "  "; cd "  "
-          
-          $path_bit = preg_split('#[\\\\/]#',$path_bit); // split on dir separators
-          $path_bit = array_filter($path_bit); // get rid of any empty values
-          if(!empty($path_bit)){
-            $ret_list = array_merge($ret_list,$path_bit); // merge the bits into the final list
-          }//if
-          
-        }//if/else
+            // if this is still true then this is the first real string bit of the path to
+            // check (ie, we've recursed down into any arrays)
+            if($check_absolute){
+            
+              if($path_bit[0] === '/'){
+              
+                $ret_list[] = ''; // so a / will be added to the front
+              
+              }//if
+            
+              $check_absolute = false;
+            
+            }//if
+            
+            // windows: no space before or after folder names allowed (windows will strip them automatically)
+            // linux: mkdir "  foo"; cd "  foo"; is completely allowed, as is: mkdir "  "; cd "  "
+            
+            $path_bit = preg_split('#[\\\\/]#',$path_bit); // split on dir separators
+            $path_bit = array_filter($path_bit); // get rid of any empty values
+            if(!empty($path_bit)){
+              $ret_list = array_merge($ret_list,$path_bit); // merge the bits into the final list
+            }//if
+            
+          }//if/else
         
-      }//if/else if
+        }//if/else
+      
+      }//if/else
       
     }//foreach
     
