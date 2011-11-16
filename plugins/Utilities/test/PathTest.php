@@ -3,7 +3,7 @@
 $base = realpath(__DIR__.'/../src');
 require_once($base.'/Path.php');
 
-require_once('/vagrant/public/out_class.php');
+///require_once('/vagrant/public/out_class.php');
 
 class PathTest extends \PHPUnit_Framework_TestCase {
 
