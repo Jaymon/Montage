@@ -110,6 +110,29 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
   }//method
 
   /**
+   *  goes down the entire path and returns a list of all the parents
+   *
+   *  @since  11-15-11
+   *  @return array a list of self instances that contain each parent all the way to the beginning      
+   */
+  public function getAncestry(){
+  
+    $ret_list = array();
+    $parent = $this;
+    
+    while($parent = $parent->getParent()){
+    
+      $ret_list[] = $parent;
+    
+    }//while
+    
+    $ret_list = array_reverse($ret_list);
+    
+    return $ret_list;
+  
+  }//method
+
+  /**
    *  true if path exists or was built succesfully
    *  
    *  @param  string  $path
@@ -128,18 +151,41 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     }//if
     
     $orig_umask = umask(0000);
-    
+
     // make sure path is directory, try to create it if it isn't...
-    
     if(!mkdir($path,0777,true)){
-      throw new \UnexpectedValueException(
-        sprintf(
-          '"%s" is not a valid directory and the attempt to create it failed. '
-          .'Check permissions for every directory on the path to make sure that path '
-          .'is writable.',
-          $path
-        )
-      );
+    
+      // go through the whole tree and try and create the path one at a time...
+      $ancestry_list = $this->getAncestry();
+      foreach($ancestry_list as $apath){
+      
+        if(!$apath->exists()){
+        
+          if(!mkdir((string)$apath,0777)){
+          
+            $info = '';
+            if($parent_apath = $apath->getParent()){
+            
+              $info = $parent_apath->isWritable() 
+                ? 'Parent directory is writeable' 
+                : 'Parent directory is not writable';
+            
+            }//if
+
+            throw new \UnexpectedValueException(
+              sprintf(
+                '"%s" could not be created. Info: %s',
+                $apath,
+                $info
+              )
+            );
+          
+          }//if
+        
+        }//if
+      
+      }//foreach
+
     }//if
     
     umask($orig_umask); // restore
@@ -153,7 +199,10 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
    *  
    *  @return boolean
    */
-  public function exists(){ return file_exists($this->getPathname()); }//method
+  public function exists(){
+    return $this->isDir() || $this->isFile();
+    ///return file_exists($this->getPathname());
+  }//method
   
   /**
    *  count all the descendants of the path
@@ -258,6 +307,9 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
    *  @return Path  null if moving up isn't possible, otherwise a new instance with the new path in it      
    */
   public function getParent($folder_regex = ''){
+  
+    // canary, for linux paths only...
+    if($this->is(DIRECTORY_SEPARATOR)){ return null; }//if
   
     $ret_path = null;
     $path_bits = explode(DIRECTORY_SEPARATOR,(string)$this);
@@ -945,7 +997,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
   protected function build(array $path_bits,$check_absolute = true){
     
     $ret_list = array();
-    
+
     foreach($path_bits as $path_bit){
       
       if(is_array($path_bit)){
@@ -956,10 +1008,9 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
       
         if(empty($path_bit)){
         
-          if($check_absolute && (DIRECTORY_SEPARATOR === '/')){
+          if($check_absolute){
           
             $ret_list[] = '';
-            $check_absolute = false;
           
           }//if
         
@@ -969,7 +1020,18 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
         
             if($path_bit_str = $path_bit->__toString()){
           
-              $ret_list[] = $path_bit->__toString();
+              if($check_absolute){
+              
+                $ret_list[] = ($path_bit_str === DIRECTORY_SEPARATOR) ? '' : $path_bit_str;
+              
+              }else{
+            
+                $ret_list = array_merge(
+                  $ret_list,
+                  array_filter(explode(DIRECTORY_SEPARATOR,$path_bit_str))
+                );
+                
+              }//if/else
               
             }//if
           
@@ -979,14 +1041,12 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
             // check (ie, we've recursed down into any arrays)
             if($check_absolute){
             
-              if($path_bit[0] === '/'){
+              if($path_bit[0] === DIRECTORY_SEPARATOR){
               
                 $ret_list[] = ''; // so a / will be added to the front
-              
+                
               }//if
-            
-              $check_absolute = false;
-            
+              
             }//if
             
             // windows: no space before or after folder names allowed (windows will strip them automatically)
@@ -1002,11 +1062,28 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
         
         }//if/else
       
+        $check_absolute = false;
+      
       }//if/else
       
     }//foreach
+
+    $ret_str = DIRECTORY_SEPARATOR;
+    if(!empty($ret_list)){
+      
+      if(empty($ret_list[0]) && !isset($ret_list[1])){
+        
+        $ret_str = DIRECTORY_SEPARATOR;
+        
+      }else{
+      
+        $ret_str = join(DIRECTORY_SEPARATOR,$ret_list);
+      
+      }//if/else
+      
+    }//if
     
-    return join(DIRECTORY_SEPARATOR,$ret_list);
+    return $ret_str;
     
   }//method
   
@@ -1033,7 +1110,11 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
       
     }//if
   
-    $path = $this->trimSlash($path);
+    if(isset($path[1])){
+  
+      $path = $this->trimSlash($path);
+      
+    }//if
     
     return $path;
   

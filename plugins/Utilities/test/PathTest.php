@@ -3,11 +3,27 @@
 $base = realpath(__DIR__.'/../src');
 require_once($base.'/Path.php');
 
-///require_once('/vagrant/public/out_class.php');
+require_once('/vagrant/public/out_class.php');
 
 class PathTest extends \PHPUnit_Framework_TestCase {
 
   protected $class_name = '\\Path';
+
+  public function testGetAncestry(){
+  
+    $path = new Path($this->getFixturePath('Path','foo','1'));
+  
+    $ancestry_list = $path->getAncestry();
+    \out::e($ancestry_list);
+    
+    foreach($ancestry_list as $ap){
+    
+      \out::e($ap->exists());
+    
+    }//foreach
+    
+  
+  }//method
 
   /**
    *  make sure an absolute linux path stays an absolute linux path
@@ -80,17 +96,17 @@ class PathTest extends \PHPUnit_Framework_TestCase {
   public function testEmptyPath(){
   
     $path = new Path('');
-    $this->assertEquals('',(string)$path);
+    $this->assertEquals(DIRECTORY_SEPARATOR,(string)$path);
     
     $path = new Path($path);
-    $this->assertEquals('',(string)$path);
+    $this->assertEquals(DIRECTORY_SEPARATOR,(string)$path);
     
     $path = new Path('foo',$path,'bar');
     $expected = new Path('foo','bar');
     $this->assertEquals((string)$expected,(string)$path);
     
     $path = new Path(new Path(''),'foo','bar');
-    $expected = new Path('foo','bar');
+    $expected = new Path('','foo','bar');
     $this->assertEquals((string)$expected,(string)$path);
   
   }//method
