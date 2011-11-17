@@ -16,7 +16,6 @@ use Path;
 
 class Cache {
 
-
   /**
    *  hold the path where stuff will be cached
    * 
@@ -28,14 +27,44 @@ class Cache {
   /**
    *  the prefix that will be used for any cache created by this class
    *
+   *  @see  setPrefix()
    *  @var  string   
    */
   protected $prefix = 'montage_';
   
+  /**
+   *  set to true if you cannot implicitely trust the cache
+   *  
+   *  set to false if the cache can be 100% trusted
+   *  
+   *  @since  11-16-11
+   *  @var  boolean
+   */
+  protected $is_dirty = true;
+  
+  /**
+   *  holds the caching namespace
+   *       
+   *  @see  setNamespace()
+   *  @var  array   
+   */
   protected $namespace = array();
   
+  /**
+   *  true if the cache is dirty cache (cannot be 100% trusted)
+   *  
+   *  @since  11-16-11   
+   *  @return boolean     
+   */
+  public function isDirty(){ return $this->is_dirty; }//method
+  
+  /**
+   *  if you want to set a prefix to something other than the default
+   *
+   *  @param  string  $prefix      
+   */
   public function setPrefix($prefix){
-    $this->prefix = $prefix;
+    $this->prefix = (string)$prefix;
     return $this;
   }//method
 
@@ -91,7 +120,7 @@ class Cache {
   public function get($key){
   
     $path = $this->getPath($key);
-    return $path->exists() ? $this->decodeStr($path->get()) : null;
+    return $path->isFile() ? $this->decodeStr($path->get()) : null;
     
   }//method
   

@@ -62,6 +62,42 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
   }//method
   
   /**
+   *  append the current internal path to each of the parent paths looking for a full
+   *  path that exists   
+   *  
+   *  @since  11-16-11
+   *  @param  array $parent_path_list a list of paths to prepend to the current path
+   *  @return self  the full path that exists, null if nothing was found   
+   */
+  public function locate(array $parent_path_list){
+  
+    // canary...
+    if(empty($parent_path_list)){
+      throw new \InvalidArgumentException('no parent paths were specified');
+    }//if
+  
+    $ret_path = null;
+  
+    foreach($parent_path_list as $parent_path){
+    
+      $ret_path = $this->normalize(array($parent_path,$this));
+      if($ret_path->exists()){
+      
+        break;
+        
+      }else{
+      
+        $ret_path = null;
+      
+      }//if/else
+    
+    }//foreach
+  
+    return $ret_path;
+  
+  }//method
+   
+  /**
    *  combine the $path into the internal path
    *  
    *  @example
