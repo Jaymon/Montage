@@ -513,6 +513,24 @@ class Reflection extends ObjectCache implements \Reflector {
   }//method
   
   /**
+   *  returns true if the passed in class actually has a child
+   *  
+   *  @since  11-23-11   
+   *  @param  string  $class_name
+   *  @return boolean true if the $class_name has a child
+   */
+  public function hasChildClass($class_name){
+  
+    if(empty($class_name)){
+      throw new \InvalidArgumentException('$class_name was empty');
+    }//if
+  
+    $class_key = $this->normalizeClassName($class_name);
+    return isset($this->parent_class_map[$class_key]);
+  
+  }//method
+  
+  /**
    *  get the class info
    *  
    *  the class info is all the information about the class that this class has

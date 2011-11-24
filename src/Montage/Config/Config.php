@@ -70,7 +70,7 @@ abstract class Config extends Field implements Configurable {
    */
   public function load($config_filename){
   
-    $config_file = $this->findFile($config_filename);
+    $config_file = $this->normalizeFile($config_filename);
     if(empty($config_file)){
       throw new \UnexpectedValueException(
         sprintf(
@@ -103,7 +103,7 @@ abstract class Config extends Field implements Configurable {
    *  @param  string  $config_filename  usually just the name.ext, not the full path   
    *  @return \Path the full path to the config file
    */
-  protected function findFile($config_filename){
+  protected function normalizeFile($config_filename){
   
     // canary...
     if(empty($config_filename)){

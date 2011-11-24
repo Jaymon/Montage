@@ -194,20 +194,10 @@ class Template extends Field implements Dependable {
     // canary, template might already be a full path...
     if(is_file($template)){ return $template; }//if
   
-    $ret_path = null;
     $template = $this->normalizeTemplateName($template);
+    $template_file = new Path($template);
+    $ret_path = $template_file->locate($this->path_list);
   
-    foreach($this->path_list as $dir){
-    
-      $ret_path = new Path($dir,$template);
-      if($ret_path->exists()){
-        break;
-      }else{
-        $ret_path = null;
-      }//if/else
-    
-    }//foreach
-    
     if(empty($ret_path)){
     
       throw new \UnexpectedValueException(

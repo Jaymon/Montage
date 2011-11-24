@@ -89,16 +89,6 @@ class Framework extends Field implements Dependable,Eventable {
   protected $instance_map = array();
   
   /**
-   *  all the values in $field_map will be transferred to the Config object when it
-   *  is created, so this map will hold values that only the framework should worry
-   *  about      
-   *
-   *  @since  11-2-11
-   *  @var  array      
-   */
-  protected $framework_field_map = array();
-  
-  /**
    *  true if instance is ready to {@link handle()} a request
    * 
    *  @since  8-15-11    
@@ -130,8 +120,8 @@ class Framework extends Field implements Dependable,Eventable {
     $config->setField('debug_level',(int)$debug_level);
     
     // set framework specific things...
-    $this->framework_field_map['framework.debug_level'] = $debug_level;
-    $this->framework_field_map['framework.recursion_max_count'] = 3;
+    $this->setField('framework.debug_level',$debug_level);
+    $this->setField('framework.recursion_max_count',3);
     
   }//method
   
@@ -220,9 +210,9 @@ class Framework extends Field implements Dependable,Eventable {
     $this->broadcastEvent($event);
     
     // de-register all the autoloaders this instance started...
-    if(isset($this->framework_field_map['autoload.instances'])){
+    if($instances = $this->getField('autoload.instances')){
       
-      foreach($this->framework_field_map['autoload.instances'] as $instance){
+      foreach($instances as $instance){
         $instance->unregister();
       }//foreach
       
@@ -249,15 +239,19 @@ class Framework extends Field implements Dependable,Eventable {
   
     try{
     
+      $container = $this->getContainer();
+    
       $this->preHandle();
 
-      $request = $this->getContainer()->getRequest();
+      $request = $container->getRequest();
   
       // decide where the request should be forwarded to...
-      list($controller_class,$controller_method,$controller_method_params) = $this->getContainer()->getControllerSelect()->find(
-        $request->getHost(),
-        $request->getPath()
-      );
+      list($controller_class,$controller_method,$controller_method_params) = $container
+        ->getControllerSelect()
+          ->find(
+            $request->getHost(),
+            $request->getPath()
+          );
       
       $event = new InfoEvent(
         sprintf(
@@ -559,7 +553,7 @@ class Framework extends Field implements Dependable,Eventable {
       
     }//foreach
     
-    $this->framework_field_map['autoload.instances'] = $instances;
+    $this->setField('autoload.instances',$instances);
     
     return $instances;
      
@@ -581,8 +575,8 @@ class Framework extends Field implements Dependable,Eventable {
     if($config_path->isDir()){
       
       $regex_list = array(
-        '#config\.\S+#i', // load any global config.* config files
-        sprintf('#%s\.\S+#i',preg_quote($config->getEnv(),'#')) // load any <env>.* config files
+        '#config\.\S+$#i', // load any global config.* config files
+        sprintf('#%s\.\S+$#i',preg_quote($config->getEnv(),'#')) // load any <env>.* config files
       );
       
       foreach($regex_list as $regex){
@@ -605,6 +599,9 @@ class Framework extends Field implements Dependable,Eventable {
       }//foreach
       
     }//if
+    
+    // @todo  check the reflection to decide if we should upgrade this object to a user
+    // specified object
   
     return $config;
   
@@ -700,19 +697,19 @@ class Framework extends Field implements Dependable,Eventable {
     $e_class_name = get_class($e);
     $e_key = sprintf('exception.%s',$e_class_name);
   
-    if(isset($this->framework_field_map[$e_key])){
+    if($e_instance = $this->getField($e_key)){
         
       throw new \RuntimeException(
         sprintf(
           '%s Exception: "%s" already triggered a framework recovery and the problem was not fixed',
           $e_class_name,
-          $this->framework_field_map[$e_key]->getMessage()
+          $e_instance->getMessage()
         )
       );
     
     }else{
     
-      $this->framework_field_map[$e_key] = $e;
+      $this->setField($e_key,$e);
     
     }//if/else
     
@@ -972,11 +969,9 @@ class Framework extends Field implements Dependable,Eventable {
    */
   protected function handleRecursion(\Exception $e){
   
-    $max_ir_count = $this->framework_field_map['framework.recursion_max_count'];
+    $max_ir_count = $this->getField('framework.recursion_max_count');
     $ir_field = 'framework.recursion_count';
-    $ir_count = isset($this->framework_field_map[$ir_field]) 
-      ? $this->framework_field_map[$ir_field]
-      : 0;
+    $ir_count = $this->getField($ir_field,0);
       
     if($ir_count > $max_ir_count){
 
@@ -993,7 +988,7 @@ class Framework extends Field implements Dependable,Eventable {
     }else{
     
       $ir_count += 1;
-      $this->framework_field_map[$ir_field] = $ir_count;
+      $this->setField($ir_field,$ir_count);
       
     }//if/else
     
@@ -1110,17 +1105,6 @@ class Framework extends Field implements Dependable,Eventable {
   }//method
   
   /**
-   *  get the config object
-   *
-   *  @Param  \Montage\Config\FrameworkConfig $config
-   */
-  public function setConfig(FrameworkConfig $config){
-  
-    $this->instance_map['config'] = $config;
-    
-  }//method
-  
-  /**
    *  create or return the framework config object
    *  
    *  @see  http://teddziuba.com/2011/06/most-important-concept-systems-design.html
@@ -1134,10 +1118,10 @@ class Framework extends Field implements Dependable,Eventable {
     // canary...
     if(isset($this->instance_map['config'])){ return $this->instance_map['config']; }//if
 
-    $instance = new FrameworkConfig();
-    $this->setConfig($instance);
+    $config = new FrameworkConfig();
+    $this->instance_map['config'] = $config;
   
-    return $instance;
+    return $config;
   
   }//method
   
@@ -1182,7 +1166,7 @@ class Framework extends Field implements Dependable,Eventable {
     $reflection->setCache($this->getCache());
     $reflection->importCache();
     
-    $reflection->addPaths($config->getField('reflection_paths'));
+    $reflection->addPaths($config->getField('reflection_paths',array()));
     
     $this->instance_map['reflection'] = $reflection;
 
@@ -1329,7 +1313,7 @@ class Framework extends Field implements Dependable,Eventable {
    */
   protected function profileStart($title){
   
-    if(($this->framework_field_map['framework.debug_level'] & self::DEBUG_PROFILE) === 0){ return false; }//if 
+    if(($this->getField('framework.debug_level',0) & self::DEBUG_PROFILE) === 0){ return false; }//if 
   
     $profiler = $this->getProfile();
     return $profiler->start($title);
@@ -1345,7 +1329,7 @@ class Framework extends Field implements Dependable,Eventable {
    */
   protected function profileStop(){
   
-    if(($this->framework_field_map['framework.debug_level'] & self::DEBUG_PROFILE) === 0){ return false; }//if
+    if(($this->getField('framework.debug_level',0) & self::DEBUG_PROFILE) === 0){ return false; }//if
     
     $profiler = $this->getProfile();
     return $profiler->stop();
