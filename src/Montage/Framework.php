@@ -19,7 +19,8 @@
  *    \Montage\Cache\Cache
  *    \Montage\Dependency\Container
  *    \Path
- *    \Profile     
+ *    \Profile
+ *    \Montage\Config\FrameworkConfig   
  *   
  *  @version 0.8
  *  @author Jay Marcyes {@link http://marcyes.com}
@@ -32,6 +33,7 @@ use Montage\Cache\PHPCache;
 use Path;
 use Profile;
 use Montage\Field\Field;
+use Montage\Config\FrameworkConfig;
 
 use Montage\Dependency\Reflection;
 use Montage\Dependency\Container;
@@ -122,11 +124,10 @@ class Framework extends Field implements Dependable,Eventable {
       throw new \InvalidArgumentException('$app_path was empty, please set it to the root path of your app');
     }//if
     
-    $this->setField('app_path',$app_path);
-    $this->setField('env',$env);
-    
-    $debug_level = (int)$debug_level;
-    $this->setField('debug_level',$debug_level);
+    $config = $this->getConfig();
+    $config->setField('app_path',$app_path);
+    $config->setField('env',$env);
+    $config->setField('debug_level',(int)$debug_level);
     
     // set framework specific things...
     $this->framework_field_map['framework.debug_level'] = $debug_level;
@@ -161,11 +162,11 @@ class Framework extends Field implements Dependable,Eventable {
   
     try{
     
-      // collect all the paths we're going to use...
-      $this->handlePaths();
-    
       // first handle any files the rest of the framework might depend on...
       $this->handleDependencies();
+    
+      // collect all the paths we're going to use...
+      $this->handlePaths();
   
       // start the autoloaders...
       // this is the first thing done because it is needed to make sure all the classes
@@ -174,6 +175,9 @@ class Framework extends Field implements Dependable,Eventable {
       
       // handle any preliminary event stuff like creating the Event Dispatcher
       $this->handleEvent();
+      
+      // handle loading the config files...
+      $this->handleConfig();
   
       // start the START classes...
       // this comes about as early as I can make it since it is key to making sure
@@ -298,11 +302,7 @@ class Framework extends Field implements Dependable,Eventable {
   
     $file_list = $this->getIncludes();
   
-    foreach($file_list as $file){
-  
-      require_once($file);
-      
-    }//foreach
+    foreach($file_list as $file){ require($file); }//foreach
   
   }//method
 
@@ -476,7 +476,7 @@ class Framework extends Field implements Dependable,Eventable {
   protected function handleAssets(){
 
     $container = $this->getContainer();
-    $config = $container->getConfig();
+    $config = $this->getConfig();
 
     // canary...
     if(!$config->hasField('asset_paths')){ return; }//if
@@ -529,13 +529,14 @@ class Framework extends Field implements Dependable,Eventable {
   protected function handleAutoload(){
   
     $container = $this->getContainer();
+    $config = $this->getConfig();
     $instances = new \SplObjectStorage();
     
     // create the standard autoloader...
     if($sal = $container->getAutoloader()){
     
-      $sal->addPaths($this->getField('reflection_paths',array()));
-      $sal->addPaths($this->getField('vendor_paths',array()));
+      $sal->addPaths($config->getField('reflection_paths',array()));
+      $sal->addPaths($config->getField('vendor_paths',array()));
       
       $sal->setCache($this->getCache());
       $sal->importCache();
@@ -562,6 +563,51 @@ class Framework extends Field implements Dependable,Eventable {
     
     return $instances;
      
+  }//method
+  
+  /**
+   *  handle loading the config files
+   *      
+   *  @since  11-23-11
+   *  @return \Montage\Config\FrameworkConfig
+   */
+  protected function handleConfig(){
+  
+    $config = $this->getConfig();
+    $config->addPaths($config->getField('config_paths',array()));
+  
+    $config_path = new Path($config->getAppPath(),'config');
+    
+    if($config_path->isDir()){
+      
+      $regex_list = array(
+        '#config\.\S+#i', // load any global config.* config files
+        sprintf('#%s\.\S+#i',preg_quote($config->getEnv(),'#')) // load any <env>.* config files
+      );
+      
+      foreach($regex_list as $regex){
+      
+        $config_files = $config_path->createFileIterator($regex,1);
+        foreach($config_files as $config_file){
+        
+          $event = new InfoEvent(
+            sprintf(
+              'loading config path: %s',
+              $config_file
+            )
+          );
+          $this->broadcastEvent($event);
+        
+          $config->load($config_file);
+        
+        }//foreach
+        
+      }//foreach
+      
+    }//if
+  
+    return $config;
+  
   }//method
   
   /**
@@ -616,7 +662,8 @@ class Framework extends Field implements Dependable,Eventable {
   protected function handleStart(){
   
     $instance_list = array();
-    $env = $this->getField('env');
+    $config = $this->getConfig();
+    $env = $config->getField('env');
     $container = $this->getContainer();
     $select = $container->getInstance('\Montage\Start\Select');
     
@@ -975,6 +1022,7 @@ class Framework extends Field implements Dependable,Eventable {
     $container->setInstance('event_dispatch',$this->getEventDispatch());
     $container->setInstance('cache',$this->getCache());
     $container->setInstance('profile',$this->getProfile());
+    $container->setInstance('config',$this->getConfig());
     
   }//method
   
@@ -1030,6 +1078,20 @@ class Framework extends Field implements Dependable,Eventable {
   }//method
   
   /**
+   *  just to make it a little easier to broadcast the event, and to also be able to 
+   *  easily override event broadcast for this entire class
+   *  
+   *  @since  8-25-11            
+   *  @return Event
+   */
+  public function broadcastEvent(Event $event){
+  
+    $dispatch = $this->getEventDispatch();
+    return empty($dispatch) ? $event : $dispatch->broadcast($event);
+  
+  }//method
+  
+  /**
    *  get the profile instance
    *  
    *  @see  profileStart(), profileStop()   
@@ -1048,16 +1110,34 @@ class Framework extends Field implements Dependable,Eventable {
   }//method
   
   /**
-   *  just to make it a little easier to broadcast the event, and to also be able to 
-   *  easily override event broadcast for this entire class
-   *  
-   *  @since  8-25-11            
-   *  @return Event
+   *  get the config object
+   *
+   *  @Param  \Montage\Config\FrameworkConfig $config
    */
-  public function broadcastEvent(Event $event){
+  public function setConfig(FrameworkConfig $config){
   
-    $dispatch = $this->getEventDispatch();
-    return empty($dispatch) ? $event : $dispatch->broadcast($event);
+    $this->instance_map['config'] = $config;
+    
+  }//method
+  
+  /**
+   *  create or return the framework config object
+   *  
+   *  @see  http://teddziuba.com/2011/06/most-important-concept-systems-design.html
+   *    the framework config should be our Single Point of Truth
+   *      
+   *  @since  11-23-11
+   *  @return \Montage\Config\FrameworkConfig instance
+   */
+  protected function getConfig(){
+  
+    // canary...
+    if(isset($this->instance_map['config'])){ return $this->instance_map['config']; }//if
+
+    $instance = new FrameworkConfig();
+    $this->setConfig($instance);
+  
+    return $instance;
   
   }//method
   
@@ -1072,10 +1152,12 @@ class Framework extends Field implements Dependable,Eventable {
     // canary...
     if(isset($this->instance_map['cache'])){ return $this->instance_map['cache']; }//if
   
+    $config = $this->getConfig();
+  
     // create the caching object...
     $cache = new PHPCache();
-    $cache->setPath($this->getField('cache_path'));
-    $cache->setNamespace($this->getField('env'));
+    $cache->setPath($config->getField('cache_path'));
+    $cache->setNamespace($config->getField('env'));
     $this->instance_map['cache'] = $cache;
   
     return $cache;
@@ -1093,12 +1175,14 @@ class Framework extends Field implements Dependable,Eventable {
     // canary...
     if(isset($this->instance_map['reflection'])){ return $this->instance_map['reflection']; }//if
   
+    $config = $this->getConfig();
+  
     // create reflection, load the cache...
     $reflection = new Reflection();
     $reflection->setCache($this->getCache());
     $reflection->importCache();
     
-    $reflection->addPaths($this->getField('reflection_paths'));
+    $reflection->addPaths($config->getField('reflection_paths'));
     
     $this->instance_map['reflection'] = $reflection;
 
@@ -1117,20 +1201,22 @@ class Framework extends Field implements Dependable,Eventable {
    */
   protected function handlePaths(){
   
+    $config = $this->getConfig();
+  
     // canary...
-    $app_path = $this->getField('app_path');
+    $app_path = $config->getField('app_path');
     if(empty($app_path)){
-      throw new \UnexpectedValueException('->getField("app_path") failed');
+      throw new \UnexpectedValueException('$config->getField("app_path") failed');
     }//if
 
     $framework_path = new Path(__DIR__,'..','..');
-    $this->setField('framework_path',$framework_path);
+    $config->setField('framework_path',$framework_path);
     
-    if(!$this->hasField('cache_path')){
+    if(!$config->hasField('cache_path')){
       
       $path = new Path($app_path,'cache');
       $path->assure();
-      $this->setField('cache_path',$path);
+      $config->setField('cache_path',$path);
       
     }//if
     
@@ -1210,13 +1296,13 @@ class Framework extends Field implements Dependable,Eventable {
     $path = new Path($framework_path,'test');
     if($path->exists()){ $test_path_list[] = $path; }//if
   
-    $this->setField('reflection_paths',$reflection_path_list);
-    $this->setField('view_paths',$view_path_list);
-    $this->setField('vendor_paths',$vendor_path_list);
-    $this->setField('asset_paths',$assets_path_list);
-    $this->setField('plugin_paths',$plugins_path_list);
-    $this->setField('test_paths',$test_path_list);
-    $this->setField('config_paths',$config_path_list);
+    $config->setField('reflection_paths',$reflection_path_list);
+    $config->setField('view_paths',$view_path_list);
+    $config->setField('vendor_paths',$vendor_path_list);
+    $config->setField('asset_paths',$assets_path_list);
+    $config->setField('plugin_paths',$plugins_path_list);
+    $config->setField('test_paths',$test_path_list);
+    $config->setField('config_paths',$config_path_list);
 
   }//method
   

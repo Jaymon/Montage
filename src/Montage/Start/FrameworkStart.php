@@ -19,15 +19,7 @@ use Montage\Event\Event;
 
 class FrameworkStart extends Start {
 
-  /**
-   *  normally start class takes a FrameworkConfig instance but we override parent::__construct()
-   *  so we can create the FrameworkConfig instance in the handle() method of this class
-   */
-  public function __construct(){ parent::__construct(); }//method
-
   public function handle(){
-
-    $this->createFrameworkConfig();
     
     $this->handleError();
     
@@ -185,46 +177,6 @@ class FrameworkStart extends Start {
     // start/register the error handler if it hasn't been started...
     $container->getErrorHandler();
   
-  }//method
-  
-  /**
-   *  create the framework config
-   *
-   *  @see  http://teddziuba.com/2011/06/most-important-concept-systems-design.html
-   *    the framework config should be our Single Point of Truth from here on out   
-   *  
-   *  @since  10-28-11
-   */
-  protected function createFrameworkConfig(){
-
-    $container = $this->getContainer();
-    $event_dispatch = $this->getEventDispatch();
-    
-    $event_dispatch->listen(
-      'framework.filter.created:\Montage\Config\FrameworkConfig',
-      function(\Montage\Event\FilterEvent $event){
-
-        $instance = $event->getParam();
-        $container = $event->getField('container');
-
-        // move all the fields from the framework into the config...
-        $framework = $container->getFramework();
-        $instance->addFields($framework->getFields());
-        $framework->setFields(array());
-        
-        /* $instance->setField('env',$framework->getField('env'));
-        $instance->setField('debug_level',$framework->getField('debug_level'));
-        $instance->setField('app_path',$framework->getField('app_path'));
-        $instance->setField('framework_path',$framework->getField('framework_path'));
-        $instance->setField('plugin_paths',$framework->getField('plugin_paths',array()));
-        $instance->setField('cache_path',$framework->getField('cache_path'));
-        */
-        
-      }
-    );
-
-    $this->framework_config = $container->getConfig();
-
   }//method
 
 }//class
