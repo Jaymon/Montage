@@ -15,6 +15,7 @@ namespace Montage\Dependency;
 
 use ReflectionObject, ReflectionClass, ReflectionMethod, ReflectionParameter;
 use Montage\Dependency\Container;
+use Montage\Reflection\ReflectionFramework;
 
 class ReflectionContainer extends Container {
 
@@ -22,14 +23,16 @@ class ReflectionContainer extends Container {
    *  the reflection class is kept outside the {@link $instance_map} because it
    *  is needed for lots of things   
    *
-   *  @var  string  the passed in Reflection instances full class name   
+   *  @var  ReflectionFramework   
    */
   protected $reflection = null;
 
   /**
    *  create an instance of this class
+   *  
+   *  @param  Montage\Reflection\ReflectionFramework  $reflection
    */
-  public function __construct(Reflection $reflection){
+  public function __construct(ReflectionFramework $reflection){
   
     $this->reflection = $reflection;
     $this->setInstance('reflection',$reflection);

@@ -6,15 +6,14 @@
  *  Matcher::find() sounds strange, what about Resolve?  6-17-11 - I went with
  *  Select 
  *  
- *  @version 0.3
- *  @author Jay Marcyes {@link http://marcyes.com}
+ *  @version 0.4
+ *  @author Jay Marcyes
  *  @since 4-6-10
  *  @package montage
  ******************************************************************************/       
 namespace Montage\Controller;
 
-use Montage\Dependency\Reflection;
-use out;
+use Montage\Reflection\ReflectionFramework;
 
 class Select {
 
@@ -82,16 +81,16 @@ class Select {
   /**
    *  holds the information about what classes exist in the system
    *
-   *  @var  Reflection   
+   *  @var  \Montage\Reflection\ReflectionFramework
    */
   protected $reflection = null;
   
   /**
    *  create instance of this class
    *  
-   *  @param  Reflection  $reflection needed to be able to find a suitable controller class            
+   *  @param  \Montage\Reflection\ReflectionFramework $reflection needed to be able to find a suitable controller class            
    */
-  public function __construct(Reflection $reflection){
+  public function __construct(ReflectionFramework $reflection){
   
     $this->reflection = $reflection;
   

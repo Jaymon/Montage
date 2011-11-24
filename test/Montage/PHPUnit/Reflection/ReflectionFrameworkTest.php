@@ -3,7 +3,7 @@ namespace {
 
   include_once('out_class.php');
 
-  use Montage\Dependency\Reflection;
+  use Montage\Reflection\ReflectionFramework;
   
   class ReflectionTest extends \PHPUnit_Framework_TestCase {
   
@@ -23,20 +23,20 @@ namespace {
     
       self::$base_path = realpath(__DIR__.'/../../../..');
       self::$base_src_path = realpath(self::$base_path.'/src/Montage');
-      self::$base_fixture_path = realpath(self::$base_path.'/test/fixtures');
+      self::$base_fixture_path = realpath(self::$base_path.'/test/fixtures/Reflection');
     
       require_once(self::$base_path.'/Plugins/Utilities/src/Path.php');
       require_once(self::$base_src_path.'/Cache/Cacheable.php');
       require_once(self::$base_src_path.'/Cache/ObjectCache.php');
       
       require_once(self::$base_src_path.'/Reflection/ReflectionFile.php');
-      require_once(self::$base_src_path.'/Dependency/Reflection.php');
+      require_once(self::$base_src_path.'/Reflection/ReflectionFramework.php');
     
     }//method
     
     public function setUp(){
     
-      $this->instance = new Reflection();
+      $this->instance = new ReflectionFramework();
       $this->instance->addFile(__FILE__);
       
       
@@ -117,9 +117,9 @@ namespace {
     
       $reflection = $this->instance;
       
-      $reflection->addFile(self::$base_fixture_path.'/Dependency/Hija.php');
-      $reflection->addFile(self::$base_fixture_path.'/Dependency/Abuelo.php');
-      $reflection->addFile(self::$base_fixture_path.'/Dependency/Padre.php');
+      $reflection->addFile(self::$base_fixture_path.'/Hija.php');
+      $reflection->addFile(self::$base_fixture_path.'/Abuelo.php');
+      $reflection->addFile(self::$base_fixture_path.'/Padre.php');
       
       ///\out::i($reflection);
       

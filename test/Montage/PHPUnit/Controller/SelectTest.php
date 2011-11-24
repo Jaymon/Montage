@@ -4,7 +4,7 @@ namespace Montage\PHPUnit {
 
   require_once(__DIR__.'/../Test.php');
 
-  use Montage\Dependency\Reflection;
+  use Montage\Reflection\ReflectionFramework;
   use Montage\Controller\Select;
   
   class SelectTest extends Test {
@@ -13,7 +13,7 @@ namespace Montage\PHPUnit {
   
     public function setUp(){
     
-      $reflection = new Reflection();
+      $reflection = new ReflectionFramework();
       
       $reflection->addFile(__DIR__.'../../../../../src/Montage/Controller/Controllable.php');
       $reflection->addFile(__DIR__.'../../../../../src/Montage/Controller/Controller.php');

@@ -2,7 +2,7 @@
 /**
  *  handles deciding what classes that implement Assets
  *  
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes
  *  @since 9-26-11
  *  @package montage
@@ -10,7 +10,7 @@
  ******************************************************************************/       
 namespace Montage\Asset;
 
-use Montage\Dependency\Reflection;
+use Montage\Reflection\ReflectionFramework;
 
 class Select {
   
@@ -31,16 +31,16 @@ class Select {
   /**
    *  holds the information about what classes exist in the system
    *
-   *  @var  Reflection   
+   *  @var  \Montage\Reflection\ReflectionFramework
    */
   protected $reflection = null;
   
   /**
    *  create instance of this class
    *  
-   *  @param  Reflection  $reflection needed to be able to find suitable classes            
+   *  @param  \Montage\Reflection\ReflectionFramework $reflection needed to be able to find suitable classes            
    */
-  function __construct(Reflection $reflection){
+  function __construct(ReflectionFramework $reflection){
   
     $this->reflection = $reflection;
   

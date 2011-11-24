@@ -14,7 +14,7 @@
  *  The classes this class creates, that means these classes are harder to override and make
  *  the child class be automatically picked up, this is because 3 of those classes are used
  *  to make the Dependency Injection Container work:
- *    \Montage\Dependency\Reflection
+ *    \Montage\Reflection\ReflectionFramework
  *    \Montage\Event\Dispatch
  *    \Montage\Cache\Cache
  *    \Montage\Dependency\Container
@@ -35,11 +35,10 @@ use Profile;
 use Montage\Field\Field;
 use Montage\Config\FrameworkConfig;
 
-use Montage\Dependency\Reflection;
+use Montage\Reflection\ReflectionFramework;
 use Montage\Dependency\Container;
 use Montage\Dependency\Dependable;
 
-use Montage\Autoload\ReflectionAutoloader;
 use Montage\Autoload\FrameworkAutoloader;
 
 use Montage\Request\Requestable;
@@ -158,6 +157,9 @@ class Framework extends Field implements Dependable,Eventable {
       // collect all the paths we're going to use...
       $this->handlePaths();
   
+      // handle loading the config files...
+      $this->handleConfig();
+  
       // start the autoloaders...
       // this is the first thing done because it is needed to make sure all the classes
       // can be found
@@ -165,9 +167,6 @@ class Framework extends Field implements Dependable,Eventable {
       
       // handle any preliminary event stuff like creating the Event Dispatcher
       $this->handleEvent();
-      
-      // handle loading the config files...
-      $this->handleConfig();
   
       // start the START classes...
       // this comes about as early as I can make it since it is key to making sure
@@ -1162,7 +1161,7 @@ class Framework extends Field implements Dependable,Eventable {
     $config = $this->getConfig();
   
     // create reflection, load the cache...
-    $reflection = new Reflection();
+    $reflection = new ReflectionFramework();
     $reflection->setCache($this->getCache());
     $reflection->importCache();
     

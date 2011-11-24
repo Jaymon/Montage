@@ -20,22 +20,21 @@
  *  
  *  @todo this can be renamed ReflectionRelationship     
  *
- *  @version 0.6
+ *  @version 0.7
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 12-28-09
  *  @package montage 
  ******************************************************************************/
-namespace Montage\Dependency;
+namespace Montage\Reflection;
 
 use ReflectionClass;
 use Montage\Reflection\ReflectionFile;
 use Path;
 use Montage\Cache\ObjectCache;
-use out;
 
 use Montage\Cache;
 
-class Reflection extends ObjectCache implements \Reflector {
+class ReflectionFramework extends ObjectCache implements \Reflector {
 
   /**
    *  hold all the classes that could possibly be loadable

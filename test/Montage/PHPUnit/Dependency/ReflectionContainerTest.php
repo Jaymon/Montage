@@ -23,7 +23,7 @@ namespace Montage\PHPUnit {
   require_once($base.'/src/Montage/Cache/PHPCache.php');
   
   require_once($base.'/src/Montage/Reflection/ReflectionFile.php');
-  require_once($base.'/src/Montage/Dependency/Reflection.php');
+  require_once($base.'/src/Montage/Reflection/ReflectionFramework.php');
   
   require_once($base.'/src/Montage/Dependency/Containable.php');
   require_once($base.'/src/Montage/Dependency/Container.php');
@@ -32,7 +32,7 @@ namespace Montage\PHPUnit {
   require_once('out_class.php');
   
   ///use PHPUnit\FrameworkTestCase;
-  use Montage\Dependency\Reflection;
+  use Montage\Reflection\ReflectionFramework;
   use Montage\Dependency\ReflectionContainer;
   
   class ContainerTest extends \PHPUnit_Framework_TestCase {
@@ -43,7 +43,7 @@ namespace Montage\PHPUnit {
   
     public function setUp(){
     
-      $this->reflection = new Reflection();
+      $this->reflection = new ReflectionFramework();
       $this->reflection->addFile(__FILE__);
       
       $this->container = new ReflectionContainer($this->reflection);
