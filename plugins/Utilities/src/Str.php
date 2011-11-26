@@ -467,20 +467,46 @@ class Str implements \ArrayAccess, \IteratorAggregate {
   }//method
   
   /**
-   *  true if the string contains any of the $words
+   *  true if the string contains any or all of the $words
    *
    *  @since  11-3-11
    *  @param  string|array  $words
+   *  @param  boolean $match_all  if true, all the $words have to be in the string   
    *  @return boolean         
    */
-  public function contains($words){
+  public function contains($words,$match_all = false){
   
     // sanity...
     if(empty($words)){ return false; }//if
   
-    list($word_regex) = $this->getWordRegex($words);
+    $ret_bool = false;
     
-    return preg_match($word_regex,$this->str) ? true : false;
+    if($match_all){
+    
+      $ret_bool = true;
+      $words = (array)$words;
+      foreach($words as $word){
+      
+        list($word_regex) = $this->getWordRegex($word);
+      
+        if(!preg_match($word_regex,$this->str)){
+        
+          $ret_bool = false;
+          break;
+        
+        }//if
+      
+      }//foreach
+    
+    }else{
+    
+      list($word_regex) = $this->getWordRegex($words);
+    
+      $ret_bool = preg_match($word_regex,$this->str) ? true : false;
+    
+    }//if/else
+  
+    return $ret_bool;
   
   }//method
   

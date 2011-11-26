@@ -23,7 +23,7 @@ class FrameworkContainer extends ReflectionContainer implements Eventable {
    */
   public function getAutoloader($params = array()){
   
-    return $this->findInstance('autoloader','\Montage\Autoload\StdAutoloader',$params);
+    return $this->findInstance('autoloader','\\Montage\\Autoload\\StdAutoloader',$params);
   
   }//method
 
@@ -35,7 +35,7 @@ class FrameworkContainer extends ReflectionContainer implements Eventable {
    */
   public function getProfile($params = array()){
   
-    return $this->findInstance('profile','\Profile',$params);
+    return $this->findInstance('profile','\\Profile',$params);
   
   }//method
 
@@ -47,7 +47,7 @@ class FrameworkContainer extends ReflectionContainer implements Eventable {
    */
   public function getErrorHandler($params = array()){
   
-    return $this->findInstance('error_handler','\Montage\Error',$params);
+    return $this->findInstance('error_handler','\\Montage\\Error',$params);
   
   }//method
 
@@ -59,7 +59,20 @@ class FrameworkContainer extends ReflectionContainer implements Eventable {
    */
   public function getSession($params = array()){
   
-    return $this->findInstance('session','\Montage\Session',$params);
+    return $this->findInstance('session','\\Montage\\Session',$params);
+  
+  }//method
+
+  /**
+   *  I seem to check for the session object a lot, because a lot of code is dependent
+   *  on having an active session, and so this method seems overdue    
+   *
+   *  @since  11-26-11
+   *  @return boolean
+   */
+  public function hasSession(){
+  
+    return $this->hasInstance('\\Montage\\Session');
   
   }//method
 
@@ -75,7 +88,7 @@ class FrameworkContainer extends ReflectionContainer implements Eventable {
    */
   public function getFramework($params = array()){
   
-    return $this->findInstance('framework','\Montage\Framework',$params);
+    return $this->findInstance('framework','\\Montage\\Framework',$params);
   
   }//method
 
@@ -86,7 +99,7 @@ class FrameworkContainer extends ReflectionContainer implements Eventable {
    */
   public function getUrl($params = array()){
   
-    return $this->findInstance('url','\Montage\Url',$params);
+    return $this->findInstance('url','\\Montage\\Url',$params);
   
   }//method
 
@@ -98,7 +111,7 @@ class FrameworkContainer extends ReflectionContainer implements Eventable {
    */
   public function getConfig($params = array()){
   
-    return $this->findInstance('config','\Montage\Config\FrameworkConfig',$params);
+    return $this->findInstance('config','\\Montage\\Config\\FrameworkConfig',$params);
   
   }//method
   
@@ -121,7 +134,7 @@ class FrameworkContainer extends ReflectionContainer implements Eventable {
    */
   public function getEventDispatch($params = array()){
   
-    return $this->findInstance('event_dispatch','\Montage\Event\Dispatch',$params);
+    return $this->findInstance('event_dispatch','\\Montage\\Event\\Dispatch',$params);
   
   }//method
   
@@ -150,7 +163,7 @@ class FrameworkContainer extends ReflectionContainer implements Eventable {
    */
   public function getRequest($params = array()){
   
-    return $this->findInstance('request','\Montage\Request\Requestable',$params);
+    return $this->findInstance('request','\\Montage\\Request\\Requestable',$params);
   
   }//method
   
@@ -162,7 +175,7 @@ class FrameworkContainer extends ReflectionContainer implements Eventable {
    */
   public function getResponse($params = array()){
   
-    return $this->findInstance('response','\Montage\Response\Response',$params);
+    return $this->findInstance('response','\\Montage\\Response\\Response',$params);
   
   }//method
   
@@ -173,7 +186,7 @@ class FrameworkContainer extends ReflectionContainer implements Eventable {
    */
   public function getControllerSelect($params = array()){
   
-    return $this->findInstance('controller_select','\Montage\Controller\Select',$params);
+    return $this->findInstance('controller_select','\\Montage\\Controller\\Select',$params);
   
   }//method
   
@@ -185,7 +198,7 @@ class FrameworkContainer extends ReflectionContainer implements Eventable {
    */
   public function getTemplate($params = array()){
     
-    return $this->findInstance('template','\Montage\Response\Template',$params);
+    return $this->findInstance('template','\\Montage\\Response\\Template',$params);
     
   }//method
   

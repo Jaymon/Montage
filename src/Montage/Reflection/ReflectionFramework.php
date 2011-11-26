@@ -18,7 +18,8 @@
  *  this class can be mostly left alone unless you want to set more class paths 
  *  (use {@link addPath()}) than what are used by default
  *  
- *  @todo this can be renamed ReflectionRelationship     
+ *  I thought about naming this class ReflectionRelationship instead, but I think
+ *  ReflectionFramework is more consistent with the rest of Montage 
  *
  *  @version 0.7
  *  @author Jay Marcyes {@link http://marcyes.com}
