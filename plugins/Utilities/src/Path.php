@@ -251,6 +251,8 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
   /**
    *  count all the descendants of the path that match $regex
    *  
+   *  would it be worthi using this? http://us2.php.net/manual/en/function.iterator-count.php
+   *      
    *  @since  6-20-11
    *  @param  string  $regex  a regex to match paths with
    *  @param  integer $depth  use 1 to get just immediate children, defaults to all depths      

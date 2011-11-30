@@ -52,6 +52,7 @@ use Montage\Event\Eventable;
 use Montage\Event\Dispatch as EventDispatch;
 
 // the files that needed to be included outside the montage specific autoloader...
+require_once(__DIR__.'/../../plugins/Utilities/src/CallbackFilterIterator.php');
 require_once(__DIR__.'/../../plugins/Utilities/src/Path.php');
 require_once(__DIR__.'/../../plugins/Utilities/src/Profile.php');
 
@@ -113,6 +114,7 @@ class Framework extends Field implements Dependable,Eventable {
       throw new \InvalidArgumentException('$app_path was empty, please set it to the root path of your app');
     }//if
     
+    // if anything changes right here, remember it needs to be changed in reset() also...
     $config = $this->getConfig();
     $config->setField('app_path',$app_path);
     $config->setField('env',$env);
@@ -141,7 +143,7 @@ class Framework extends Field implements Dependable,Eventable {
     if($this->is_ready){ return true; }//if
   
     $this->profileStart('Handle preHandle');
-  
+    
     $ret_mixed = true;
   
     // this needs to be the first thing done otherwise preHandle() will keep getting
@@ -159,7 +161,7 @@ class Framework extends Field implements Dependable,Eventable {
   
       // handle loading the config files...
       $this->handleConfig();
-  
+      
       // start the autoloaders...
       // this is the first thing done because it is needed to make sure all the classes
       // can be found
@@ -167,16 +169,17 @@ class Framework extends Field implements Dependable,Eventable {
       
       // handle any preliminary event stuff like creating the Event Dispatcher
       $this->handleEvent();
+
   
       // start the START classes...
       // this comes about as early as I can make it since it is key to making sure
       // singletons can be created right
       $this->handleStart();
-      
+
       // start the EVENT classes...
       // this comes after start so the event subscribe classes can get singletons 
       $this->handleEventSubcribe();
-      
+
       $event = new Event('framework.preHandle');
       $this->broadcastEvent($event);
       
@@ -187,6 +190,12 @@ class Framework extends Field implements Dependable,Eventable {
       // re-handle the request...
       $ret_mixed = $this->preHandle();
       
+    }catch(\Exception $e){
+    
+      // the framework never made it to being ready, so we can't reliably do any error handling
+      $this->is_ready = false;
+      throw $e;
+    
     }//try/catch
     
     $this->profileStop();
@@ -201,26 +210,39 @@ class Framework extends Field implements Dependable,Eventable {
    *  @since  8-3-11
    */
   public function reset(){
-    
-    $event = new InfoEvent('Framework reset');
-    $this->broadcastEvent($event);
+  
+    // we do all the events before reseting because at the end of this method nothing
+    // will be listening to events anymore
     
     $event = new Event('framework.reset');
+    $this->broadcastEvent($event);
+    
+    $event = new InfoEvent('Framework reset');
     $this->broadcastEvent($event);
     
     // de-register all the autoloaders this instance started...
     if($instances = $this->getField('autoload.instances')){
       
-      foreach($instances as $instance){
-        $instance->unregister();
-      }//foreach
+      foreach($instances as $instance){ $instance->unregister(); }//foreach
       
     }//if
     
     $this->is_ready = false;
     
+    // save config values we are going to need on any rerun
+    $config = $this->getConfig();
+    $config_field_map = array(
+      'app_path' => $config->getField('app_path'),
+      'env' => $config->getField('env'),
+      'debug_level' => $config->getField('debug_level')
+    );
+    
     // start all the objects over again...
     $this->instance_map = array();
+  
+    // now reset the config with the saved values...
+    $config = $this->getConfig();
+    $config->addFields($config_field_map);
   
   }//method
   
@@ -238,10 +260,9 @@ class Framework extends Field implements Dependable,Eventable {
   
     try{
     
-      $container = $this->getContainer();
-    
       $this->preHandle();
-
+    
+      $container = $this->getContainer();
       $request = $container->getRequest();
   
       // decide where the request should be forwarded to...
@@ -275,7 +296,7 @@ class Framework extends Field implements Dependable,Eventable {
       $this->broadcastEvent($event);
     
     }catch(\Exception $e){
-    
+
       $ret_mixed = $this->handleException($e);
     
     }//try/catch
@@ -295,7 +316,9 @@ class Framework extends Field implements Dependable,Eventable {
   
     $file_list = $this->getIncludes();
   
-    foreach($file_list as $file){ require($file); }//foreach
+    // we use require_once because this can be called more than once (framework resets, another
+    // Framework instance being created)
+    foreach($file_list as $file){ require_once($file); }//foreach
   
   }//method
 
@@ -872,6 +895,7 @@ class Framework extends Field implements Dependable,Eventable {
    */
   protected function handleException(\Exception $e){
 
+    // canary...
     $this->handleRecursion($e);
     
     $event = new InfoEvent('Handling Exception',array('e' => $e));
@@ -950,7 +974,18 @@ class Framework extends Field implements Dependable,Eventable {
       
     }catch(\Exception $e){
     
-      $ret_mixed = $this->handleException($e);
+      if($this->is_ready){
+    
+        $ret_mixed = $this->handleException($e);
+        
+      }else{
+      
+        // we failed to handle the exception and the framework isn't ready, so just throw
+        // the exception because there is a very high probability it will fail handling
+        // the exception again...
+        throw $e;
+      
+      }//if/else
     
     }//try/catch
   
@@ -1104,6 +1139,14 @@ class Framework extends Field implements Dependable,Eventable {
   }//method
   
   /**
+   *  set the config instance this framework will use
+   *  
+   *  @since  11-26-11
+   *  @param  \Montage\Config\FrameworkConfig $config
+   */
+  public function setConfig(FrameworkConfig $config){ $this->instance_map['config'] = $config; }//method
+  
+  /**
    *  create or return the framework config object
    *  
    *  @see  http://teddziuba.com/2011/06/most-important-concept-systems-design.html
@@ -1118,7 +1161,7 @@ class Framework extends Field implements Dependable,Eventable {
     if(isset($this->instance_map['config'])){ return $this->instance_map['config']; }//if
 
     $config = new FrameworkConfig();
-    $this->instance_map['config'] = $config;
+    $this->setConfig($config);
   
     return $config;
   

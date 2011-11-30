@@ -245,6 +245,11 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
     
       // first check cache...
       $class_map = $this->getClassInfo($class_name);
+      
+      if(empty($class_map['key'])){
+        throw new \UnexpectedValueException('the returned class map does not have a key field');
+      }//if
+      
       $key = $class_map['key'];
       
       if(isset($class_map['class_found'])){
@@ -372,10 +377,16 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
   }//method
   
   /**
-   *
+   *  add mutliple paths to be reflected
+   *   
    *  @since  6-27-11
+   *  @param  array $path_list  an array of paths
+   *  @return integer how many files from the paths were added      
    */
   public function addPaths(array $path_list){
+  
+    // canary...
+    if(empty($path_list)){ throw new \InvalidArgumentException('$path_list was empty'); }//if
   
     $ret_count = 0;
     foreach($path_list as $path){
@@ -386,7 +397,19 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
   
   }//method
   
+  /**
+   *  add a path to be reflected
+   *   
+   *  @since  6-27-11
+   *  @param  string|\Path $path  the path
+   *  @return integer how many files from the path were added      
+   */
   public function addPath($path){
+  
+    // canary...
+    if(empty($path)){
+      throw new \InvalidArgumentException('$path was empty');
+    }//if
   
     $regex = '#(?:php(?:\d+)?|inc|phtml)$#i';
   
@@ -394,7 +417,9 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
     if(!($path instanceof Path)){
     
       $path = new Path($path);
-      if(!$path->exists()){ return 0; }//if
+      if(!$path->isDir()){
+        throw new \InvalidArgumentException(sprintf('$path "%s" was not a valid directory',$path));
+      }//if
 
     }//if
     if($this->hasPath($path)){
