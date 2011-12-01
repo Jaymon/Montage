@@ -96,6 +96,16 @@ class Framework extends Field implements Dependable,Eventable {
    *  @var  boolean
    */
   protected $is_ready = false;
+  
+  protected $config_class_name = 'Montage\\Config\\FrameworkConfig';
+  
+  protected $reflection_class_name = 'Montage\\Reflection\\ReflectionFramework';
+  
+  protected $cache_class_name = 'Montage\\Cache\\PhpCache';
+  
+  protected $event_dispatch_class_name = 'Montage\\Event\\Dispatch';
+  
+  protected $profile_class_name = 'Profile';
 
   /**
    *  create this object
@@ -1099,7 +1109,7 @@ class Framework extends Field implements Dependable,Eventable {
     // canary...
     if(isset($this->instance_map['event_dispatch'])){ return $this->instance_map['event_dispatch']; }//if
   
-    $event_dispatch = new EventDispatch();
+    $event_dispatch = new $this->event_dispatch_class_name();
     $this->setEventDispatch($event_dispatch);
     
     return $event_dispatch;
@@ -1131,7 +1141,7 @@ class Framework extends Field implements Dependable,Eventable {
   
     if(isset($this->instance_map['profile'])){ return $this->instance_map['profile']; }//if
     
-    $profile = new Profile();
+    $profile = new $this->profile_class_name();
     $this->instance_map['profile'] = $profile;
     
     return $profile;
@@ -1160,7 +1170,7 @@ class Framework extends Field implements Dependable,Eventable {
     // canary...
     if(isset($this->instance_map['config'])){ return $this->instance_map['config']; }//if
 
-    $config = new FrameworkConfig();
+    $config = new $this->config_class_name();
     $this->setConfig($config);
   
     return $config;
@@ -1181,7 +1191,7 @@ class Framework extends Field implements Dependable,Eventable {
     $config = $this->getConfig();
   
     // create the caching object...
-    $cache = new PHPCache();
+    $cache = new $this->cache_class_name();
     $cache->setPath($config->getField('cache_path'));
     $cache->setNamespace($config->getField('env'));
     $this->instance_map['cache'] = $cache;
@@ -1204,7 +1214,7 @@ class Framework extends Field implements Dependable,Eventable {
     $config = $this->getConfig();
   
     // create reflection, load the cache...
-    $reflection = new ReflectionFramework();
+    $reflection = new $this->reflection_class_name();
     $reflection->setCache($this->getCache());
     $reflection->importCache();
     
