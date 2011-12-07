@@ -90,6 +90,8 @@ class Framework extends Field implements Dependable,Eventable,Cacheable {
    */
   protected $instance_map = array();
   
+  protected $instance_state_map = array();
+  
   /**
    *  true if instance is ready to {@link handle()} a request
    * 
@@ -103,7 +105,7 @@ class Framework extends Field implements Dependable,Eventable,Cacheable {
   
   protected $reflection_class_name = 'Montage\\Reflection\\ReflectionFramework';
   
-  protected $cache_class_name = 'Montage\\Cache\\Cache'; // 'Montage\\Cache\\PhpCache';
+  protected $cache_class_name = 'Montage\\Cache\\PhpCache'; // 'Montage\\Cache\\Cache';
   
   protected $event_dispatch_class_name = 'Montage\\Event\\Dispatch';
   
@@ -1200,7 +1202,7 @@ class Framework extends Field implements Dependable,Eventable,Cacheable {
   
     foreach($instance_key_list as $instance_key){
     
-      $cache_map[$instance_key] = $this->instance_map[$instance_key];
+      $cache_map[$instance_key] = $this->instance_map[$instance_key]->exportState();
     
     }//foreach
     
@@ -1221,13 +1223,9 @@ class Framework extends Field implements Dependable,Eventable,Cacheable {
     // canary, if no cache then don't try and persist...
     if(empty($cache)){ return false; }//if
 
-    $cache_map = $cache->get($this->cacheName());
-    if(!empty($cache_map)){
+    $this->instance_state_map = $cache->get($this->cacheName());
+    if(empty($this->instance_state_map)){ $this->instance_state_map = array(); }//if
     
-      $this->instance_map = array_merge($this->instance_map,$cache_map);
-      
-    }//if
-  
     return true;
   
   }//method
@@ -1293,6 +1291,13 @@ class Framework extends Field implements Dependable,Eventable,Cacheable {
   
     // create reflection, load the cache...
     $reflection = new $this->reflection_class_name();
+    
+    if(isset($this->instance_state_map['reflection'])){
+    
+      $reflection->importState($this->instance_state_map['reflection']);
+    
+    }//if
+    
     $reflection->addPaths($config->getField('reflection_paths',array()));
     
     $this->instance_map['reflection'] = $reflection;
@@ -1318,6 +1323,13 @@ class Framework extends Field implements Dependable,Eventable,Cacheable {
     $config = $this->getConfig();
     
     $sal = $container->getAutoloader();
+    
+    if(isset($this->instance_state_map['autoloader'])){
+    
+      $sal->importState($this->instance_state_map['autoloader']);
+    
+    }//if
+    
     $sal->addPaths($config->getField('reflection_paths',array()));
     $sal->addPaths($config->getField('vendor_paths',array()));
     

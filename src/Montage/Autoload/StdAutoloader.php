@@ -35,7 +35,9 @@ use Montage\Autoload\Autoloader;
 use Path;
 use Montage\Reflection\ReflectionFile;
 
-class StdAutoloader extends Autoloader {
+use Montage\Cache\Stateable;
+
+class StdAutoloader extends Autoloader implements Stateable {
 
   /**
    *  holds the user submitted paths
@@ -125,6 +127,63 @@ class StdAutoloader extends Autoloader {
 
     }//if
   
+  }//method
+  
+  /**
+   *  return true if the internal state has been changed since the object was instantiated
+   *  or since importState has been called   
+   *
+   *  @return boolean
+   */
+  public function changedState(){ return $this->export_cache; }//method
+
+  /**
+   *  return a hash of the current state of this object's internal state
+   *  
+   *  the returned value should be compatible with {@link importState()} to return
+   *  the object to the state it was in when this method was called         
+   *
+   *  @return array
+   */
+  public function exportState(){
+  
+    $param_name_list = $this->__sleep();
+    $state_map = array();
+    foreach($param_name_list as $param_name){
+    
+      if(isset($this->{$param_name})){
+    
+        $state_map[$param_name] = $this->{$param_name};
+    
+      }//if
+    
+    }//foreach
+  
+    return $state_map;
+  
+  }//method
+  
+  /**
+   *  re-populate the params of the object instance with the param values that were cached
+   *  with {@link exportState()}   
+   *  
+   *  @param  array $state_map  a hash of the cached params
+   *  @param  boolean $trust_state  true if this state can be completely trusted   
+   *  @return boolean
+   */
+  public function importState(array $state_map = array(),$trust_state = false){
+  
+    // canery
+    if(empty($state_map)){ return false; }//if
+  
+    foreach($state_map as $param_name => $param_val){
+    
+      $this->{$param_name} = $param_val;
+    
+    }//foreach
+    
+    return true;
+    
   }//method
   
   /**
