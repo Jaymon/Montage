@@ -60,6 +60,9 @@ class PHPCache extends Cache {
   /**
    *  get a native php code value for $val
    *  
+   *  var_export($val,true) seemed to be buggy for me and had some limitations so
+   *  I went custom             
+   *  
    *  @param  mixed $val
    *  @param  string  $arr_prefix how much whitespace an array should have   
    *  @return string

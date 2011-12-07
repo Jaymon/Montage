@@ -35,6 +35,8 @@ use Profile;
 use Montage\Field\Field;
 use Montage\Config\FrameworkConfig;
 
+use Montage\Cache\Cacheable;
+
 use Montage\Reflection\ReflectionFramework;
 use Montage\Dependency\Container;
 use Montage\Dependency\Dependable;
@@ -64,7 +66,7 @@ require_once(__DIR__.'/Autoload/FrameworkAutoloader.php');
 $fal = new FrameworkAutoloader('Montage',realpath(__DIR__.'/..'));
 $fal->register();
 
-class Framework extends Field implements Dependable,Eventable {
+class Framework extends Field implements Dependable,Eventable,Cacheable {
 
   const DEBUG_OFF = 0;
   const DEBUG = 1;
@@ -101,7 +103,7 @@ class Framework extends Field implements Dependable,Eventable {
   
   protected $reflection_class_name = 'Montage\\Reflection\\ReflectionFramework';
   
-  protected $cache_class_name = 'Montage\\Cache\\PhpCache';
+  protected $cache_class_name = 'Montage\\Cache\\Cache'; // 'Montage\\Cache\\PhpCache';
   
   protected $event_dispatch_class_name = 'Montage\\Event\\Dispatch';
   
@@ -168,6 +170,8 @@ class Framework extends Field implements Dependable,Eventable {
     
       // collect all the paths we're going to use...
       $this->handlePaths();
+  
+      $cache = $this->importCache();
   
       // handle loading the config files...
       $this->handleConfig();
@@ -555,17 +559,10 @@ class Framework extends Field implements Dependable,Eventable {
   protected function handleAutoload(){
   
     $container = $this->getContainer();
-    $config = $this->getConfig();
     $instances = new \SplObjectStorage();
     
     // create the standard autoloader...
-    if($sal = $container->getAutoloader()){
-    
-      $sal->addPaths($config->getField('reflection_paths',array()));
-      $sal->addPaths($config->getField('vendor_paths',array()));
-      
-      $sal->setCache($this->getCache());
-      $sal->importCache();
+    if($sal = $this->getAutoloader()){
       
       $sal->register();
       $instances->attach($sal);
@@ -1178,12 +1175,93 @@ class Framework extends Field implements Dependable,Eventable {
   }//method
   
   /**
+   *  get the name of the cache
+   *
+   *  @return string    
+   */
+  public function cacheName(){ return get_class($this); }//method
+  
+  /**
+   *  using the Cache instance from {@link getCache()} cache the params with names
+   *  returned from {@link cacheParams()}   
+   *
+   *  @return boolean   
+   */
+  public function exportCache(){
+  
+    $cache = $this->getCache();
+  
+    // canary, if no cache then don't try and persist...
+    if(empty($cache)){ return false; }//if
+  
+    $cache_map = array();
+    $container = $this->getContainer();
+    $instance_key_list = array('reflection','autoloader');
+  
+    foreach($instance_key_list as $instance_key){
+    
+      $cache_map[$instance_key] = $this->instance_map[$instance_key];
+    
+    }//foreach
+    
+    return ($cache->set($this->cacheName(),$cache_map) > 0) ? true : false;
+    
+  }//method
+  
+  /**
+   *  import the cached params and re-populate the params of the object instance
+   *  with the param values that were cached
+   *  
+   *  @return boolean      
+   */
+  public function importCache(){
+  
+    $cache = $this->getCache();
+  
+    // canary, if no cache then don't try and persist...
+    if(empty($cache)){ return false; }//if
+
+    $cache_map = $cache->get($this->cacheName());
+    if(!empty($cache_map)){
+    
+      $this->instance_map = array_merge($this->instance_map,$cache_map);
+      
+    }//if
+  
+    return true;
+  
+  }//method
+  
+  /**
+   *  delete the stored cache
+   *  
+   *  @return boolean      
+   */
+  public function killCache(){
+  
+    $cache = $this->getCache();
+    if(empty($cache)){ return false; }//if
+  
+    return $cache->kill($this->cacheName());
+  
+  }//method
+  
+  /**
+   *  set the object that will do the caching for any class that implements this interface
+   *  
+   *  @param  Montage\Cache $cache  the Cache instance
+   */
+  public function setCache(\Montage\Cache\Cache $cache = null){
+    $this->instance_map['cache'] = $cache;
+  }//method
+  
+  /**
    *  create or return the caching object
    *  
    *  @since  7-6-11
    *  @return Montage\Cache\Cacheable instance
    */
-  protected function getCache(){
+  public function getCache(){
   
     // canary...
     if(isset($this->instance_map['cache'])){ return $this->instance_map['cache']; }//if
@@ -1194,7 +1272,7 @@ class Framework extends Field implements Dependable,Eventable {
     $cache = new $this->cache_class_name();
     $cache->setPath($config->getField('cache_path'));
     $cache->setNamespace($config->getField('env'));
-    $this->instance_map['cache'] = $cache;
+    $this->setCache($cache);
   
     return $cache;
   
@@ -1215,14 +1293,37 @@ class Framework extends Field implements Dependable,Eventable {
   
     // create reflection, load the cache...
     $reflection = new $this->reflection_class_name();
-    $reflection->setCache($this->getCache());
-    $reflection->importCache();
-    
     $reflection->addPaths($config->getField('reflection_paths',array()));
     
     $this->instance_map['reflection'] = $reflection;
 
     return $reflection;
+  
+  }//method
+  
+  /**
+   *  get the main autoloader
+   *  
+   *  this is only here because the autoloader is cached
+   *  
+   *  @since  12-6-11
+   *  @return \Montage\Autoload\StdAutoloader
+   */
+  protected function getAutoloader(){
+  
+    // canary...
+    if(isset($this->instance_map['autoloader'])){ return $this->instance_map['autoloader']; }//if
+  
+    $container = $this->getContainer();
+    $config = $this->getConfig();
+    
+    $sal = $container->getAutoloader();
+    $sal->addPaths($config->getField('reflection_paths',array()));
+    $sal->addPaths($config->getField('vendor_paths',array()));
+    
+    $this->instance_map['autoloader'] = $sal;
+    
+    return $sal;
   
   }//method
   
@@ -1385,6 +1486,20 @@ class Framework extends Field implements Dependable,Eventable {
     
     $profiler = $this->getProfile();
     return $profiler->stop();
+  
+  }//method
+  
+  public function __destruct(){
+  
+    try{
+  
+      $cache = $this->exportCache();
+      
+    }catch(\Exception $e){
+    
+      \out::e($e);
+    
+    }
   
   }//method
    

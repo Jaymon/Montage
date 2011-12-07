@@ -2,8 +2,8 @@
 /**
  *  any class can implement this interface and then be able to cache itself
  *  
- *  @version 0.1
- *  @author Jay Marcyes {@link http://marcyes.com}
+ *  @version 0.2
+ *  @author Jay Marcyes
  *  @since 6-22-11
  *  @package montage 
  ******************************************************************************/
@@ -31,13 +31,6 @@ interface Cacheable {
    *  @return string    
    */
   public function cacheName();
-
-  /**
-   *  get the name of the params that should be cached
-   *
-   *  @return array an array of the param names that should be cached    
-   */
-  public function cacheParams();
 
   /**
    *  using the Cache instance from {@link getCache()} cache the params with names

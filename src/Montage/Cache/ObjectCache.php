@@ -51,9 +51,14 @@ class ObjectCache implements Cacheable {
   /**
    *  get the name of the params that should be cached
    *
+   *  this was removed from the interface because it isn't really required to make
+   *  the interface work, it's just a great helper method to make this base class
+   *  a little easier to integrate, but other classes that are just going to implement
+   *  the interface don't really need it since they have to define exportCache anyway         
+   *      
    *  @return array an array of the param names that should be cached    
    */
-  public function cacheParams(){ return array_keys(get_object_vars($this)); }//method
+  public function __sleep(){ return array_keys(get_object_vars($this)); }//method
 
 
   /**
@@ -69,7 +74,7 @@ class ObjectCache implements Cacheable {
     // canary, if no cache then don't try and persist...
     if(empty($cache)){ return false; }//if
   
-    $param_name_list = $this->cacheParams();
+    $param_name_list = $this->__sleep();
     
     $cache_map = array();
     foreach($param_name_list as $param_name){

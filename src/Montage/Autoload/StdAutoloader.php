@@ -33,17 +33,9 @@ namespace Montage\Autoload;
 
 use Montage\Autoload\Autoloader;
 use Path;
-use Montage\Cache\Cacheable;
 use Montage\Reflection\ReflectionFile;
 
-class StdAutoloader extends Autoloader implements Cacheable {
-
-  /**
-   *  holds the cache object
-   *  
-   *  @var  Montage\Cache\Cache
-   */
-  protected $cache = null;
+class StdAutoloader extends Autoloader {
 
   /**
    *  holds the user submitted paths
@@ -63,6 +55,14 @@ class StdAutoloader extends Autoloader implements Cacheable {
   protected $class_map = array();
   
   protected $export_cache = false;
+  
+  /**
+   *  when this object is serialized, we don't need everything
+   *
+   *  @since  12-6-11   
+   *  @return array   
+   */
+  public function __sleep(){ return array('class_map'); }//method
   
   /**
    *  get all the user submitted paths
@@ -360,98 +360,6 @@ class StdAutoloader extends Autoloader implements Cacheable {
       'handlePathScan', // do a brute-force scan of all internal instance paths looking for the class
       'handleIncludePathScan' // do a brute-force of include paths (super super slow)
     );
-  
-  }//method
-  
-  /**
-   *  set the object that will do the caching for any class that implements this interface
-   *  
-   *  @param  Montage\Cache $cache  the Cache instance
-   */
-  public function setCache(\Montage\Cache\Cache $cache = null){
-    
-    $this->cache = $cache;
-    
-  }//method
-  
-  /**
-   *  get the caching object
-   *  
-   *  @return Montage\Cache\Cache
-   */
-  public function getCache(){ return $this->cache; }//method
-
-  /**
-   *  get the name of the cache
-   *
-   *  @return string    
-   */
-  public function cacheName(){ return get_class($this); }//method
-  
-  /**
-   *  get the name of the params that should be cached
-   *
-   *  @return array an array of the param names that should be cached    
-   */
-  public function cacheParams(){ return array('class_map'); }//method
-
-  /**
-   *  using the Cache instance from {@link getCache()} cache the params with names
-   *  returned from {@link cacheParams()}   
-   *
-   *  @return boolean   
-   */
-  public function exportCache(){
-  
-    $cache = $this->getCache();
-  
-    // canary, if no cache then don't try and persist...
-    if(empty($cache)){ return false; }//if
-  
-    return ($cache->set($this->cacheName(),$this->class_map) > 0) ? true : false;
-    
-  }//method
-  
-  /**
-   *  import the cached params and re-populate the params of the object instance
-   *  with the param values that were cached
-   *  
-   *  @return boolean      
-   */
-  public function importCache(){
-  
-    $cache = $this->getCache();
-  
-    // canary, if no cache then don't try and persist...
-    if(empty($cache)){ return false; }//if
-
-    if($cache_map = $cache->get($this->cacheName())){
-    
-      $this->class_map = $cache_map;
-    
-    }//if
-  
-    return true;
-  
-  }//method
-  
-  /**
-   *  delete the stored cache
-   *  
-   *  @return boolean      
-   */
-  public function killCache(){
-  
-    $cache = $this->getCache();
-    if(empty($cache)){ return false; }//if
-  
-    return $cache->kill($this->cacheName());
-  
-  }//method
-  
-  public function __destruct(){
-  
-    if($this->export_cache){ $this->exportCache(); }//if
   
   }//method
 

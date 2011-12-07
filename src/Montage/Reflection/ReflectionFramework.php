@@ -31,11 +31,8 @@ namespace Montage\Reflection;
 use ReflectionClass;
 use Montage\Reflection\ReflectionFile;
 use Path;
-use Montage\Cache\ObjectCache;
 
-use Montage\Cache;
-
-class ReflectionFramework extends ObjectCache implements \Reflector {
+class ReflectionFramework implements \Reflector {
 
   /**
    *  hold all the classes that could possibly be loadable
@@ -74,12 +71,21 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
   protected $path_map = array('files' => array(),'folders' => array());
   
   /**
-   *  whether this class's cache has been reloaded or not
+   *  whether the cache has been reloaded or not
    *  
    *  @see  reload()
    *  @var  boolean
    */
   protected $reloaded = false;
+  
+  /**
+   *  currently unused, a relic from when this extended ObjectCache, but I want
+   *  to keep it in here for a bit so I still know the trigger points for when the
+   *  cache should be updated      
+   *
+   *  @var  boolean   
+   */
+  protected $export_cache = true;
   
   public static function export(){ return serialize($this); }//method
   public function __toString(){ return spl_object_hash($this); }//method
@@ -203,7 +209,7 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
       // cache result, this slows down the first request but converts other requests
       // from around ~7ms to .1ms
       $this->children_class_map[$key] = $ret_list;
-      $this->export_cache = true; ///$this->exportCache();
+      $this->export_cache = true;
       
       
     }//if/else
@@ -368,7 +374,7 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
   
     if($ret_count > 0){
     
-      $this->export_cache = true; ///$this->exportCache();
+      $this->export_cache = true;
       
     }//if
       
@@ -445,7 +451,7 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
     }//foreach
 
     $this->path_map['folders'][(string)$path] = $subpath_count;
-    $this->export_cache = true; ///$this->exportCache();
+    $this->export_cache = true;
     return $ret_count;
   
   }//method
@@ -509,7 +515,7 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
     
     }//if/else
     
-    $this->export_cache = true; ///$this->exportCache(); // update cache
+    $this->export_cache = true; // update cache
     
     return true;
   
@@ -819,15 +825,6 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
     
     return true;
   
-  }//method
-  
-  /**
-   *  get the name of the params that should be cached
-   *
-   *  @return array an array of the param names that should be cached    
-   */
-  public function cacheParams(){
-    return array('class_map','parent_class_map','path_map','children_class_map');
   }//method
   
   /**
