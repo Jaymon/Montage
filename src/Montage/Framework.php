@@ -36,6 +36,7 @@ use Montage\Field\Field;
 use Montage\Config\FrameworkConfig;
 
 use Montage\Cache\Cacheable;
+use Montage\Cache\Stateable;
 
 use Montage\Reflection\ReflectionFramework;
 use Montage\Dependency\Container;
@@ -172,8 +173,9 @@ class Framework extends Field implements Dependable,Eventable,Cacheable {
     
       // collect all the paths we're going to use...
       $this->handlePaths();
-  
-      $cache = $this->importCache();
+      
+      // we do this here because the cache needs the cache path, which is added in handlePaths()
+      $this->importCache();
   
       // handle loading the config files...
       $this->handleConfig();
@@ -498,6 +500,28 @@ class Framework extends Field implements Dependable,Eventable,Cacheable {
     // output the template response to the screen...
     return $template->handle();
 
+  }//method
+  
+  /**
+   *  handle setting the state found at $key into the $instance
+   *
+   *  @since  12-7-11
+   *  @param  string  $key  the key of the {@link $instance_state_map} to use
+   *  @param  \Montage\Cache\Stateable  $instance the object instance whose state is being restored         
+   */
+  protected function handleState($key,Stateable $instance){
+  
+    // canary...
+    if(!isset($this->instance_state_map[$key])){ return $instance; }//if
+  
+    // set the state
+    $instance->importState($this->instance_state_map[$key]);
+    
+    // we don't need 2 copies
+    unset($this->instance_state_map[$key]);
+  
+    return $instance;
+  
   }//method
   
   /**
@@ -1056,7 +1080,6 @@ class Framework extends Field implements Dependable,Eventable,Cacheable {
     $container->setInstance('framework',$this);
     
     // set the container's other dependencies (none of these can be created by the container)...
-    // we don't use setEventDispatch() here to keep compatibility with alternate containers
     $container->setInstance('event_dispatch',$this->getEventDispatch());
     $container->setInstance('cache',$this->getCache());
     $container->setInstance('profile',$this->getProfile());
@@ -1291,13 +1314,7 @@ class Framework extends Field implements Dependable,Eventable,Cacheable {
   
     // create reflection, load the cache...
     $reflection = new $this->reflection_class_name();
-    
-    if(isset($this->instance_state_map['reflection'])){
-    
-      $reflection->importState($this->instance_state_map['reflection']);
-    
-    }//if
-    
+    $this->handleState('reflection',$reflection);
     $reflection->addPaths($config->getField('reflection_paths',array()));
     
     $this->instance_map['reflection'] = $reflection;
@@ -1323,12 +1340,7 @@ class Framework extends Field implements Dependable,Eventable,Cacheable {
     $config = $this->getConfig();
     
     $sal = $container->getAutoloader();
-    
-    if(isset($this->instance_state_map['autoloader'])){
-    
-      $sal->importState($this->instance_state_map['autoloader']);
-    
-    }//if
+    $this->handleState('autoloader',$sal);
     
     $sal->addPaths($config->getField('reflection_paths',array()));
     $sal->addPaths($config->getField('vendor_paths',array()));
@@ -1501,6 +1513,11 @@ class Framework extends Field implements Dependable,Eventable,Cacheable {
   
   }//method
   
+  /**
+   *  destroy this object
+   *
+   *  @since  12-6-11         
+   */
   public function __destruct(){
   
     try{
@@ -1510,6 +1527,7 @@ class Framework extends Field implements Dependable,Eventable,Cacheable {
     }catch(\Exception $e){
     
       \out::e($e);
+      throw $e;
     
     }
   
