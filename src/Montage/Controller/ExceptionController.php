@@ -23,46 +23,18 @@
 namespace Montage\Controller;
 
 use Montage\Controller\Controller;
-use Montage\Exception\StopException;
 
 class ExceptionController extends Controller {
 
-  /**
-   *  set to false to have DIC ignore this dependency
-   *     
-   *  @optional   
-   *  @var  \Montage\Request\Request
-   */
-  public $request = null;
-  
-  /**
-   *  set to false to have DIC ignore this dependency
-   *  
-   *  @optional      
-   *  @var  \Montage\Response\Response
-   */
-  public $response = null;
-  
-  /**
-   *  set to false to have DIC ignore this dependency
-   *     
-   *  @optional   
-   *  @var  \Montage\Url
-   */
-  public $url = null;
-
-  /**
-   *  overrides the parent to get rid of the dependencies since this could be
-   *  called before all dependencies are sorted, which would cause a fatal error
-   *  since the dependencies can't be found
-   */
-  public function __construct(){}//method
-
   public function handleHttpException(\Exception $e){
   
-    \out::h();
-  
-  
+    if(!empty($this->response)){
+    
+      $this->response->setStatusCode($e->getCode(),$e->getStatusMessage());
+    
+    }//if
+    
+    return sprintf('%s - %s',$e->getCode(),$e->getStatusMessage());
   
   }//method
 

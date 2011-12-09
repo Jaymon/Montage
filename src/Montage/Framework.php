@@ -179,7 +179,6 @@ class Framework extends Field implements Dependable,Eventable {
       
       // handle any preliminary event stuff like creating the Event Dispatcher
       $this->handleEvent();
-
   
       // start the START classes...
       // this comes about as early as I can make it since it is key to making sure
@@ -615,7 +614,7 @@ class Framework extends Field implements Dependable,Eventable {
       
         $config_files = $config_path->createFileIterator($regex,1);
         foreach($config_files as $config_file){
-        
+
           $event = new InfoEvent(
             sprintf(
               'loading config path: %s',
@@ -875,6 +874,11 @@ class Framework extends Field implements Dependable,Eventable {
           
         }//if/else
         
+      }catch(\Montage\Exception\HttpException $e){
+      
+        // just rethrow http exceptions since a NotFoundException is just a fancy HttpException...
+        throw $e;
+      
       }catch(\Exception $e){
       
         throw new \Montage\Exception\NotFoundException(

@@ -181,6 +181,12 @@ class FieldAnnotation extends ParamAnnotation {
       $instance->setLabel($name);
     
     }//if/else
+    
+    if($val = $rdocblock->getTag('value')){
+    
+      $instance->setVal($val);
+      
+    }//if
   
     return $instance;
   

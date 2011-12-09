@@ -180,7 +180,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     if($this->exists()){ return true; }//if
   
     $path = $this->getPathname();
-  
+
     // make sure path isn't empty...
     if(empty($path)){
       throw new \InvalidArgumentException('cannot verify that an empty $path exists');
@@ -193,9 +193,10 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     
       // go through the whole tree and try and create the path one at a time...
       $ancestry_list = $this->getAncestry();
+      $ancestry_list[] = $this;
       foreach($ancestry_list as $apath){
       
-        if(!$apath->exists()){
+        if(!$apath->isDir()){
         
           if(!mkdir((string)$apath,0777)){
           

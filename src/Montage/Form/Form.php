@@ -26,6 +26,11 @@ use Montage\Field\GetFieldable;
 
 abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetFieldable {
 
+  /**
+   *  @var  Submit
+   */
+  public $submit = null;
+
   const METHOD_POST = 'post';
   const METHOD_GET = 'get';
 

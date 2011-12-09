@@ -307,21 +307,25 @@ class StdAutoloader extends Autoloader implements Cacheable {
     
       if(!($path instanceof Path)){ $path = new Path($path); }//if
     
-      $iterator = $path->createIterator($regex);
-      foreach($iterator as $file){
+      if($path->isDir()){
       
-        $rfile = new ReflectionFile($file->getPathname());
-        if($rfile->hasClass($class_name)){
+        $iterator = $path->createIterator($regex);
+        foreach($iterator as $file){
         
-          if($ret_bool = $this->req($class_name,$file_name,$file->getPathname())){
-        
-            break 2;
-            
+          $rfile = new ReflectionFile($file->getPathname());
+          if($rfile->hasClass($class_name)){
+          
+            if($ret_bool = $this->req($class_name,$file_name,$file->getPathname())){
+          
+              break 2;
+              
+            }//if
+          
           }//if
         
-        }//if
-      
-      }//foreach
+        }//foreach
+        
+      }//if
     
     }//foreach
     
@@ -387,13 +391,6 @@ class StdAutoloader extends Autoloader implements Cacheable {
    *  @return string    
    */
   public function cacheName(){ return get_class($this); }//method
-  
-  /**
-   *  get the name of the params that should be cached
-   *
-   *  @return array an array of the param names that should be cached    
-   */
-  public function cacheParams(){ return array('class_map'); }//method
 
   /**
    *  using the Cache instance from {@link getCache()} cache the params with names
@@ -432,20 +429,6 @@ class StdAutoloader extends Autoloader implements Cacheable {
     }//if
   
     return true;
-  
-  }//method
-  
-  /**
-   *  delete the stored cache
-   *  
-   *  @return boolean      
-   */
-  public function killCache(){
-  
-    $cache = $this->getCache();
-    if(empty($cache)){ return false; }//if
-  
-    return $cache->kill($this->cacheName());
   
   }//method
   

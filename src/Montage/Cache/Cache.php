@@ -104,9 +104,10 @@ class Cache {
    *  @return integer how many bytes were written
    */
   public function set($key,$val){
-    
+      
     $path = $this->getPath($key);
     $bytes = $path->set($this->encodeStr($val));
+      
     return $bytes;
     
   }//method

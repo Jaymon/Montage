@@ -258,7 +258,8 @@ class Select {
    */
   public function findException(\Exception $e){
     
-    $e_name = get_class($e);
+    $re = new \ReflectionObject($e);
+    $e_name = $re->getShortName();
     $class_name = '';
     $method_name = '';
     

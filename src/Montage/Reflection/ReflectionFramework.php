@@ -826,7 +826,7 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
    *
    *  @return array an array of the param names that should be cached    
    */
-  public function cacheParams(){
+  public function __sleep(){
     return array('class_map','parent_class_map','path_map','children_class_map');
   }//method
   

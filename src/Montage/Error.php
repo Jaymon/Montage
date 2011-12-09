@@ -59,6 +59,9 @@ class Error implements Eventable {
     // http://us2.php.net/set_error_handler
     set_error_handler(array($this,'handleRuntime'));
     register_shutdown_function(array($this,'handleFatal'));
+    
+    // http://us2.php.net/manual/en/function.set-exception-handler.php
+    ///set_exception_handler(array($this,'handleException'));
   
   }//method
   
@@ -171,7 +174,7 @@ class Error implements Eventable {
    *  @return boolean
    */
   public function handleException($e){
-  
+
     $error_map = array();
     $error_map['group'] = 'EXCEPTION';
     $error_map['type'] = $e->getCode();
@@ -193,9 +196,7 @@ class Error implements Eventable {
    *  @param  array $error_map  all the gathered info about the error
    */
   protected function handleError(array $error_map){
-  
-    \out::e($error_map);
-  
+
     // broadcast the error to anyone that is listening...
     $event = new Event('framework.error',$error_map);
     $this->broadcastEvent($event);

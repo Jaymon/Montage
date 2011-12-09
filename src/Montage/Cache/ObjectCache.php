@@ -2,8 +2,8 @@
 /**
  *  any class can extend this class and instantly have the ability to cache itself
  *  
- *  @version 0.2
- *  @author Jay Marcyes {@link http://marcyes.com}
+ *  @version 0.3
+ *  @author Jay Marcyes
  *  @since 6-22-11
  *  @package montage 
  ******************************************************************************/
@@ -51,9 +51,14 @@ class ObjectCache implements Cacheable {
   /**
    *  get the name of the params that should be cached
    *
+   *  this was removed from the interface because it isn't really required to make
+   *  the interface work, it's just a great helper method to make this base class
+   *  a little easier to integrate, but other classes that are just going to implement
+   *  the interface don't really need it since they have to define exportCache anyway         
+   *      
    *  @return array an array of the param names that should be cached    
    */
-  public function cacheParams(){ return array_keys(get_object_vars($this)); }//method
+  public function __sleep(){ return array_keys(get_object_vars($this)); }//method
 
 
   /**
@@ -69,7 +74,7 @@ class ObjectCache implements Cacheable {
     // canary, if no cache then don't try and persist...
     if(empty($cache)){ return false; }//if
   
-    $param_name_list = $this->cacheParams();
+    $param_name_list = $this->__sleep();
     
     $cache_map = array();
     foreach($param_name_list as $param_name){
@@ -78,11 +83,7 @@ class ObjectCache implements Cacheable {
     
         $cache_map[$param_name] = $this->{$param_name};
     
-      }else{
-      
-        $cache_map[$param_name] = null;
-      
-      }//if/else
+      }//if
     
     }//foreach
     
@@ -118,23 +119,29 @@ class ObjectCache implements Cacheable {
   
   }//method
   
-  /**
-   *  delete the stored cache
-   *  
-   *  @return boolean      
-   */
-  public function killCache(){
-  
-    $cache = $this->getCache();
-    if(empty($cache)){ return false; }//if
-  
-    return $cache->kill($this->cacheName());
-  
-  }//method
-  
   public function __destruct(){
   
-    if($this->export_cache){ $this->exportCache(); }//if
+    if($this->export_cache){
+    
+      try{
+    
+        $this->exportCache();
+      
+      }catch(\Exception $e){
+      
+        $msg = sprintf(
+          '"%s" in __destruct() might lead to a '
+          .'"Fatal error: Exception thrown without a stack frame in Unknown on line 0',
+          $e->getMessage()
+        );
+      
+        trigger_error($msg,E_USER_NOTICE);
+      
+        throw $e;
+      
+      }//try/catch
+      
+    }//if
   
   }//method
   

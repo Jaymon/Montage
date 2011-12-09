@@ -29,10 +29,9 @@ abstract class Start extends Field implements Startable, Dependable, Eventable {
   /**
    *  the framework configuration object
    *  
-   *  @see  __construct()
    *  @var  \Montage\Config\FrameworkConfig
    */
-  protected $framework_config = null;
+  public $config = null;
 
   /**
    *  the dependency injection container
@@ -50,12 +49,6 @@ abstract class Start extends Field implements Startable, Dependable, Eventable {
    */
   protected $event_dispatch = null;
 
-  public function __construct(FrameworkConfig $framework_config = null){
-  
-    $this->framework_config = $framework_config;
-  
-  }//method
-  
   public function setContainer(Containable $container){ $this->container = $container; }//method
   public function getContainer(){ return $this->container; }//method
 

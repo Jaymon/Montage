@@ -23,8 +23,8 @@ class FrameworkStart extends Start {
     
     $this->handleError();
     
-    mb_internal_encoding($this->framework_config->getCharset());
-    date_default_timezone_set($this->framework_config->getTimezone());
+    mb_internal_encoding($this->config->getCharset());
+    date_default_timezone_set($this->config->getTimezone());
     
     $this->handleCreateEvents();
     $this->handleCreatedEvents();
@@ -57,7 +57,50 @@ class FrameworkStart extends Start {
         $config = $container->getConfig();
         $instance->addPaths($config->getField('view_paths'));
         
-      }
+      }//closure
+    );
+    
+    // automatically import the cache if the class implements the right interface
+    $event_dispatch->listen(
+      'framework.filter.created:\Montage\Cache\Cacheable',
+      function(\Montage\Event\FilterEvent $event){
+
+        $instance = $event->getParam();
+        if($cache = $instance->getCache()){
+        
+          $instance->importCache();
+          
+        }//if
+        
+      }//closure
+    );
+    
+    // automatically add configured fields to SetFieldable compatible instances
+    $event_dispatch->listen(
+      'framework.filter.created:\Montage\Field\SetFieldable',
+      function(\Montage\Event\FilterEvent $event){
+
+        $instance = $event->getParam();
+        $container = $event->getField('container');
+        $config = $container->getConfig();
+        
+        if($config_map = $config->getField('class_fields')){
+          
+          $instance_class_name = get_class($instance);
+          foreach(array($instance_class_name,'\\'.$instance_class_name) as $class_name){
+          
+            if(isset($config_map[$class_name])){
+            
+              ///\out::e('adding fields to '.$class_name);
+              $instance->addFields($config_map[$class_name]);
+            
+            }//if
+          
+          }//foreach
+          
+        }//if
+        
+      }//closure
     );
     
     // allow form objects in the controller method to be populated with submitted values
@@ -83,7 +126,7 @@ class FrameworkStart extends Start {
         
         $event->setParam($instance);
         
-      }
+      }//closure
     );
 
   }//method
@@ -169,10 +212,10 @@ class FrameworkStart extends Start {
     
     $container = $this->getContainer();
     
-    error_reporting($this->framework_config->getErrorLevel());
+    error_reporting($this->config->getErrorLevel());
     ///error_reporting(E_ALL ^ E_USER_NOTICE);
     
-    ini_set('display_errors',$this->framework_config->showErrors() ? 'on' : 'off');
+    ini_set('display_errors',$this->config->showErrors() ? 'on' : 'off');
     
     // start/register the error handler if it hasn't been started...
     $container->getErrorHandler();

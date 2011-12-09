@@ -56,7 +56,7 @@ http://www.w3schools.com/html5/tag_doctype.asp
   
     <?php if($this->hasField('header_template')): ?>
   
-      <div id="header" class="container">
+      <div id="header">
         <?php $this->out($this->getField('header_template')); flush(); ?>
       </div>
       
@@ -64,7 +64,7 @@ http://www.w3schools.com/html5/tag_doctype.asp
       
     <?php if($this->hasField('content_template')): ?>
         
-      <div id="content" class="container">
+      <div id="content">
         <?php $this->out($this->getField('content_template')); flush() ?>
       </div>
     
@@ -72,7 +72,7 @@ http://www.w3schools.com/html5/tag_doctype.asp
     
     <?php if($this->hasField('footer_template')): ?>
       
-      <div id="footer" class="container">
+      <div id="footer">
         <?php $this->out($this->getField('footer_template')); flush(); ?>
       </div>
       
