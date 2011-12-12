@@ -844,14 +844,26 @@ class Framework extends Field implements Dependable,Eventable {
             $event = $this->broadcastEvent($event);
             $filtered_param = $event->getParam();
           
-            if($filtered_param !== null){
-            
-              // set the filtered param...
-              $params[$index] = $filtered_param;
-              
-            }//if
+            // set the filtered param...
+            if($filtered_param !== null){ $params[$index] = $filtered_param; }//if
           
-          }//if
+          }else{
+          
+            // broadcast an event to give a chance to modify the controller param...
+            $event = new FilterEvent(
+              'framework.filter.controller_param',
+              $raw_param,
+              array(
+                'reflection_param' => $rparam,
+                'container' => $container
+              )
+            );
+            $event = $this->broadcastEvent($event);
+            $filtered_param = $event->getParam();
+          
+            if($filtered_param !== null){ $params[$index] = $filtered_param; }//if
+          
+          }//if/else
     
           $rfunc_params[$index] = $container->normalizeParam($rparam,$params);
           
