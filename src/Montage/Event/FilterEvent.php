@@ -10,7 +10,9 @@
  ******************************************************************************/
 namespace Montage\Event;
 
-class FilterEvent extends Event {
+use Montage\Dependency\Dependable;
+
+class FilterEvent extends Event implements Dependable {
 
   /**
    *  holds the field that is going to be filtered
@@ -18,6 +20,15 @@ class FilterEvent extends Event {
    *  @var  mixed
    */
   protected $param = null;
+  
+  /**
+   *  true if the param has been touched
+   *  
+   *  @since  12-12-11
+   *  @see  changedParam()   
+   *  @var  boolean 
+   */
+  protected $param_changed = false;
 
   /**
    *  create a new Event
@@ -28,6 +39,8 @@ class FilterEvent extends Event {
   public function __construct($name,$param,array $field_map = array()){
   
     $this->setParam($param);
+    $this->param_changed = false;
+    
     parent::__construct($name,$field_map,false);
   
   }//method
@@ -44,6 +57,35 @@ class FilterEvent extends Event {
    *
    *  @param  mixed $param
    */
-  public function setParam($param){ $this->param = $param; }//method
+  public function setParam($param){
+  
+    $this->param = $param;
+    $this->param_changed = true;
+    
+  }//method
+  
+  /**
+   *  return true if {@link setParam()} has been called
+   *  
+   *  this is handy if you want to know if the param has been updated
+   *  
+   *  @since  12-12-11
+   *  @return boolean               
+   */
+  public function changedParam(){ return $this->param_changed; }//method
+  
+  /**
+   *  required for Montage\Dependency\Dependable interface
+   */
+  public function setContainer(\Montage\Dependency\Containable $container){
+  
+    $this->setField('container',$container);
+  
+  }//method
+  
+  /**
+   *  required for Montage\Dependency\Dependable interface
+   */
+  public function getContainer(){ return $this->getField('container'); }//method
   
 }//class

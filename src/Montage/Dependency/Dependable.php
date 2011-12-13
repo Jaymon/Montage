@@ -5,9 +5,6 @@
  *  This should be done sparingly as it basically makes what dependancies your class
  *  truly is dependant on opaque 
  *  
- *  @todo rename to Dependable?  
- *  
- *  
  *  http://en.wikipedia.org/wiki/Coupling_%28computer_science%29
  *  
  *  @version 0.1
