@@ -39,8 +39,13 @@ class Session extends SymfonySession implements Fieldable {
    *  @return object  the class instance for fluid interface
    */
   public function setField($key,$val = null){
+  
+    // canary
+    if(!$this->started){ throw new \RuntimeException('session is not started'); }//if
+  
     $this->set($key,$val);
     return $this;
+    
   }//method
   
   /**
@@ -88,8 +93,13 @@ class Session extends SymfonySession implements Fieldable {
    *  @return object  the class instance for fluid interface
    */
   public function killField($key){
+  
+    // canary
+    if(!$this->started){ throw new \RuntimeException('session is not started'); }//if
+  
     $this->remove($key);
     return $this;
+    
   }//method
   
   /**
@@ -117,9 +127,13 @@ class Session extends SymfonySession implements Fieldable {
    */
   public function addFields(array $field_map){
   
+    // canary
+    if(!$this->started){ throw new \RuntimeException('session is not started'); }//if
+  
     if(!empty($field_map)){
       $this->attributes = array_merge($this->attributes,$field_map);
     }//if
+    
     return $this;
   
   }//method
@@ -132,8 +146,13 @@ class Session extends SymfonySession implements Fieldable {
    *  @return object  the class instance for fluid interface
    */
   public function setFields(array $field_map){
+  
+    // canary
+    if(!$this->started){ throw new \RuntimeException('session is not started'); }//if
+  
     $this->setAttributes($field_map);
     return $this;
+    
   }//method
   
   /**

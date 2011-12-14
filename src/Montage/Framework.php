@@ -177,17 +177,16 @@ class Framework extends Field implements Dependable,Eventable {
       // can be found
       $this->handleAutoload();
       
-      // handle any preliminary event stuff like creating the Event Dispatcher
-      $this->handleEvent();
-  
+      // container should now exist
+      
       // start the START classes...
       // this comes about as early as I can make it since it is key to making sure
       // singletons can be created right
       $this->handleStart();
 
-      // start the EVENT classes...
-      // this comes after start so the event subscribe classes can get singletons 
-      $this->handleEventSubcribe();
+      // start the event SUBSCRIBE classes...
+      // this comes after start so the event subscribe classes can get singleton dependencies
+      $this->handleEvent();
 
       $event = new Event('framework.preHandle');
       $this->broadcastEvent($event);
@@ -639,28 +638,14 @@ class Framework extends Field implements Dependable,Eventable {
   }//method
   
   /**
-   *  handle event dispatch creation
-   *  
-   *  this just makes sure that the event dispatcher is created
-   *      
-   *  @since  8-25-11
-   *  @return Dispatch
-   */
-  protected function handleEvent(){
-  
-    return $this->getEventDispatch();
-  
-  }//method
-  
-  /**
    *  start all the known \Montage\Event\Subscribeable classes
    *     
    *  an Event Subscribeable class is a class that automatically can subscribe to an event
    *  
-   *  @since  10-15-11
+   *  @since  handleEvent: 8-25-11, handleEventSubscribe: 10-15-11, combined: 12-13-11
    *  @return array a list of Event subscribe instances   
    */
-  protected function handleEventSubcribe(){
+  protected function handleEvent(){
   
     $container = $this->getContainer();
     

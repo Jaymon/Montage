@@ -102,29 +102,6 @@ class FrameworkStart extends Start {
         
       }//closure
     );
-    
-    // allow form objects in the controller method to be populated with submitted values
-    $event_dispatch->listen(
-      'framework.filter.controller_param_created:\\Montage\\Form\\Form',
-      function(\Montage\Event\FilterEvent $event){
-      
-        $instance = $event->getParam();
-      
-        $container = $event->getField('container');
-        $request = $container->getRequest();
-        
-        $form_name = $instance->getName();
-
-        if($form_field_map = $request->getField($form_name)){
-        
-          $instance->set($form_field_map);
-        
-        }//if
-        
-        $event->setParam($instance);
-        
-      }//closure
-    );
 
   }//method
   

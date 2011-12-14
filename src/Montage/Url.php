@@ -673,7 +673,7 @@ class Url extends Field {
    *  given a $scheme, $base, $path or combination of the 3 build a url
    *  
    *  @param  string  $scheme can be one of the SCHEME_* constants
-   *  @param  string  $$base  usually something like example.com
+   *  @param  string  $base  usually something like example.com
    *  @param  string  $path something like /foo/bar
    *  @return string  all the 3 parts combined
    */

@@ -2,19 +2,10 @@
 /**
  *  handle exceptions 
  *  
- *  this class drops all dependencies from {@link \Montage\Controller\Controller} because
- *  if could be called before all dependencies are sorted, which would cause a fatal error
- *  since the dependencies can't be found.
- *  
- *  If you need to have dependencies, I would recommend using the setClassName(ClassName $var)
- *  syntax in your child classes as that will allow the dependencies to be passed in if they
- *  are available, but ignored if they're not, though you still might get fatal errors if a 
- *  needed class file cannot be found
- *  
  *  Fatal errors are common if this controller is called before the AutoLoader has been
  *  created.
  *  
- *  @version 0.2
+ *  @version 0.3
  *  @author Jay Marcyes
  *  @since 2-19-10
  *  @package montage 
@@ -26,6 +17,12 @@ use Montage\Controller\Controller;
 
 class ExceptionController extends Controller {
 
+  /**
+   *  handle http exceptions by setting the status code and printing a basic error
+   *  to the user
+   *  
+   *  @return string  the message to print to the user
+   */
   public function handleHttpException(\Exception $e){
   
     if(!empty($this->response)){
@@ -49,20 +46,30 @@ class ExceptionController extends Controller {
   public function handleIndex(\Exception $e,array $e_list = array()){
   
     $title = sprintf('Exception handled by %s',__METHOD__);
-  
+    $plain_text = (strncasecmp(PHP_SAPI, 'cli', 3) === 0);
     array_unshift($e_list,$e);
+    
+    if($plain_text){
+    
+      echo $title,PHP_EOL,PHP_EOL;
+  
+    }else{
+      
+      echo $title,'<br><br>';
+      
+    }//if/else
   
     foreach($e_list as $e){
     
-      if(strncasecmp(PHP_SAPI, 'cli', 3) === 0){
+      if($plain_text){
       
-        echo $title,PHP_EOL,PHP_EOL;
         echo $e; // CLI
+        echo PHP_EOL,'------------------------------------------------',PHP_EOL;
       
       }else{
       
-        echo $title,'<br><br>';
         echo nl2br($e); // html
+        echo '<hr>';
       
       }//if/else
       
