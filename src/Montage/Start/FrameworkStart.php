@@ -48,7 +48,7 @@ class FrameworkStart extends Start {
     $event_dispatch = $this->getEventDispatch();
   
     $event_dispatch->listen(
-      'framework.filter.created:\Montage\Response\Template',
+      'framework.filter.created:\\Montage\\Response\\Template',
       function(\Montage\Event\FilterEvent $event){
 
         $instance = $event->getParam();
@@ -62,7 +62,7 @@ class FrameworkStart extends Start {
     
     // automatically import the cache if the class implements the right interface
     $event_dispatch->listen(
-      'framework.filter.created:\Montage\Cache\Cacheable',
+      'framework.filter.created:\\Montage\\Cache\\Cacheable',
       function(\Montage\Event\FilterEvent $event){
 
         $instance = $event->getParam();
@@ -77,7 +77,7 @@ class FrameworkStart extends Start {
     
     // automatically add configured fields to SetFieldable compatible instances
     $event_dispatch->listen(
-      'framework.filter.created:\Montage\Field\SetFieldable',
+      'framework.filter.created:\\Montage\\Field\\SetFieldable',
       function(\Montage\Event\FilterEvent $event){
 
         $instance = $event->getParam();
@@ -105,13 +105,10 @@ class FrameworkStart extends Start {
     
     // allow form objects in the controller method to be populated with submitted values
     $event_dispatch->listen(
-      'framework.filter.controller_param_created',
+      'framework.filter.controller_param_created:\\Montage\\Form\\Form',
       function(\Montage\Event\FilterEvent $event){
       
         $instance = $event->getParam();
-      
-        // canary...
-        if(!($instance instanceof \Montage\Form\Form)){ return; }//if
       
         $container = $event->getField('container');
         $request = $container->getRequest();
@@ -141,7 +138,7 @@ class FrameworkStart extends Start {
     $event_dispatch = $this->getEventDispatch();
   
     $event_dispatch->listen(
-      'framework.filter.create:\Montage\Session',
+      'framework.filter.create:\\Montage\\Session',
       function(\Montage\Event\FilterEvent $event){
 
         $params = $event->getParam();
@@ -161,7 +158,7 @@ class FrameworkStart extends Start {
     
     // set up some lazy load dependency resolves...
     $event_dispatch->listen(
-      'framework.filter.create:\Montage\Request\Requestable',
+      'framework.filter.create:\\Montage\\Request\\Requestable',
       function(\Montage\Event\FilterEvent $event){
       
         $params = $event->getParam();
@@ -182,7 +179,7 @@ class FrameworkStart extends Start {
     );
     
     $event_dispatch->listen(
-      'framework.filter.create:\Montage\Url',
+      'framework.filter.create:\\Montage\\Url',
       function(\Montage\Event\FilterEvent $event){
       
         $params = $event->getParam();

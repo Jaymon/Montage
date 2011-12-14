@@ -828,24 +828,44 @@ class Framework extends Field implements Dependable,Eventable {
         }else{
         
           $raw_param = isset($params[$index]) ? $params[$index] : null;
+          $event_class_list = array();
         
           // filter the creation of the object...
           if($rclass = $rparam->getClass()){
           
-            // broadcast an event to give a chance to create the object instance...
-            $event = new FilterEvent(
-              'framework.filter.controller_param_create',
-              $raw_param,
-              array(
-                'reflection_param' => $rparam,
-                'container' => $container
-              )
-            );
-            $event = $this->broadcastEvent($event);
-            $filtered_param = $event->getParam();
+            $reflection = $this->getReflection();
+            $event_class_list = $reflection->getRelated($rclass->getName());
+            $event_class_list[] = '';
           
-            // set the filtered param...
-            if($filtered_param !== null){ $params[$index] = $filtered_param; }//if
+            foreach($event_class_list as $event_class_name){
+            
+              $event_name = 'framework.filter.controller_param_create';
+              if(!empty($event_class_name)){ $event_name .= ':'.$event_class_name; }//if
+            
+              // broadcast an event to give a chance to create the object instance...
+              $event = new FilterEvent(
+                $event_name,
+                $raw_param,
+                array(
+                  'reflection_param' => $rparam,
+                  'container' => $container
+                )
+              );
+              $event = $this->broadcastEvent($event);
+              
+              // if we've created the object then go ahead and end look for a creation event
+              if($event->changedParam()){
+              
+                $filtered_param = $event->getParam();
+              
+                if(is_object($filtered_param)){
+                  $params[$index] = $filtered_param;
+                  break;
+                }//if
+               
+              }//if
+              
+            }//foreach
           
           }else{
           
@@ -859,9 +879,9 @@ class Framework extends Field implements Dependable,Eventable {
               )
             );
             $event = $this->broadcastEvent($event);
+            
             $filtered_param = $event->getParam();
-          
-            if($filtered_param !== null){ $params[$index] = $filtered_param; }//if
+            if($event->changedParam()){ $params[$index] = $filtered_param; }//if
           
           }//if/else
     
@@ -869,18 +889,25 @@ class Framework extends Field implements Dependable,Eventable {
           
           // filter the post-creation of the object...
           if(is_object($rfunc_params[$index])){
+          
+            foreach($event_class_list as $event_class_name){
             
-            $event = new FilterEvent(
-              'framework.filter.controller_param_created',
-              $rfunc_params[$index],
-              array(
-                'param' => $raw_param,
-                'reflection_param' => $rparam,
-                'container' => $container
-              )
-            );
-            $event = $this->broadcastEvent($event);
-            $rfunc_params[$index] = $event->getParam();
+              $event_name = 'framework.filter.controller_param_created';
+              if(!empty($event_class_name)){ $event_name .= ':'.$event_class_name; }//if
+            
+              $event = new FilterEvent(
+                $event_name,
+                $rfunc_params[$index],
+                array(
+                  'param' => $raw_param,
+                  'reflection_param' => $rparam,
+                  'container' => $container
+                )
+              );
+              $event = $this->broadcastEvent($event);
+              $rfunc_params[$index] = $event->getParam();
+              
+            }//foreach
             
           }//if
           
@@ -926,6 +953,10 @@ class Framework extends Field implements Dependable,Eventable {
     
     $event = new InfoEvent('Handling Exception',array('e' => $e));
     $this->broadcastEvent($event);
+    
+    $e_list = $this->getField('e_list',array());
+    $e_list[] = $e;
+    $this->setField('e_list',$e_list);
   
     $ret_mixed = null;
   
@@ -992,6 +1023,8 @@ class Framework extends Field implements Dependable,Eventable {
           sprintf('Exception Controller: %s::%s',$controller_class,$controller_method)
         );
         $this->broadcastEvent($event);
+        
+        $controller_method_params = array_reverse($e_list);
         
         $controller_response = $this->handleController($controller_class,$controller_method,$controller_method_params);
         $ret_mixed = $this->handleResponse($controller_response);

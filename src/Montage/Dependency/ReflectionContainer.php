@@ -6,7 +6,7 @@
  *  name and this class will then use reflection to get the absolute child and create that
  *  instead of the parent class you passed in.        
  *  
- *  @version 0.2
+ *  @version 0.3
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 6-1-11
  *  @package montage
@@ -52,9 +52,10 @@ class ReflectionContainer extends Container {
     // canary...
     if(!is_object($instance)){ throw new \InvalidArgumentException('$instance was empty'); }//if
 
-    $class_list = $this->getDependencies(get_class($instance));
+    $reflection = $this->getReflection();
+    $class_list = $reflection->getRelated(get_class($instance));
     
-    // add the class name key...
+    // add the class name key (it might not be a namespaced\classname, that's why we add it)..
     if(!empty($class_name)){ $class_list[] = $class_name; }//if
     
     // save the instance in every found key...
@@ -131,17 +132,28 @@ class ReflectionContainer extends Container {
   protected function handleOnCreate($class_name,array $params){
   
     $reflection = $this->getReflection();
-    $cb_class_list = $this->getDependencies($class_name);
+    $cb_class_list = $reflection->getParents($class_name);
     if(!in_array($class_name,$cb_class_list)){ $cb_class_list[] = $class_name; }//if
     
     foreach($cb_class_list as $cb_class_name){
     
-      $params = parent::handleOnCreate($cb_class_name,$params);
+      $params = $this->_handleOnCreate($cb_class_name,$params);
     
     }//foreach
   
     return $params;
   
+  }//method
+  
+  /**
+   *  because this handleOnCreate loops through all the classes, we use this to
+   *  call {@link parent::handleOnCreate()}   
+   *
+   *  @since  12-13-11   
+   *  @see  handleOnCreate()
+   */
+  protected function _handleOnCreate($class_name,array $params){
+    return parent::handleOnCreate($class_name,$params);
   }//method
   
   /**
@@ -154,15 +166,26 @@ class ReflectionContainer extends Container {
   protected function handleOnCreated($class_name,$instance){
     
     $reflection = $this->getReflection();
-    $cb_class_list = $this->getDependencies($class_name);
+    $cb_class_list = $reflection->getParents($class_name);
     if(!in_array($class_name,$cb_class_list)){ $cb_class_list[] = $class_name; }//if
     
     foreach($cb_class_list as $cb_class_name){
     
-      $params = parent::handleOnCreated($cb_class_name,$instance);
+      $this->_handleOnCreated($cb_class_name,$instance);
     
     }//foreach
     
+  }//method
+  
+  /**
+   *  because this handleOnCreated loops through all the classes, we use this to
+   *  call {@link parent::handleOnCreated()}   
+   *
+   *  @since  12-13-11
+   *  @see  handleOnCreated()
+   */
+  protected function _handleOnCreated($class_name,$instance){
+    return parent::handleOnCreated($class_name,$instance);
   }//method
   
   /**
@@ -194,7 +217,7 @@ class ReflectionContainer extends Container {
       
       }//if/else if
       
-      $class_map = $reflection->getClassInfo(get_class($instance));
+      $class_map = $reflection->getClass(get_class($instance));
       $info_map = array();
       
       // update the class info with the new info...
@@ -230,7 +253,7 @@ class ReflectionContainer extends Container {
   protected function methodInjection($instance,\ReflectionClass $rclass = null){
   
     $reflection = $this->getReflection();
-    $class_map = $reflection->getClassInfo(get_class($instance));
+    $class_map = $reflection->getClass(get_class($instance));
     if(isset($class_map['info']['inject_map'])){
     
       $inject_map = $class_map['info']['inject_map'];
@@ -277,39 +300,6 @@ class ReflectionContainer extends Container {
     parent::reset();
     $this->setInstance('reflection',$this->reflection);
   
-  }//method
-  
-  protected function getDependencies($class_name){
-    
-    $class_list = array();
-    $reflection = $this->getReflection();
-    if($reflection->hasClass($class_name)){
-    
-      $class_list = $reflection->getDependencies($class_name);
-      
-    }else{
-    
-      // build the dependency list...
-    
-      $class = $class_name;
-      
-      // add all parent classes...
-      for($class_list[] = $class; $class = get_parent_class($class); $class_list[] = $class);
-      
-      // add all interfaces...
-      if($interface_list = class_implements($class_name)){
-        $class_list = array_merge($class_list,array_values($interface_list));
-      }//if
-      
-      // save the dependency list for the future...
-      $reflection->addClassInfo($class_name,array('dependencies' => $class_list));
-      
-    }//if/else
-    
-    $class_list[] = $class_name;
-    
-    return $class_list;
-    
   }//method
 
 }//class

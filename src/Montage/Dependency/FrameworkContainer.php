@@ -223,55 +223,34 @@ class FrameworkContainer extends ReflectionContainer implements Eventable {
   }//method
   
   /**
-   *  handle actually running the onCreate callback
-   *  
-   *  @since  8-25-11
-   *  @param  string  $class_name
-   *  @param  array $params            
-   *  @return array the same $params filtered through the callback
+   *  because this handleOnCreate loops through all the classes, we use this to
+   *  call {@link parent::handleOnCreate()}   
+   *
+   *  @since  12-13-11   
+   *  @see  handleOnCreate()
    */
-  protected function handleOnCreate($class_name,array $params){
+  protected function _handleOnCreate($class_name,array $params){
   
-    $reflection = $this->getReflection();
-    $cb_class_list = $this->getDependencies($class_name);
-    if(!in_array($class_name,$cb_class_list)){ $cb_class_list[] = $class_name; }//if
+    $class_key = $this->getEventKey('create',$class_name);
+    $event = new FilterEvent($class_key,$params,array('container' => $this));
+    $event = $this->broadcastEvent($event);
+    return $event->getParam();
     
-    foreach($cb_class_list as $cb_class_name){
-    
-      $cb_class_key = $this->getEventKey('create',$cb_class_name);
-      $event = new FilterEvent($cb_class_key,$params,array('container' => $this));
-      $event = $this->broadcastEvent($event);
-      $params = $event->getParam();
-    
-    }//foreach
-  
-    return $params;
-  
   }//method
   
   /**
-   *  handle actually running the onCreated callback
-   *  
-   *  @since  8-25-11
-   *  @param  string  $class_name
-   *  @param  object  $instance the newly created instance   
+   *  because this handleOnCreated loops through all the classes, we use this to
+   *  call {@link parent::handleOnCreated()}   
+   *
+   *  @since  12-13-11
+   *  @see  handleOnCreated()
    */
-  protected function handleOnCreated($class_name,$instance){
+  protected function _handleOnCreated($class_name,$instance){
     
-    $reflection = $this->getReflection();
-    $cb_class_list = $this->getDependencies($class_name);
-    if(!in_array($class_name,$cb_class_list)){ $cb_class_list[] = $class_name; }//if
-    
-    foreach($cb_class_list as $cb_class_name){
-    
-      $cb_class_key = $this->getEventKey('created',$cb_class_name);
-      $event = new FilterEvent($cb_class_key,$instance,array('container' => $this));
-      $event = $this->broadcastEvent($event);
-      $instance = $event->getParam();
-    
-    }//foreach
-    
-    return $instance;
+    $class_key = $this->getEventKey('created',$class_name);
+    $event = new FilterEvent($class_key,$instance,array('container' => $this));
+    $event = $this->broadcastEvent($event);
+    return $event->getParam();
     
   }//method
   
@@ -285,7 +264,7 @@ class FrameworkContainer extends ReflectionContainer implements Eventable {
   protected function getEventKey($prefix,$class_name){
   
     // prepend the absolute namespace...
-    if($class_name[0] !== '\\'){ $class_name = '\\'.$class_name; }//if
+    ///if($class_name[0] !== '\\'){ $class_name = '\\'.$class_name; }//if
   
     return sprintf('framework.filter.%s:%s',$prefix,$class_name);
   

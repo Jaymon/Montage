@@ -85,16 +85,36 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
   public function __toString(){ return spl_object_hash($this); }//method
 
   /**
+   *  get all the related classes to $class_name
+   *  
+   *  this will include class_name      
+   *
+   *  @since  12-13-11
+   *  @param  string  $class_name
+   *  @return array a list of class names
+   */
+  public function getRelated($class_name){
+  
+    $class_list = $this->getParents($class_name);
+    
+    if($class_name[0] !== '\\'){ $class_name = '\\'.$class_name; }//if
+    $class_list[] = $class_name;
+  
+    return $class_list;
+  
+  }//method
+
+  /**
    *  get all the classes the $class_name is dependant on
    *  
    *  @since  10-17-11   
    *  @param  string  $class_name
    *  @return array a list of class names
    */
-  public function getDependencies($class_name){
+  public function getParents($class_name){
   
     $ret_list = array();
-    $class_map = $this->getClassInfo($class_name);
+    $class_map = $this->getClass($class_name);
 
     if(isset($class_map['info']['dependencies'])){
     
@@ -102,27 +122,50 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
     
     }else{
   
+      $normalize_closure = function($class_name){
+      
+        if($class_name[0] !== '\\'){ $class_name = '\\'.$class_name; }//if
+      
+        return $class_name;
+      
+      };
+  
       if(isset($class_map['parents'])){
       
         foreach($class_map['parents'] as $parent_class_name){
         
-          $ret_list[] = $parent_class_name;
+          $ret_list[] = $normalize_closure($parent_class_name);
         
-          $parent_list = $this->getDependencies($parent_class_name);
+          $parent_list = $this->getParents($parent_class_name);
           if(!empty($parent_list)){
           
-            $ret_list = array_merge($ret_list,$parent_list);
+            $ret_list = array_merge($ret_list,array_map($normalize_closure,$parent_list));
             
           }//if
         
         }//foreach
         
-        // guarantee uniqueness, not sure this is needed since there should never be dupes
-        /// $ret_list = array_unique($ret_list);
-        
-        $this->addClassInfo($class_name,array('dependencies' => $ret_list));
+      }else{
       
-      }//if
+        // build the dependency list...
+    
+        // add all parent classes...
+        for($class = $class_name; $class = get_parent_class($class); $ret_list[] = $normalize_closure($class));
+        
+        // add all interfaces...
+        if($interface_list = class_implements($class_name)){
+        
+          $ret_list = array_merge(
+            $ret_list,
+            array_map($normalize_closure,array_values($interface_list))
+          );
+          
+        }//if
+        
+      }//if/else
+      
+      // save the dependency list for the future...
+      $this->addClassInfo($class_name,array('dependencies' => $ret_list));
       
     }//if/else
   
@@ -244,7 +287,7 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
     try{
     
       // first check cache...
-      $class_map = $this->getClassInfo($class_name);
+      $class_map = $this->getClass($class_name);
       
       if(empty($class_map['key'])){
         throw new \UnexpectedValueException('the returned class map does not have a key field');
@@ -482,7 +525,7 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
    *  add information about the class
    *  
    *  this information will be added to 'info' key of the class map that is available
-   *  through {@link getClassInfo()}
+   *  through {@link getClass()}
    *  
    *  @since  9-7-11
    *  @param  string  $class_name
@@ -491,25 +534,21 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
    */
   public function addClassInfo($class_name,array $info_map){
   
-    $class_key = $this->normalizeClassName($class_name);
-    if(!isset($this->class_map[$class_key])){
-      $this->class_map[$class_key] = array();
-    }//if
+    $class_map = $this->findClass($class_name);
+    $key = $class_map['key'];
     
-    if(isset($this->class_map[$class_key]['info'])){
+    if(isset($class_map['info'])){
     
-      $this->class_map[$class_key]['info'] = array_merge(
-        $this->class_map[$class_key]['info'],
-        $info_map
-      );
+      $class_map['info'] = array_merge($class_map['info'],$info_map);
     
     }else{
     
-      $this->class_map[$class_key]['info'] = $info_map;
+      $class_map['info'] = $info_map;
     
     }//if/else
     
-    $this->export_cache = true; ///$this->exportCache(); // update cache
+    $this->class_map[$key] = $class_map;
+    $this->export_cache = true; // update cache
     
     return true;
   
@@ -565,20 +604,16 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
    *  @param  string  $class_name
    *  @return array         
    */
-  public function getClassInfo($class_name){
+  public function getClass($class_name){
   
     $class_key = $this->normalizeClassName($class_name);
     
     // canary...
-    if(!isset($this->class_map[$class_key])){
-      // @todo  I think an exception might be too dramatic, just return array()?
-      //throw new \InvalidArgumentException(sprintf('$class_name (%s) is not known',$class_name));
-      return array();
-    }//if
+    if(!isset($this->class_map[$class_key])){ return array(); }//if
     
     if($this->isChangedClass($class_key)){
       $this->reload();
-      return $this->getClassInfo($class_name);
+      return $this->getClass($class_name);
     }//if
     
     return $this->class_map[$class_key];
@@ -663,6 +698,15 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
   }//method
   
   /**
+   *  get the name of the params that should be cached
+   *
+   *  @return array an array of the param names that should be cached    
+   */
+  public function __sleep(){
+    return array('class_map','parent_class_map','path_map','children_class_map');
+  }//method
+  
+  /**
    *  reload all known paths
    *  
    *  @since  6-20-11
@@ -709,17 +753,17 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
   protected function isChangedClass($class_key){
   
     // canary...
+    if(empty($this->class_map[$class_key])){
+      $e_msg = sprintf('class %s does not exist in %s',$class_key,get_class($this));
+      throw new \ReflectionException($e_msg);
+    }//if
+    if(!empty($this->class_map[$class_key]['internal'])){ return false; }//if
+    if(empty($this->class_map[$class_key]['path'])){
+      $e_msg = sprintf('info on external class %s is incomplete',$class_key);
+      throw new \ReflectionException($e_msg);
+    }//if
     if(!file_exists($this->class_map[$class_key]['path'])){
-      $e_msg = '';
-      if(isset($this->class_map[$class_key])){
-        if(isset($this->class_map[$class_key]['path'])){
-          $e_msg = sprintf('%s does not exist anymore',$this->class_map[$class_key]['path']);
-        }else{
-          $e_msg = sprintf('info on class %s is incomplete',$class_key);
-        }//if/else
-      }else{
-        $e_msg = sprintf('class %s does not exist in %s',$class_key,get_class($this));
-      }//if/else
+      $e_msg = sprintf('%s does not exist anymore',$this->class_map[$class_key]['path']);
       throw new \ReflectionException($e_msg);
     }//if
   
@@ -775,10 +819,8 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
    */
   protected function setClass($class_name,$class_file,array $class_info_map){
   
-    $class_map = array();
-    $key = $this->normalizeClassName($class_name);
-    $class_map['class'] = $this->qualifyClassName($class_name);
-    $class_map['key'] = $key;
+    $class_map = $this->findClass($class_name);
+    $key = $class_map['key'];
     
     ///$class_map['last_modified'] = filemtime($class_file); // use MD5 instead?
     $class_map['hash'] = md5_file($class_file);
@@ -805,13 +847,6 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
     
     }//if
     
-    // respect any previous info added with {@link addClassInfo()}...
-    if(isset($this->class_map[$key])){
-    
-      $class_map = array_merge($this->class_map[$key],$class_map);
-    
-    }//if
-    
     $this->class_map[$key] = $class_map;
     
     // this gets cleared anytime something is added, because it is easier that way
@@ -822,12 +857,46 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
   }//method
   
   /**
-   *  get the name of the params that should be cached
-   *
-   *  @return array an array of the param names that should be cached    
+   *  find the information for $class_name
+   *  
+   *  if it can't find the information from the {@link $class_map} it will create
+   *  a map from scratch with basic information about the class, so this will always
+   *  return information about the class
+   *  
+   *  @since  12-13-11
+   *  @param  string  $class_name the class name           
+   *  @return array
    */
-  public function __sleep(){
-    return array('class_map','parent_class_map','path_map','children_class_map');
+  protected function findClass($class_name){
+  
+    $class_map = array();
+    $key = $this->normalizeClassName($class_name);
+    
+    if(isset($this->class_map[$key])){
+    
+      $class_map = $this->class_map[$key];
+    
+    }else{
+    
+      if(class_exists($class_name,false) || interface_exists($class_name,false)){
+    
+        $rclass = new \ReflectionClass($class_name);
+        $class_map['internal'] = $rclass->isInternal();
+        
+      }else{
+      
+        // since the class doesn't exist it is most definitely a user defined class
+        $class_map['internal'] = false;
+      
+      }//try/catch
+        
+      $class_map['class'] = $this->qualifyClassName($class_name);
+      $class_map['key'] = $key;
+    
+    }//if/else
+    
+    return $class_map;
+  
   }//method
   
   /**

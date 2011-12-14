@@ -10,9 +10,7 @@
  ******************************************************************************/
 namespace Montage\Event;
 
-use Montage\Dependency\Dependable;
-
-class FilterEvent extends Event implements Dependable {
+class FilterEvent extends Event {
 
   /**
    *  holds the field that is going to be filtered
@@ -73,19 +71,5 @@ class FilterEvent extends Event implements Dependable {
    *  @return boolean               
    */
   public function changedParam(){ return $this->param_changed; }//method
-  
-  /**
-   *  required for Montage\Dependency\Dependable interface
-   */
-  public function setContainer(\Montage\Dependency\Containable $container){
-  
-    $this->setField('container',$container);
-  
-  }//method
-  
-  /**
-   *  required for Montage\Dependency\Dependable interface
-   */
-  public function getContainer(){ return $this->getField('container'); }//method
   
 }//class

@@ -46,21 +46,27 @@ class ExceptionController extends Controller {
    *
    *  @param  \Exception  $e  the thrown exception   
    */
-  public function handleIndex(\Exception $e){
+  public function handleIndex(\Exception $e,array $e_list = array()){
   
     $title = sprintf('Exception handled by %s',__METHOD__);
   
-    if(strncasecmp(PHP_SAPI, 'cli', 3) === 0){
+    array_unshift($e_list,$e);
+  
+    foreach($e_list as $e){
     
-      echo $title,PHP_EOL,PHP_EOL;
-      echo $e; // CLI
-    
-    }else{
-    
-      echo $title,'<br><br>';
-      echo nl2br($e); // html
-    
-    }//if/else
+      if(strncasecmp(PHP_SAPI, 'cli', 3) === 0){
+      
+        echo $title,PHP_EOL,PHP_EOL;
+        echo $e; // CLI
+      
+      }else{
+      
+        echo $title,'<br><br>';
+        echo nl2br($e); // html
+      
+      }//if/else
+      
+    }//if
      
     return false;
   

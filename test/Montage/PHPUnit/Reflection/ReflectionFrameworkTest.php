@@ -1,7 +1,8 @@
 <?php
 namespace {
 
-  include_once('out_class.php');
+  //include_once('out_class.php');
+  include_once('/vagrant/public/out_class.php');
 
   use Montage\Reflection\ReflectionFramework;
   
@@ -38,8 +39,6 @@ namespace {
     
       $this->instance = new ReflectionFramework();
       $this->instance->addFile(__FILE__);
-      
-      
       
     }//method
 
@@ -113,29 +112,19 @@ namespace {
      *  
      *  @since  8-22-11
      */   
-    public function testDependencies(){
+    public function testGetParents(){
     
       $reflection = $this->instance;
-      
       $reflection->addFile(self::$base_fixture_path.'/Hija.php');
       $reflection->addFile(self::$base_fixture_path.'/Abuelo.php');
       $reflection->addFile(self::$base_fixture_path.'/Padre.php');
       
       ///\out::i($reflection);
       
-      $class_list = $reflection->getDependencies('\Hija');
-      \out::e($class_list);
+      $class_list = $reflection->getParents('\Hija');
+      ///\out::e($class_list);
       $this->assertEquals(2,count($class_list),'Hija class should have 2 dependencies');
       
-      
-      
-      ///$reflection->addFile("C:\Projects\Sandbox\Montage\_active\src\Montage\Request\Request.php");
-      ///\out::e($reflection->getClassInfo('Montage\Request\Request'));
-      
-      // @todo  I think there is an issue with the reflection where if it loads the child
-      // class file before the parent class file then all the dependencies won't exist, this should
-      // be tested and fixed
-    
     }//method
     
     /**
