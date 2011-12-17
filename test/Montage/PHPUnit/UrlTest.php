@@ -18,6 +18,21 @@ class UrlTest extends TestCase {
   
   }//method
 
+  /**
+   *  @since  12-17-11
+   */
+  public function testSet(){
+  
+    $this->url->set('foo',array('foo','bar',array('baz' => 'che')));
+  
+    $this->assertEquals('http://example.com/foo/bar/?baz=che',$this->url->getFoo());
+    $this->assertEquals(
+      'http://example.com/foo/bar/happy/?baz=che&duh=dah',
+      $this->url->getFoo('happy',array('duh' => 'dah'))
+    );
+  
+  }//method
+
    /**
    *  test the build method
    */
@@ -71,6 +86,7 @@ class UrlTest extends TestCase {
       'in' => array(array('http://app.com','foo','bar',array('get' => 1))),
       'out' => array(
         'url' => 'http://app.com',
+        'default_url' => false,
         'path' => array('foo','bar'),
         'query' => array('get' => 1)
       )
@@ -79,6 +95,7 @@ class UrlTest extends TestCase {
       'in' => array(array('foo','bar',array('get' => 1))),
       'out' => array(
         'url' => 'http://example.com',
+        'default_url' => true,
         'path' => array('foo','bar'),
         'query' => array('get' => 1)
       )
@@ -87,6 +104,7 @@ class UrlTest extends TestCase {
       'in' => array(array('http://app.com',array('get' => 1))),
       'out' => array(
         'url' => 'http://app.com',
+        'default_url' => false,
         'path' => array(),
         'query' => array('get' => 1)
       )
@@ -95,6 +113,7 @@ class UrlTest extends TestCase {
       'in' => array(array('http://app.com','foo','bar')),
       'out' => array(
         'url' => 'http://app.com',
+        'default_url' => false,
         'path' => array('foo','bar'),
         'query' => array()
       )
@@ -103,6 +122,7 @@ class UrlTest extends TestCase {
       'in' => array(array('http://app.com',' ','')),
       'out' => array(
         'url' => 'http://app.com',
+        'default_url' => false,
         'path' => array(' ',''),
         'query' => array()
       )

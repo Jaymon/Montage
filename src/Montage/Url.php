@@ -181,12 +181,10 @@ class Url extends Field {
   public function getCurrent($bit = ''){
   
     $args = func_get_args();
+    
     // get the base url...
     $current_url = $this->normalizeBase($this->current_url);
-    
-    if(empty($current_url)){
-      $current_url = $this->normalizeBase($this->base_url);
-    }//if
+    if(empty($current_url)){ $current_url = $this->normalizeBase($this->base_url); }//if
     
     $url_map = $this->normalize($args);
     return $this->build($current_url,$url_map['path'],$url_map['query']);
@@ -302,12 +300,12 @@ class Url extends Field {
    *      array('che' => 'baz') // remove 'che' query field if its value is 'baz'
    *    ); // -> 'http://app.com/foo/?dah'      
    *
-   *  @param  mixed $arg,...  first argument must be a url, last argument can be
+   *  @param  mixed $bit,...  first argument can be a root. Last argument can be
    *                          an array of key/val mappings that will be turned into
-   *                          a query string, all other args will be treated as path bits
+   *                          a query string, all other args will be treated as path components
    *  @return string  a url with the found path bits and query vars removed
    */
-  public function kill(){
+  public function kill($bit = ''){
   
     $args = func_get_args();
     // sort through the passed in args...
@@ -460,6 +458,43 @@ class Url extends Field {
   }//method
   
   /**
+   *  handle setting a custom url for a field
+   *  
+   *  @example
+   *    // make foo point to /bar/ url...
+   *    $this->setFoo('http://app.com','bar');
+   *    $this->getFoo(); // -> http://app.com/bar       
+   *
+   *    // even easier way to make foo point to bar...
+   *    // base url: http://app.com   
+   *    $this->setFoo('bar');
+   *    $this->getFoo(); // -> http://app.com/bar      
+   *      
+   *  @param  string  $field
+   *  @param  array $args the arguments. has the same form as arguments passed to {@link get()}            
+   *  @return string
+   */
+  public function set($field,array $args){
+  
+    // canary...
+    if(empty($args)){ throw new \InvalidArgumentException('$args was empty'); }//if
+  
+    $url_map = $this->normalize($args);
+    
+    // get rid of the base if it is the default base
+    if(!empty($url_map['default_url'])){
+    
+      unset($url_map['url'],$url_map['default_url']);
+    
+    }//if
+    
+    $this->setField($field,$url_map);
+    
+    return $this;
+    
+  }//method
+  
+  /**
    *  magically allow this class set fields using the method call
    *  
    *  @param  string  $method the method that was called
@@ -469,7 +504,7 @@ class Url extends Field {
   public function __call($method,$args){
   
     $method_map = array(
-      'set' => 'handleSet',
+      'set' => 'set',
       'get' => 'handleGet',
       'has' => 'handleHas'
     );
@@ -525,7 +560,7 @@ class Url extends Field {
    *  @param  array $args ignored by this function, but passed in by default
    *  @return boolean   
    */
-  protected function handleHas($field,$args = array()){ return $this->hasField($field); }//method
+  protected function handleHas($field,array $args = array()){ return $this->hasField($field); }//method
   
   /**
    *  same everything as {@link get()} but will pass in the $field as the $root
@@ -534,73 +569,28 @@ class Url extends Field {
    *  @param  mixed $args the same args as {@link get()} can accept
    *  @return string   
    */
-  protected function handleGet($field,$args = array()){
+  protected function handleGet($field,array $args = array()){
   
-    $base = $this->getField($field,'');
-    array_unshift($args,$base);
-    return call_user_func_array(array($this,'get'),$args);
-  
-  }//method
-  
-  /**
-   *  handle setting a custom url for a field
-   *  
-   *  @example
-   *    // make foo point to /bar/ url...
-   *    $this->setFoo(self::SCHEME_NORMAL,'app.com','bar');
-   *    $this->getFoo(); // -> http://app.com/bar       
-   *
-   *    // even easier way to make foo point to bar...
-   *    // base url: http://app.com   
-   *    $this->setFoo('bar');
-   *    $this->getFoo(); // -> http://app.com/bar      
-   *      
-   *  @param  string  $field
-   *  @param  array $args the arguments, can be up to 3 arguments passed in:
-   *                        1 = path (eg, /foo/bar/))
-   *                        2 = host (eg, example.com), path
-   *                        3 = scheme (eg, one of the SCHEME_* constants), host, path            
-   *  @return string
-   */
-  protected function handleSet($field,$args){
-  
-    // canary...
-    if(empty($args)){
-      throw new RuntimeException(
-        join(
-          "\r\n",
-          array(
-            'Cannot set with an empty $args array. Any set* methods can take up to 3 arguments: ',
-            ' - 1 argument: [path (eg, /foo/bar)]',
-            ' - 2 arguments: [host (eg, example.com), path]',
-            ' - 3 arguments: [scheme (eg, http), host, path].'
-          )
-        )
-      );
-    }//if 
-  
-    $total_args = count($args);
+    $url_args = array();
+    $base_map = $this->getField($field,array());
+    $url_map = $this->normalize($args);
     
-    if($total_args === 1){
+    // add the base url
+    if(isset($base_map['url'])){ $url_args[] = $base_map['url']; }//if
     
-      $base_url = $this->base_url;
-      $ret_str = $args[0];
-      
-      $this->setField($field,$this->assemble('',$base_url,$ret_str));
+    // add the base path
+    if(!empty($base_map['path'])){ $url_args = array_merge($url_args,$base_map['path']); }//if
     
-    }else if($total_args < 3){
+    // add the passed in url as a path argument if it isn't the default base
+    if(empty($url_map['default_url'])){ $url_args[] = $url_map['url']; }//if
     
-        $ret_str = $this->assemble('',$args[0],$args[1]);
-        
-    }else{
-      
-      $ret_str = $this->assemble($args[0],$args[1],$args[2]);
-      
-    }//if/else if/else
-      
-    $this->setField($field,$ret_str);
+    // add the passed in path
+    if(!empty($url_map['path'])){ $url_args = array_merge($url_args,$url_map['path']); }//if
     
-    return $ret_str;
+    // merge the query maps
+    $url_args[] = array_merge($base_map['query'],$url_map['query']);
+    
+    return call_user_func_array(array($this,'get'),$url_args);
   
   }//method
   
@@ -621,6 +611,7 @@ class Url extends Field {
   
     $ret_map = array(
       'url' => '',
+      'default_url' => false,
       'path' => array(),
       'query' => array()
     );
@@ -628,6 +619,7 @@ class Url extends Field {
     if(empty($args)){
     
       $ret_map['url'] = $this->normalizeBase($this->base_url);
+      $ret_map['default_url'] = true;
       
     }else{
       
@@ -656,6 +648,7 @@ class Url extends Field {
       }else{
       
         $url = $this->normalizeBase($this->base_url);
+        $ret_map['default_url'] = true;
       
       }//if/else
       
