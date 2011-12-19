@@ -21,6 +21,20 @@ abstract class Subscribe implements Subscribeable {
   protected $dispatch = null;
 
   /**
+   *  get the name(s) of the event(s) this class is subscribing to
+   *  
+   *  @return string|array      
+   */
+  abstract public function getEventName();
+
+  /**
+   *  this is the callback that will be registered to the name(s) returned from {@link getEventName()}
+   *  
+   *  @param  Event $event
+   */
+  abstract public function handle(Event $event);
+
+  /**
    *  get the event dispatcher
    *
    *  @Param  Dispatch  $dispatch   

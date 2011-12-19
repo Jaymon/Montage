@@ -55,40 +55,6 @@ class Response extends SymfonyResponse implements Fieldable {
   }//method
 
   /**
-   *  get a cookie value
-   *
-   *  @since  9-6-11
-   *  @param  string  $name
-   *  @return mixed    
-   */
-  public function getCookie($name){ return $this->headers->getCookie($name); }//method
-  
-  /**
-   *  true if the cookie by $name exists
-   *
-   *  @since  9-6-11
-   *  @param  string  $name
-   *  @return boolean    
-   */
-  public function hasCookie($name){ return $this->headers->hasCookie($cookie); }//method
-  
-  /**
-   *  set a cookie
-   *  
-   *  @since  9-6-11
-   *  @param  Cookie  $cookie the cookie object
-   */
-  public function setCookie(Cookie $cookie){ return $this->headers->setCookie($cookie); }//method
-
-  /**
-   *  remove a previously set cookie
-   *  
-   *  @since  9-6-11
-   *  @param  string  $name the name of the cookie to remove
-   */
-  public function killCookie($name){ return $this->headers->removeCookie($name); }//method
-
-  /**
    *  send the http response headers
    *  
    *  overrides the parent to not attempt to send the headers if there was output before this

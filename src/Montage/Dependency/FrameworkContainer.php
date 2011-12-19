@@ -75,6 +75,18 @@ class FrameworkContainer extends ReflectionContainer implements Eventable {
     return $this->hasInstance('\\Montage\\Session');
   
   }//method
+  
+  /**
+   *  get the Cookie Jar (the cookie manager)
+   *
+   *  @since  12-19-11
+   *  @return Montage\CookieJar
+   */
+  public function getCookieJar($params = array()){
+  
+    return $this->findInstance('cookie_jar','\\Montage\\CookieJar',$params);
+  
+  }//method
 
   /**
    *  get the framework

@@ -2,7 +2,7 @@
 /**
  *  interface to allow easy class based event subscriptions
  *  
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes
  *  @since 8-25-11
  *  @package montage
@@ -11,20 +11,6 @@
 namespace Montage\Event;
 
 interface Subscribeable {
-
-  /**
-   *  get the name(s) of the event(s) this class is subscribing to
-   *  
-   *  @return string|array      
-   */
-  public function getEventName();
-
-  /**
-   *  this is the callback that will be registered to the name(s) returned from {@link getEventName()}
-   *  
-   *  @param  Event $event
-   */
-  public function handle(Event $event);
   
   /**
    *  get the event dispatcher

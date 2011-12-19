@@ -650,7 +650,7 @@ class Framework extends Field implements Dependable,Eventable {
     $container = $this->getContainer();
     
     // create the event sub selector...
-    $select = $container->getInstance('\Montage\Event\Select');
+    $select = $container->getInstance('\\Montage\\Event\\Select');
     
     $class_list = $select->find();
 
