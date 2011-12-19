@@ -13,9 +13,10 @@
  ******************************************************************************/
 namespace Montage\Dependency;
 
-use ReflectionObject, ReflectionClass, ReflectionMethod, ReflectionParameter;
+use ReflectionObject, ReflectionClass, ReflectionMethod, ReflectionParameter, ReflectionProperty;
 use Montage\Dependency\Container;
 use Montage\Reflection\ReflectionFramework;
+use Montage\Annotation\ParamAnnotation;
 
 class ReflectionContainer extends Container {
 
@@ -169,6 +170,8 @@ class ReflectionContainer extends Container {
     $cb_class_list = $reflection->getParents($class_name);
     if(!in_array($class_name,$cb_class_list)){ $cb_class_list[] = $class_name; }//if
     
+    $this->handleDependencies($instance);
+    
     foreach($cb_class_list as $cb_class_name){
     
       $this->_handleOnCreated($cb_class_name,$instance);
@@ -189,104 +192,229 @@ class ReflectionContainer extends Container {
   }//method
   
   /**
-   *  override parent to cache method names and params into the {@link $inject_map}
-   * 
-   *  @since  9-7-11    
-   *  @see  parent::injectInstance()
+   *  automatically inject dependencies in the recently created instance
+   *  
+   *  currently, there are three ways to do dependencies:
+   *    injectClassName(\ClassName $instance){} // instance must exist
+   *    setClassName(\ClassName $instance){} // instance is optional
+   *    / **
+   *     *  @var  \Namespace\ClassName
+   *     * /        
+   *    public $instance = null; // this public property will be set with the instance
+   *
+   *  @param  object  $instance
+   *  @return object  the same instance with dependencies injected
    */
-  protected function injectInstance($instance,\ReflectionFunctionAbstract $rmethod){
+  protected function handleDependencies($instance){
   
-    $ret_bool = parent::injectInstance($instance,$rmethod);
-  
-    if($ret_bool){
+    // canary...
+    if(empty($instance)){ throw new \InvalidArgumentException('$instance was empty'); }//if
     
-      $method_name = $rmethod->getName();
-      $class_name = $this->getInjectClassName($rmethod);
-      $reflection = $this->getReflection();
-      $inject_map = array();
+    $dependency_list = array();
+    $robj = new ReflectionObject($instance);
+    $reflection = $this->getReflection();
+    
+    // first check cache, if it doesn't exist, build it and save it
+    $class_map = $reflection->getClass($robj->getName());
+    if(!isset($class_map['info']['inject'])){
       
-      if($this->isInjectMethod($rmethod)){
+      // find the dependency methods
+      $rmethod_list = $robj->getMethods(ReflectionMethod::IS_PUBLIC);
+      foreach($rmethod_list as $rmethod){
+  
+        if($map = $this->getMethodDependencyMap($rmethod,$instance)){
       
-        $inject_map['inject'] = array();
-        $inject_map['inject'][$method_name] = $class_name;
-      
-      }else if($this->isSetMethod($rmethod)){
-      
-        $inject_map['set'] = array();
-        $inject_map['set'][$method_name] = $class_name;
-      
-      }//if/else if
-      
-      $class_map = $reflection->getClass(get_class($instance));
-      $info_map = array();
-      
-      // update the class info with the new info...
-      if(isset($class_map['info'])){ $info_map = $class_map['info']; }//if
-      if(!isset($info_map['inject_map'])){ $info_map['inject_map'] = array(); }//if
-      
-      foreach($inject_map as $type => $list){
+          $dependency_list[] = $map;  
         
-        foreach($list as $mn => $mc){
+        }//if
+  
+      }//foreach
+      
+      $rparam_list = $robj->getProperties(ReflectionProperty::IS_PUBLIC);
+      foreach($rparam_list as $rparam){
+  
+        if($map = $this->getParamDependencyMap($rparam,$instance)){
+      
+          $dependency_list[] = $map;  
         
-          if(!isset($info_map['inject_map'][$type])){ $info_map['inject_map'][$type] = array(); }//if
-        
-          $info_map['inject_map'][$type][$mn] = $mc;
-          
-        }//foreach
+        }//if
       
       }//foreach
+      
+      $reflection->addClassInfo($robj->getName(),array('inject' => $dependency_list));
+      
+    }else{
     
-      $reflection->addClassInfo(get_class($instance),$info_map);
+      $dependency_list = $class_map['info']['inject'];
     
-    }//if
+    }//if/else
+
+    foreach($dependency_list as $map){
+    
+      $this->injectInstance($robj,$instance,$map);
+    
+    }//foreach
+    
+    return $instance;
   
-    return $ret_bool;
-    
   }//method
   
   /**
-   *  override parent to check cache before manually injecting dependencies
-   * 
+   *  inject a dependency using: $instance::$rmethod({@link getInjectClassName()})
+   *
    *  @since  9-7-11
-   *  @see  parent::injectInstance()
+   *  @param  object  $instance
+   *  @param  ReflectionFunctionAbstract  $rmethod  the reflection of the method of $instance
+   *  @return boolean true if the instance was going to be reflected, regardless of whether it was
    */
-  protected function methodInjection($instance,\ReflectionClass $rclass = null){
+  protected function injectInstance(\ReflectionObject $robj,$instance,array $map){
   
-    $reflection = $this->getReflection();
-    $class_map = $reflection->getClass(get_class($instance));
-    if(isset($class_map['info']['inject_map'])){
+    $class_name = $map['class_name'];
+    $name = $map['name'];
+  
+    if(empty($map['method'])){
     
-      $inject_map = $class_map['info']['inject_map'];
-
-      if(isset($inject_map['inject'])){
-        
-        foreach($inject_map['inject'] as $method_name => $class_name){
-        
-          $this->handleInjectMethod($instance,$method_name,$class_name);
-        
-        }//foreach
-        
-      }//if
-      
-      if(isset($inject_map['set'])){
-        
-        foreach($inject_map['set'] as $method_name => $class_name){
-        
-          $this->handleSetMethod($instance,$method_name,$class_name);
-        
-        }//foreach
-        
-      }//if
-      
-      $ret = $instance;
+      $rparam = $robj->getProperty($name);
+    
+      $rparam->setValue(
+        $rparam->isStatic() ? null : $instance,
+        $this->getInstance($class_name)
+      );
     
     }else{
     
-      $ret = parent::methodInjection($instance,$rclass);
+      $callback = array();
     
+      // build callback
+      if(empty($map['static'])){
+      
+        $callback = array($instance,$name);
+      
+      }else{
+      
+        $callback = array($robj->getName(),$name);
+      
+      }//if/else
+    
+      if(empty($map['optional'])){
+        
+        call_user_func($callback,$this->getInstance($class_name));
+          
+      }else{
+      
+        try{
+        
+          if($this->hasInstance($class_name)){
+            
+            call_user_func($callback,$this->getInstance($class_name));
+            
+          }//if
+          
+        }catch(\Exception $e){
+          // exceptions aren't fatal, just don't set the dependency
+        }//try/catch
+          
+      }//if/else if
+      
     }//if/else
   
-    return $ret;
+    return $instance;
+  
+  }//method
+  
+  /**
+   *  returns a dependency map if the method is a valid dependency inject method
+   *  
+   *  @since  9-7-11   
+   *  @param  ReflectionMethod  $method  the reflection of the method/function           
+   *  @return array
+   */
+  protected function getParamDependencyMap(\ReflectionProperty $rparam,$instance){
+  
+    $val = $rparam->getValue($instance);
+    $docblock = $rparam->getDocComment();
+  
+    // canary
+    if($val !== null){ return array(); }//if
+    if(empty($docblock)){ return array(); }//if
+  
+    $ret_map = array();
+    $param_name = $rparam->getName();
+    $class_name = '';
+
+    $annotation = new ParamAnnotation($rparam);
+    $class_name = $annotation->getClassName();
+      
+    if(!empty($class_name)){
+      
+      // fix namespace...
+      if($class_name[0] !== '\\'){
+      
+        $robj = new ReflectionObject($instance);
+        $class_name = sprintf('%s\\%s',$robj->getNamespaceName(),$class_name);
+      
+      }//if
+      
+      $ret_map['name'] = $param_name;
+      $ret_map['optional'] = false;
+      $ret_map['method'] = false;
+      $ret_map['static'] = $rparam->isStatic();
+      $ret_map['class_name'] = $class_name;
+      
+    }//if
+    
+    return $ret_map;
+  
+  }//method
+  
+  /**
+   *  returns a dependency map if the method is a valid dependency inject method
+   *  
+   *  @since  9-7-11   
+   *  @param  ReflectionMethod  $method  the reflection of the method/function           
+   *  @return array
+   */
+  protected function getMethodDependencyMap(\ReflectionMethod $rmethod,$instance){
+  
+    // canary
+    if($rmethod->getNumberOfParameters() !== 1){ return array(); }//if
+  
+    $ret_map = array();
+    $method_name = $rmethod->getName();
+    
+    if(preg_match('#^inject#i',$method_name)){
+    
+      $ret_map['name'] = $method_name;
+      $ret_map['optional'] = false;
+    
+    }else if(preg_match('#^set#i',$method_name)){
+    
+      $ret_map['name'] = $method_name;
+      $ret_map['optional'] = true;
+    
+    }//if/else if
+    
+    if(!empty($ret_map)){
+      
+      $rparams = $rmethod->getParameters();
+      $rparam = current($rparams);
+      $prclass = $rparam->getClass();
+      
+      if($prclass === null){
+    
+        $ret_map = array();
+    
+      }else{
+    
+        $ret_map['method'] = true;
+        $ret_map['static'] = $rmethod->isStatic();
+        $ret_map['class_name'] = $prclass->getName();
+        
+      }//if
+    
+    }//if
+    
+    return $ret_map;
   
   }//method
   

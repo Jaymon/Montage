@@ -77,6 +77,9 @@ class ParamAnnotation extends Annotation {
    */
   protected function findType(){
   
+    // canary
+    if(empty($this->rdocblock)){ return ''; }//if
+  
     $type = '';
   
     if($this->reflection instanceof \ReflectionProperty){

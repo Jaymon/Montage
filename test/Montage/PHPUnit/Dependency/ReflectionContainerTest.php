@@ -24,6 +24,10 @@ namespace Montage\PHPUnit {
   
   require_once($base.'/src/Montage/Reflection/ReflectionFile.php');
   require_once($base.'/src/Montage/Reflection/ReflectionFramework.php');
+  require_once($base.'/src/Montage/Reflection/ReflectionDocBlock.php');
+  
+  require_once($base.'/src/Montage/Annotation/Annotation.php');
+  require_once($base.'/src/Montage/Annotation/ParamAnnotation.php');
   
   require_once($base.'/src/Montage/Dependency/Containable.php');
   require_once($base.'/src/Montage/Dependency/Container.php');
@@ -103,13 +107,12 @@ namespace Montage\PHPUnit {
     public function testParamInjection(){
     
       $instance = $this->container->getInstance('Montage\Test\Fixtures\Dependency\ParamInjected');
-      
+
       $this->assertTrue($instance instanceof \Montage\Test\Fixtures\Dependency\ParamInjected);
       $this->assertTrue($instance->che instanceof \Che);
       $this->assertTrue(\Montage\Test\Fixtures\Dependency\ParamInjected::$bong instanceof \Bong);
       $this->assertNull($instance->che2);
       $this->assertTrue($instance->c instanceof \Montage\Test\Fixtures\Dependency\C);
-      
       
     }//method
     
@@ -191,12 +194,8 @@ namespace Montage\PHPUnit {
       $class_map = $this->reflection->getClass('Montage\Test\Fixtures\Dependency\FooBar');
       
       $this->assertArrayHasKey('info',$class_map);
-      $this->assertArrayHasKey('inject_map',$class_map['info']);
-      $this->assertArrayHasKey('inject',$class_map['info']['inject_map']);
-      $this->assertArrayHasKey('set',$class_map['info']['inject_map']);
-      
-      $this->assertEquals(1,count($class_map['info']['inject_map']['set']));
-      $this->assertEquals(1,count($class_map['info']['inject_map']['inject']));
+      $this->assertArrayHasKey('inject',$class_map['info']);
+      $this->assertEquals(2,count($class_map['info']['inject']));
     
     }//method
     
@@ -212,9 +211,12 @@ namespace Montage\PHPUnit {
       
       $class_map = $this->reflection->getClass('Montage\Test\Fixtures\Dependency\BarBaz');
       
-      foreach($class_map['info']['inject_map'] as $type => $map){
+      $this->assertEquals(4,count($class_map['info']['inject']));
       
-        $this->assertEquals(2,count($map));
+      $method_name_list = array('setFoo','injectBar','setChe','injectBong');
+      foreach($class_map['info']['inject'] as $map){
+      
+        $this->assertTrue(in_array($map['name'],$map));
       
       }//foreach
       
