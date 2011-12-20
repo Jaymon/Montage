@@ -15,7 +15,7 @@ use Symfony\Component\HttpFoundation\Cookie;
 class CookieJar extends Field {
 
   /**
-   *  @var  Montage\Request\Requestable
+   *  @var  \Montage\Request\Requestable
    */
   public $request = null;
   
@@ -33,7 +33,7 @@ class CookieJar extends Field {
   public function hasField($key){
   
     $cookie_map = $this->request->cookies->all();
-    return !empty($cookie_map[$name]);
+    return !empty($cookie_map[$key]);
   
   }//method
   
@@ -67,7 +67,7 @@ class CookieJar extends Field {
    */
   public function getField($key,$default_val = null){
   
-    return $this->request->cookies->get($name,$default_val);
+    return $this->request->cookies->get($key,$default_val);
   
   }//method
   
@@ -80,7 +80,7 @@ class CookieJar extends Field {
    */
   public function setField($key,$val = null){
   
-    $cookie = new Cookie($name,$val);
+    $cookie = new Cookie($key,$val);
     return $this->setCookie($cookie);
   
   }//method
@@ -166,5 +166,9 @@ class CookieJar extends Field {
    *  @return array
    */
   public function getResponseFields(){ return $this->response->getCookies(); }//method
+  
+  ///protected function encodeField($val){}//method
+  
+  ///protected function decodeField($val){}//method
 
 }//class

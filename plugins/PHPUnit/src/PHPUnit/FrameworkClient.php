@@ -15,6 +15,7 @@ namespace PHPUnit;
 use Symfony\Component\BrowserKit\Client;
 use Symfony\Component\BrowserKit\Request as BrowserKitRequest;
 use Symfony\Component\BrowserKit\Response as BrowserKitResponse;
+use Symfony\Component\HttpFoundation\Cookie;
 
 use PHPUnit\FrameworkCrawler;
 use Montage\Framework;
@@ -148,12 +149,15 @@ class FrameworkClient extends Client {
   {
     $headers = $response->headers->all();
     
-    if($response->headers->getCookies()){
+    if($cookies = $response->headers->getCookies()){
       
+      \out::e($cookies);
+      
+      /*
       $cookies = array();
       foreach($response->headers->getCookies() as $cookie){
           
-          $cookies[] = new DomCookie(
+          $cookies[] = new Cookie(
             $cookie->getName(),
             $cookie->getValue(),
             $cookie->getExpiresTime(),
@@ -163,7 +167,7 @@ class FrameworkClient extends Client {
             $cookie->isHttpOnly()
           );
           
-      }//foreach
+      }//foreach */
       
       $headers['Set-Cookie'] = implode(', ', $cookies);
       
@@ -187,15 +191,9 @@ class FrameworkClient extends Client {
    */
   protected function doRequest($request){
     
-    // re-use the container and the framework, but convert them back to their virgin state...
-    $container = $this->framework->getContainer();
-    $container->reset();
     $this->framework->reset();
-
-    // let's use our passed in "fake" request and then tell the framework about the container again
-    // since it no longer remembers it...
+    $container = $this->framework->getContainer();
     $container->setInstance('request',$request);
-    $this->framework->setContainer($container);
     
     // actually handle the request, capture the output since handle usually echoes to the screen...
     ob_start();
@@ -206,7 +204,7 @@ class FrameworkClient extends Client {
     ob_end_clean();
     
     // set the captured content into the response object...
-    $response = $this->framework->getContainer()->getResponse();
+    $response = $container->getResponse();
     $response->setContent($output);
     
     return $response;

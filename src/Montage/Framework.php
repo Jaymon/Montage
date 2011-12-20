@@ -61,8 +61,11 @@ require_once(__DIR__.'/../../plugins/Utilities/src/Profile.php');
 require_once(__DIR__.'/Autoload/Autoloadable.php');
 require_once(__DIR__.'/Autoload/Autoloader.php');
 require_once(__DIR__.'/Autoload/FrameworkAutoloader.php');
+
 $fal = new FrameworkAutoloader('Montage',realpath(__DIR__.'/..'));
 $fal->register();
+
+/// require_once('/vagrant/public/out_class.php'); \out::h();
 
 class Framework extends Field implements Dependable,Eventable {
 
@@ -81,6 +84,20 @@ class Framework extends Field implements Dependable,Eventable {
   const DEBUG_ALL = 3;
 
   /**
+   *  @since  12-20-11  
+   *  @see  preHandle()
+   *  @var  integer
+   */
+  const HANDLE_PRE = 1;
+  
+  /**
+   *  @since  12-20-11  
+   *  @see  handlePaths()
+   *  @var  integer
+   */
+  const HANDLE_PATHS = 2;
+
+  /**
    *  holds any important internal instances this class is going to use
    *
    *  @since  7-6-11  changed from individual protected instance vars to this array
@@ -93,9 +110,9 @@ class Framework extends Field implements Dependable,Eventable {
    * 
    *  @since  8-15-11    
    *  @see  preHandle()
-   *  @var  boolean
+   *  @var  integer
    */
-  protected $is_ready = false;
+  protected $is_ready = 0;
   
   protected $config_class_name = 'Montage\\Config\\FrameworkConfig';
   
@@ -124,6 +141,9 @@ class Framework extends Field implements Dependable,Eventable {
       throw new \InvalidArgumentException('$app_path was empty, please set it to the root path of your app');
     }//if
     
+    // first handle any files the rest of the framework might depend on...
+    $this->handleDependencies();
+    
     // if anything changes right here, remember it needs to be changed in reset() also...
     $config = $this->getConfig();
     $config->setField('app_path',$app_path);
@@ -150,21 +170,18 @@ class Framework extends Field implements Dependable,Eventable {
   public function preHandle(){
   
     // canary...
-    if($this->is_ready){ return true; }//if
+    if($this->isHandled(self::HANDLE_PRE)){ return true; }//if
   
     $this->profileStart('Handle preHandle');
     
     $ret_mixed = true;
-  
+    
     // this needs to be the first thing done otherwise preHandle() will keep getting
     // called again and again as other methods call this method to make sure everything
     // is ready...
-    $this->is_ready = true;
+    $this->setHandled(self::HANDLE_PRE);
   
     try{
-    
-      // first handle any files the rest of the framework might depend on...
-      $this->handleDependencies();
     
       // collect all the paths we're going to use...
       $this->handlePaths();
@@ -201,7 +218,7 @@ class Framework extends Field implements Dependable,Eventable {
     }catch(\Exception $e){
     
       // the framework never made it to being ready, so we can't reliably do any error handling
-      $this->is_ready = false;
+      $this->is_ready = 0;
       throw $e;
     
     }//try/catch
@@ -218,7 +235,7 @@ class Framework extends Field implements Dependable,Eventable {
    *  @since  8-3-11
    */
   public function reset(){
-  
+
     // we do all the events before reseting because at the end of this method nothing
     // will be listening to events anymore
     
@@ -228,14 +245,7 @@ class Framework extends Field implements Dependable,Eventable {
     $event = new InfoEvent('Framework reset');
     $this->broadcastEvent($event);
     
-    // de-register all the autoloaders this instance started...
-    if($instances = $this->getField('autoload.instances')){
-      
-      foreach($instances as $instance){ $instance->unregister(); }//foreach
-      
-    }//if
-    
-    $this->is_ready = false;
+    $this->is_ready = 0;
     
     // save config values we are going to need on any rerun
     $config = $this->getConfig();
@@ -247,6 +257,13 @@ class Framework extends Field implements Dependable,Eventable {
     
     // start all the objects over again...
     $this->instance_map = array();
+  
+    // de-register all the autoloaders this instance started...
+    if($instances = $this->getField('autoload.instances')){
+      
+      foreach($instances as $instance){ $instance->unregister(); }//foreach
+      
+    }//if
   
     // now reset the config with the saved values...
     $config = $this->getConfig();
@@ -748,6 +765,8 @@ class Framework extends Field implements Dependable,Eventable {
    */
   protected function handleController($class_name,$method,array $params = array()){
   
+    ///\out::e($class_name,$method,$params);
+  
     $container = $this->getContainer();
     
     // allow filtering of the controller info...
@@ -1018,7 +1037,7 @@ class Framework extends Field implements Dependable,Eventable {
       
     }catch(\Exception $e){
     
-      if($this->is_ready){
+      if($this->isHandled(self::HANDLE_PRE)){
     
         $ret_mixed = $this->handleException($e);
         
@@ -1085,13 +1104,15 @@ class Framework extends Field implements Dependable,Eventable {
    */
   public function setContainer(\Montage\Dependency\Containable $container){
   
+    // canary
+    if(!$this->isHandled(self::HANDLE_PATHS)){ $this->handlePaths(); }//if
+  
     $this->instance_map['container'] = $container;
     
     // just in case, container should know about this instance for circular-dependency goodness...
     $container->setInstance('framework',$this);
     
-    // set the container's other dependencies (none of these can be created by the container)...
-    // we don't use setEventDispatch() here to keep compatibility with alternate containers
+    // set the other singletons (none of these can be created by the container)...
     $container->setInstance('event_dispatch',$this->getEventDispatch());
     $container->setInstance('cache',$this->getCache());
     $container->setInstance('profile',$this->getProfile());
@@ -1108,11 +1129,10 @@ class Framework extends Field implements Dependable,Eventable {
   
     // canary...
     if(isset($this->instance_map['container'])){ return $this->instance_map['container']; }//if
+    if(!$this->isHandled(self::HANDLE_PATHS)){ $this->handlePaths(); }//if
   
-    $this->preHandle();
-    
     $reflection = $this->getReflection();
-    $container_class_name = $reflection->findClassName('Montage\Dependency\FrameworkContainer');
+    $container_class_name = $reflection->findClassName('\\Montage\\Dependency\\FrameworkContainer');
     $container = new $container_class_name($reflection);
     
     $this->setContainer($container);
@@ -1223,6 +1243,9 @@ class Framework extends Field implements Dependable,Eventable {
     if(isset($this->instance_map['cache'])){ return $this->instance_map['cache']; }//if
   
     $config = $this->getConfig();
+    if(!$config->hasField('cache_path')){
+      throw new \UnexpectedValueException('$config has no "cache_path" field');
+    }//if
   
     // create the caching object...
     $cache = new $this->cache_class_name();
@@ -1271,6 +1294,10 @@ class Framework extends Field implements Dependable,Eventable {
    */
   protected function handlePaths(){
   
+    // canary
+    if($this->isHandled(self::HANDLE_PATHS)){ return; }//if
+  
+    $this->setHandled(self::HANDLE_PATHS);
     $config = $this->getConfig();
   
     // canary...
@@ -1421,5 +1448,22 @@ class Framework extends Field implements Dependable,Eventable {
     return $profiler->stop();
   
   }//method
+  
+  /**
+   *  true if $val has been called
+   *  
+   *  @since  12-20-11
+   *  @param  integer $val  the HANDLE_* constant to check
+   *  @return boolean            
+   */
+  protected function isHandled($val){ return $this->is_ready & $val; }//method
+  
+  /**
+   *  set $val as handled
+   *  
+   *  @since  12-20-11
+   *  @param  integer $val  the HANDLE_* constant to check        
+   */
+  protected function setHandled($val){ $this->is_ready |= $val; }//method
    
 }//method

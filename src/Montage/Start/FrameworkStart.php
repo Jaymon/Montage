@@ -32,9 +32,6 @@ class FrameworkStart extends Start {
     // now that all the creation events are handled, we can create objects and set defaults
     // if you try and create something before the handleCreate(d)Events() methods then
     // stuff that needs to be set might not be set...
-    $response = $this->getContainer()->getResponse();
-    $response->setTemplate('page');
-    $response->setField('footer_template','footer');
   
   }//method
   
@@ -46,6 +43,21 @@ class FrameworkStart extends Start {
   protected function handleCreatedEvents(){
   
     $event_dispatch = $this->getEventDispatch();
+  
+    $event_dispatch->listen(
+      'framework.filter.created:\\Montage\\Response\\Response',
+      function(\Montage\Event\FilterEvent $event){
+
+        $instance = $event->getParam();
+        
+        // only set these values if nothing has been set
+        if(!$instance->hasTemplate()){ $instance->setTemplate('page'); }//if
+        if(!$instance->hasField('footer_template')){
+          $instance->setField('footer_template','footer');
+        }//if
+        
+      }//closure
+    );
   
     $event_dispatch->listen(
       'framework.filter.created:\\Montage\\Response\\Template',

@@ -11,6 +11,12 @@
  *  just as good for only getting the first N lines of a file, or recursing the 
  *  first N children of a directory     
  * 
+ *  @todo assure() doesn't create a file if it doesn't exist, I guess the class should
+ *  check if there is an extension and just assume it is a file if there is one, for assure()
+ *  purposes, etc. I needed this because I have a logsub method that creates a file and I'm having
+ *  permissions problems because if you run on the cli, vagrant owns it, but if you create it
+ *  through an http request, www-data owns it    
+ *  
  *  @version 0.6
  *  @author Jay Marcyes
  *  @since 12-6-10
@@ -60,6 +66,14 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     parent::__construct($path);
   
   }//method
+  
+  /**
+   *  set the permissions
+   *  
+   *  @param  integer $permissions  something like 0755
+   *  @return integer the old permissions   
+   */
+  public function setPerms($permissions){ return chmod($this->getPathname(),$permissions); }//method
   
   /**
    *  append the current internal path to each of the parent paths looking for a full
@@ -209,13 +223,13 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
             
             }//if
 
-            throw new \UnexpectedValueException(
-              sprintf(
-                '"%s" could not be created. Info: %s',
-                $apath,
-                $info
-              )
+            $e_msg = sprintf(
+              '"%s" could not be created. Info: %s',
+              $apath,
+              $info
             );
+
+            throw new \UnexpectedValueException($e_msg);
           
           }//if
         

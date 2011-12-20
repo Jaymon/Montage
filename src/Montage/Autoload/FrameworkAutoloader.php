@@ -61,7 +61,7 @@ class FrameworkAutoloader extends Autoloader {
     ///if($count > 0){
     if($is_framework){
     
-      $file = $this->src_path.DIRECTORY_SEPARATOR.$file_name;
+      $file = $this->src_path.DIRECTORY_SEPARATOR.$file_name; 
       include($file);
     
     }//if

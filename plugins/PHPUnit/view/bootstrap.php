@@ -5,7 +5,7 @@
  *  
  *  @package    test
  *  @subpackage PHPUnit
- *  @author     <?php echo $this->getField('author'); ?>
+ *  @author     <?php echo $this->getField('author'),PHP_EOL; ?>
  ******************************************************************************/
 
 // include the framework...

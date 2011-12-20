@@ -86,18 +86,6 @@ abstract class TestCase extends PHPUnit_Framework_TestCase {
   }//method
   
   /**
-   *  assert that the val has the same value as $count when count($val) is called
-   *  
-   *  @since  11-23-11      
-   *  @throws \PHPUnit_Framework_ExpectationFailedException
-   */
-  public function assertCount($count,$val){
-  
-    return $this->assertEquals($count,count($val));
-  
-  }//method
-  
-  /**
    *  assert that an Exception was thrown
    *
    *  @since  11-5-11

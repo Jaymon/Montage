@@ -41,7 +41,7 @@ class Session extends SymfonySession implements Fieldable {
   public function setField($key,$val = null){
   
     // canary
-    if(!$this->started){ throw new \RuntimeException('session is not started'); }//if
+    ///if(!$this->started){ throw new \RuntimeException('session is not started'); }//if
   
     $this->set($key,$val);
     return $this;
@@ -95,7 +95,7 @@ class Session extends SymfonySession implements Fieldable {
   public function killField($key){
   
     // canary
-    if(!$this->started){ throw new \RuntimeException('session is not started'); }//if
+    ///if(!$this->started){ throw new \RuntimeException('session is not started'); }//if
   
     $this->remove($key);
     return $this;
@@ -128,7 +128,7 @@ class Session extends SymfonySession implements Fieldable {
   public function addFields(array $field_map){
   
     // canary
-    if(!$this->started){ throw new \RuntimeException('session is not started'); }//if
+    ///if(!$this->started){ throw new \RuntimeException('session is not started'); }//if
   
     if(!empty($field_map)){
       $this->attributes = array_merge($this->attributes,$field_map);
@@ -148,7 +148,7 @@ class Session extends SymfonySession implements Fieldable {
   public function setFields(array $field_map){
   
     // canary
-    if(!$this->started){ throw new \RuntimeException('session is not started'); }//if
+    ///if(!$this->started){ throw new \RuntimeException('session is not started'); }//if
   
     $this->setAttributes($field_map);
     return $this;

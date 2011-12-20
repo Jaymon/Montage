@@ -571,6 +571,11 @@ class Url extends Field {
    */
   protected function handleGet($field,array $args = array()){
   
+    // canary
+    if(!$this->hasField($field)){
+      throw new \BadMethodCallException(sprintf('$field "%s" does not exist',$field));
+    }//if
+  
     $url_args = array();
     $base_map = $this->getField($field,array());
     $url_map = $this->normalize($args);
