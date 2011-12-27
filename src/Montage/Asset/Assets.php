@@ -2,6 +2,10 @@
 /**
  *  handle a group of assets (basically, this wraps a bunch of Asset instances)
  * 
+ *  if you have a library (let's call it Foo) that consists of 5 css files, then this
+ *  class would represent the Foo library, and there would be 5 Asset class instances
+ *  internal to this class that represent each individual css file   
+ *  
  *  @version 0.1
  *  @author Jay Marcyes
  *  @since 9-22-11
@@ -52,7 +56,13 @@ abstract class Assets implements Assetable,IteratorAggregate {
    *
    *  @return string
    */
-  public function getName(){ return get_class($this); }//method
+  public function getName(){
+  
+    $ret_str = get_class($this);
+    $ret_str = str_replace('\\','/',$ret_str);
+    return $ret_str;
+    
+  }//method
   
   /**
    *  get the assets this instance wraps
@@ -229,7 +239,8 @@ abstract class Assets implements Assetable,IteratorAggregate {
     
       // clear all old paths that might exist (just to keep the directory semi clear)...
       $kill_path = $public_file->getParent();
-      $kill_path->clear(sprintf('#%s-[^\.]+\.%s#i',$relative_file->getFilename(),$this->getExtension()));
+      $regex = sprintf('#%s-[^\.]+\.%s#i',$relative_file->getFilename(),$extension);
+      $kill_path->clear($regex);
       
       // copy the file to the new public location...
       $public_file->setFrom($src_file);
@@ -276,7 +287,7 @@ abstract class Assets implements Assetable,IteratorAggregate {
    *  @return string
    */
   public function render($name = ''){
-  
+
     $ret_str = '';
     $asset_map = $this->get();
     
@@ -285,7 +296,7 @@ abstract class Assets implements Assetable,IteratorAggregate {
       $ret_str .= $asset_map[$name]->render().PHP_EOL;
     
     }else{
-    
+
       $assets_iterator = new FlattenArrayIterator($this->get());
       foreach($assets_iterator as $asset){
       
@@ -304,7 +315,7 @@ abstract class Assets implements Assetable,IteratorAggregate {
    *
    *  @return string   
    */
-  public function __toString(){ $this->render(); }//method
+  public function __toString(){ return $this->render(); }//method
   
   /**
    *  add an Asset to this instance

@@ -2,7 +2,7 @@
 /**
  *  represent one Asset file, usually a css or js file
  *  
- *  @version 0.2
+ *  @version 0.3
  *  @author Jay Marcyes
  *  @since 9-21-11
  *  @package montage
@@ -14,10 +14,6 @@ use Path;
 use Montage\Field\Field;
 
 class Asset extends Field implements Assetable {
-
-  // const TYPE_STYLESHEET = 1;
-  // const TYPE_JAVASCRIPT = 2;
-  // const TYPE_IMAGE = 3;
   
   /**
    *  construct an instance
@@ -98,16 +94,19 @@ class Asset extends Field implements Assetable {
    */
   protected function setName($name){
   
-    $name = new Path($name);
-    $parent = $name->getParent();
-    $ret_str = new Path($parent,$name->getFilename());
+    $ret_str = new Path($name);
+    if($parent = $name->getParent()){
+    
+      $ret_str = new Path($parent,$ret_str->getFilename());
+      
+    }else{
+    
+      $ret_str = $ret_str->getFilename();
+    
+    }//if/else
     
     // all directory separators should be url separators...
     $ret_str = str_replace('\\','/',$ret_str);
-    
-    // everything should be uppsercase...
-    $ret_str = mb_strtolower($ret_str);
-    
     $this->setField('name',$ret_str);
   
   }//method

@@ -186,6 +186,31 @@ class FrameworkStart extends Start {
         
       }
     );
+    
+    $event_dispatch->listen(
+      'framework.filter.create:\\Screen',
+      function(\Montage\Event\FilterEvent $event){
+
+        $params = $event->getParam();
+        $container = $event->getField('container');
+        $request = $container->getRequest();
+        
+        if(!isset($params['is_quiet']) && !isset($params[0])){
+        
+          $params['is_quiet'] = $request->getField('quiet',false);
+        
+        }//if
+        
+        if(!isset($params['is_trace']) && !isset($params[1])){
+        
+          $params['is_trace'] = $request->getField('trace',false);
+        
+        }//if
+        
+        $event->setParam($params);
+        
+      }
+    );
   
   }//method
   

@@ -93,7 +93,7 @@ class CookieJar extends Field {
    */
   public function killField($key){
   
-    $this->response->clearCookie($key);
+    $this->response->headers->clearCookie($key);
     return $this;
     
   }//method
@@ -130,7 +130,7 @@ class CookieJar extends Field {
     $cookie_list = $this->getResponseFields();
     foreach($cookie_list as $cookie){
     
-      $this->response->removeCookie($cookie->getName(),$cookie->getPath(),$cookie->getDomain());
+      $this->response->headers->removeCookie($cookie->getName(),$cookie->getPath(),$cookie->getDomain());
     
     }//foreach
   
@@ -165,7 +165,7 @@ class CookieJar extends Field {
    *  
    *  @return array
    */
-  public function getResponseFields(){ return $this->response->getCookies(); }//method
+  public function getResponseFields(){ return $this->response->headers->getCookies(); }//method
   
   ///protected function encodeField($val){}//method
   

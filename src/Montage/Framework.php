@@ -53,6 +53,7 @@ use Montage\Event\Dispatch as EventDispatch;
 
 // the files that needed to be included outside the montage specific autoloader...
 require_once(__DIR__.'/../../plugins/Utilities/src/CallbackFilterIterator.php');
+require_once(__DIR__.'/../../plugins/Utilities/src/FlattenArrayIterator.php');
 require_once(__DIR__.'/../../plugins/Utilities/src/Path.php');
 require_once(__DIR__.'/../../plugins/Utilities/src/Profile.php');
 
@@ -200,7 +201,7 @@ class Framework extends Field implements Dependable,Eventable {
       // this comes about as early as I can make it since it is key to making sure
       // singletons can be created right
       $this->handleStart();
-
+      
       // start the event SUBSCRIBE classes...
       // this comes after start so the event subscribe classes can get singleton dependencies
       $this->handleEvent();
@@ -530,7 +531,7 @@ class Framework extends Field implements Dependable,Eventable {
     $select = $container->getInstance('\Montage\Asset\Select');
     
     // create the global assets class that will handle everything...
-    $assets = $container->getInstance($select->findCatchAll());
+    $assets = $container->getAssets();
     
     $assets->setDestPath($dest_path);
     
@@ -544,7 +545,7 @@ class Framework extends Field implements Dependable,Eventable {
     $assets->setSrcPaths($config->getField('asset_paths',array()));
     
     // create all the "other" asset classes...
-    $class_name_list = $select->find();
+    $class_name_list = $select->find(array(get_class($assets)));
     foreach($class_name_list as $class_name){
     
       $assets->add($container->createInstance($class_name));
@@ -556,9 +557,29 @@ class Framework extends Field implements Dependable,Eventable {
     $event = new FilterEvent('framework.filter.assets',$assets);
     $event = $this->broadcastEvent($event);
     $assets = $event->getParam();
+
+    ///echo '<pre>',print_r($assets->get()),'</pre>';
     
-    $template = $this->getContainer()->getTemplate();
-    $template->setField('assets',$assets);
+    ///\out::i($assets);
+    
+    /* foreach($assets->get() as $k => $a){
+    
+      \out::e($k);
+    
+    }//foreach */
+  
+    /*
+    $f = new \FlattenArrayIterator($assets->get());
+    foreach($f as $k => $v){
+    
+      \out::e($k);
+      \out::e($v);
+    
+    }*/
+    
+    ///\out::x();
+    
+    return $assets;
   
   }//method
 
@@ -639,7 +660,7 @@ class Framework extends Field implements Dependable,Eventable {
           );
           $this->broadcastEvent($event);
         
-          $config->load($config_file);
+          $config->load($config_file,$config->getField('app_path'));
         
         }//foreach
         

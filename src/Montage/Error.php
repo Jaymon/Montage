@@ -113,9 +113,11 @@ class Error implements Eventable {
    */        
   public function handleRuntime($errno,$errstr,$errfile,$errline){
 
+    ///var_dump($errno); var_dump($errstr); var_dump($errfile); var_dump($errline);
+
     // canary...
     if($errno === E_RECOVERABLE_ERROR){
-      throw new \InvalidArgumentException($errstr,$errno);
+      throw new \ErrorException($errstr,$errno,$errno,$errfile,$errline);
     }//if
     // respect error reporting, ignore supressed errors...
     // http://us2.php.net/manual/en/language.operators.errorcontrol.php

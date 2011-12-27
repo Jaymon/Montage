@@ -34,6 +34,13 @@ abstract class Controller extends Field implements Controllable {
    *  @var  \Montage\Url
    */
   public $url = null;
+  
+  /**
+   *  the framework configuration object
+   *  
+   *  @var  \Montage\Config\FrameworkConfig
+   */
+  public $config = null;
 
   /**
    *  override to allow your controller to do stuff right before any handle method is called

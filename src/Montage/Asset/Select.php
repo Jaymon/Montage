@@ -19,14 +19,7 @@ class Select {
    *  
    *  @var  string
    */
-  protected $class_extend = '\Montage\Asset\Assets';
-  
-  /**
-   *  this is the parent class a class has to extend to be considered a catchall asset
-   *  
-   *  @var  string
-   */
-  protected $class_catchall = '\Montage\Asset\FrameworkAssets';
+  protected $class_extend = '\\Montage\\Asset\\Assets';
   
   /**
    *  holds the information about what classes exist in the system
@@ -51,20 +44,9 @@ class Select {
    * 
    *  @return array a list of fully namespaced class names
    */
-  public function find(){
+  public function find(array $ignore_list = array()){
   
-    return $this->reflection->findClassNames($this->class_extend,array($this->class_catchall));
-    
-  }//method
-  
-  /**
-   *  find the catch-all class
-   * 
-   *  @return string  the catch-all class
-   */
-  public function findCatchAll(){
-  
-    return $this->reflection->findClassName($this->class_catchall);
+    return $this->reflection->findClassNames($this->class_extend,$ignore_list);
     
   }//method
   

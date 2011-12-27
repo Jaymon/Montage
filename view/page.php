@@ -41,7 +41,7 @@ http://www.w3schools.com/html5/tag_doctype.asp
       <link rel="alternate" type="application/rss+xml" title="RSS feed for this page" href="<?php echo $this->getField('rss_url'); ?>" />
     <?php endif; ?>
 
-    <?php if($assets = $this->getField('assets')): ?>
+    <?php if($assets = $this->getContainer()->getAssets()): ?>
     
       <?php echo $assets->render('css'); ?>
       

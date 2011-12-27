@@ -2,15 +2,10 @@
 /**
  *  iterate through a multi-dimensional array
  *  
- *  @todo have the keys return an array() of all the keys down, so if the array looked
- *  like: array(0 => 'foo',1 => array(0 => array(0 => 'bar'))); then when we got to 
- *  value 'bar' the key would be: array(1,0,0) with the last value being the correct
- *  key   
- *  
  *  @link http://www.php.net/manual/en/class.recursivearrayiterator.php
  *  @link http://www.php.net/manual/en/class.splstack.php
  *    
- *  @version 0.1
+ *  @version 0.3
  *  @author Jay Marcyes
  *  @since 10-1-11 
  ******************************************************************************/
@@ -29,6 +24,15 @@ class FlattenArrayIterator extends RecursiveArrayIterator {
    *  @var  SplStack   
    */
   protected $stack = null;
+  
+  /**
+   *  holds all the keys needed to get to the current value
+   *  
+   *  @since  12-22-11
+   *  @see  keys()
+   *  @var  array
+   */
+  protected $keys = array();
 
   /**
    *  create instance
@@ -57,16 +61,46 @@ class FlattenArrayIterator extends RecursiveArrayIterator {
     
     if(is_array($current)){
     
+      $this->keys[] = $this->key();
+    
       // move the iterator to the next element so it will be ready when it pops...
       $this->iterator->next();
       $this->stack->push($this->iterator);
     
       $this->iterator = new ArrayIterator($current);
-      $current = $this->iterator->current();
+      $current = $this->current();
     
     }//if
   
     return $current;
+  
+  }//method
+  
+  /**
+   *  get all the keys that led to current
+   *  
+   *  @example
+   *    $arr = array('foo' => array('bar' => array('baz' => 1)));
+   *    $i = new FlattenArrayIterator($arr);
+   *    foreach($i as $a){
+   *      echo $a; // 1
+   *      print_r($i->keys()); // array('foo','bar','baz')
+   *    }            
+   *
+   *  original notes:   
+   *  have the keys return an array() of all the keys down, so if the array looked
+   *  like: array(0 => 'foo',1 => array(0 => array(0 => 'bar'))); then when we got to 
+   *  value 'bar' the key would be: array(1,0,0) with the last value being the correct
+   *  key
+   *      
+   *  @since  12-22-11
+   *  @return array a list of all the keys needed to get to the current value
+   */
+  public function keys(){
+  
+    $keys = $this->keys;
+    $keys[] = $this->key();
+    return $keys;
   
   }//method
   
@@ -92,7 +126,9 @@ class FlattenArrayIterator extends RecursiveArrayIterator {
       if(!$this->stack->isEmpty()){
       
         $this->iterator = $this->stack->pop();
-        $is_valid = $this->iterator->valid();
+        array_pop($this->keys);
+        
+        $is_valid = $this->valid();
       
       }//if
     

@@ -842,7 +842,13 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
     $basepath = $this->getParent();
     $basepath->assure();
     
-    return copy((string)$path,(string)$this);
+    if(!copy((string)$path,(string)$this)){
+      throw new \UnexpectedValueException(
+        sprintf('unable to copy source "%s" to destination "%s"',$path,$this)
+      );
+    }//if
+    
+    return true;
     
   }//method
 
@@ -1041,6 +1047,7 @@ class Path extends SplFileInfo implements Countable,IteratorAggregate {
    *    $this->build(array('foo','bar')); // -> foo/bar
    *    $this->build(array(array('foo','baz'),'bar')); // -> foo/baz/bar
    *    $this->build(array(array('foo','baz'),'/bar/che')); // -> foo/baz/bar/che
+   *    $this->build(array('','foo')); // /foo   
    *  
    *  @param  array $path_bits  the path bits that will be used to build the path
    *  @param  boolean $check_absolute true if the first character of the first real path_bit

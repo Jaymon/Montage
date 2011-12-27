@@ -16,7 +16,7 @@
  *    
  *  @link http://mcrypt.hellug.gr/lib/mcrypt.3.html
  *  
- *  @version 0.1
+ *  @version 0.4
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 9-5-07
  *  @package Utilities
@@ -62,6 +62,36 @@ class Crypt {
     $this->cipher_algo = $cipher_algo;
     $this->cipher_mode = $cipher_mode;
   
+  }//method
+  
+  /**
+   *  encrypt an array
+   *  
+   *  @since  12-20-11   
+   *  @param  string  $key  the password you want to use
+   *  @param  array $arr  the array you want to encrypt
+   *  @return string  the encrypted text
+   */
+  public function encryptArr($key,array $arr){
+  
+    $text = serialize($arr);
+    return $this->encrypt($key,$text);
+
+  }//method
+  
+  /**
+   *  decrypt text encrypted with {@link encryptArr()}
+   * 
+   *  @since  12-20-11    
+   *  @param  string  $key  the password used to encrypt the text
+   *  @param  string  $cipher_text the encrypted text
+   *  @return array the decrypted array
+   */
+  public function decryptArr($key,$cipher_text){
+  
+    $text = $this->decrypt($key,$cipher_text);
+    return unserialize($text);
+
   }//method
   
   /**

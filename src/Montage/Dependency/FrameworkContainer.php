@@ -16,6 +16,18 @@ use Montage\Event\FilterEvent;
 class FrameworkContainer extends ReflectionContainer implements Eventable {
 
   /**
+   *  get the Framework assets manager
+   *
+   *  @since  12-23-11
+   *  @return \Montage\Asset\FrameworkAssets
+   */
+  public function getAssets($params = array()){
+  
+    return $this->findInstance('assets','\\Montage\\Asset\\FrameworkAssets',$params);
+  
+  }//method
+
+  /**
    *  get the Standard Autoloader
    *
    *  @since  10-28-11
@@ -276,7 +288,7 @@ class FrameworkContainer extends ReflectionContainer implements Eventable {
   protected function getEventKey($prefix,$class_name){
   
     // prepend the absolute namespace...
-    ///if($class_name[0] !== '\\'){ $class_name = '\\'.$class_name; }//if
+    if($class_name[0] !== '\\'){ $class_name = '\\'.$class_name; }//if
   
     return sprintf('framework.filter.%s:%s',$prefix,$class_name);
   

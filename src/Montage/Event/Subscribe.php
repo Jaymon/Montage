@@ -21,9 +21,10 @@ abstract class Subscribe implements Subscribeable {
   protected $dispatch = null;
 
   /**
-   *  get the name(s) of the event(s) this class is subscribing to
+   *  get the name(s) of the event(s) this class is subscribing to      
    *  
-   *  @return string|array      
+   *  @return string|array  if a string, then the it is the event name, if an array, then it is
+   *                        a map of event_name/callback pairs 
    */
   abstract public function getEventName();
 
@@ -54,12 +55,20 @@ abstract class Subscribe implements Subscribeable {
   public function register(){
   
     $dispatch = $this->getEventDispatch();
-    $callback = array($this,'handle');
     
-    $event_name_list = (array)$this->getEventName();
-    foreach($event_name_list as $event_name){
-      $dispatch->listen($event_name,$callback);
-    }//foreach
+    $event_name_list = $this->getEventName();
+    if(is_array($event_name_list)){
+      
+      foreach($event_name_list as $event_name => $callback){
+        $dispatch->listen($event_name,$callback);
+      }//foreach
+      
+    }else{
+    
+      $callback = array($this,'handle');
+      $dispatch->listen($event_name_list,$callback);
+    
+    }//if/else
   
   }//method
   
@@ -69,12 +78,20 @@ abstract class Subscribe implements Subscribeable {
   public function unregister(){
   
     $dispatch = $this->getEventDispatch();
-    $callback = array($this,'handle');
+
+    $event_name_list = $this->getEventName();
+    if(is_array($event_name_list)){
+      
+      foreach($event_name_list as $event_name => $callback){
+        $dispatch->kill($event_name,$callback);
+      }//foreach
+      
+    }else{
     
-    $event_name_list = (array)$this->getEventName();
-    foreach($event_name_list as $event_name){
-      $dispatch->kill($event_name,$callback);
-    }//foreach
+      $callback = array($this,'handle');
+      $dispatch->kill($event_name_list,$callback);
+    
+    }//if/else
   
   }//method
 
