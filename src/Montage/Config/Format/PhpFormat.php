@@ -22,6 +22,7 @@ class PhpFormat extends Format {
   protected function parseFields(Path $file){
   
     // we wrap it in a closure so it can't access the class using $this in the config file
+    // http://stackoverflow.com/questions/5734011/php-5-4-closure-this-support
     $closure = function(Path $_f_i_l_e_){
     
       // move all the defined variables into the local closure symbol table

@@ -7,7 +7,7 @@
  *  should only override it if you want to mess with that functionality, otherwise, you
  *  should always extend Assets     
  * 
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes
  *  @since 9-23-11
  *  @package montage
@@ -29,6 +29,15 @@ class FrameworkAssets extends Assets {
    *  @var  array
    */
   protected $assets_path_list = array();
+  
+  /**
+   *  hold asset dependencies until they are resolved
+   *  
+   *  @since  12-29-11   
+   *  @see  handle(), add()      
+   *  @var  array
+   */
+  protected $asset_dependency_map = array();
   
   /**
    *  this particular object doesn't have a specific asset type but this is required by parent
@@ -81,6 +90,21 @@ class FrameworkAssets extends Assets {
     }//foreach
     
     parent::handle();
+    
+    // error out if there are missing dependencies
+    if(!empty($this->asset_dependency_map)){
+    
+      $e_msg = 'There are assets with missing dependencies:';
+    
+      foreach($this->asset_dependency_map as $dependency_name => $dependent_asset){
+      
+        $e_msg .= sprintf(' [%s depends on %s]',$dependency_asset->getName(),$dependency_name);
+      
+      }//foreach
+    
+      throw new \UnexpectedValueException($e_msg);
+    
+    }//if
     
   }//method
   
@@ -166,14 +190,51 @@ class FrameworkAssets extends Assets {
    */
   public function add(Assetable $asset){
   
+    $name = $asset->getName();
     $ext = $asset->getExtension();
-    if(!isset($this->asset_list[$ext])){
+    $cleared = true;
     
-      $this->asset_list[$ext] = array();
+    if(!isset($this->asset_list[$ext])){ $this->asset_list[$ext] = array(); }//if
+    
+    // make sure this asset has all its dependencies cleared before adding it to the list
+    if($dependencies = $asset->getDependencies()){
+    
+      foreach($dependencies as $dependency_name){
+      
+        if(!isset($this->asset_list[$ext][$dependency_name])){
+        
+          if(!isset($this->asset_dependency_map[$dependency_name])){
+          
+            $this->asset_dependency_map[$dependency_name] = array();
+            
+          }//if
+          
+          $this->asset_dependency_map[$dependency_name][$name] = $asset;
+          $cleared = false;
+        
+        }//if
+      
+      }//foreach
     
     }//if
+
+    if($cleared){
     
-    $this->asset_list[$ext][$asset->getName()] = $asset;
+      $this->asset_list[$ext][$name] = $asset;
+      
+      // add any dependencies that rely on this asset
+      if(isset($this->asset_dependency_map[$name])){
+      
+        $this->asset_list[$ext] = array_merge(
+          $this->asset_list[$ext],
+          $this->asset_dependency_map[$name]
+        );
+        
+        unset($this->asset_dependency_map[$name]);
+      
+      }//if
+      
+    }//if
     
   }//method
   

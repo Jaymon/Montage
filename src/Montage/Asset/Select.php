@@ -2,7 +2,7 @@
 /**
  *  handles deciding what classes that implement Assets
  *  
- *  @version 0.2
+ *  @version 0.3
  *  @author Jay Marcyes
  *  @since 9-26-11
  *  @package montage
@@ -26,25 +26,22 @@ class Select {
    *
    *  @var  \Montage\Reflection\ReflectionFramework
    */
-  protected $reflection = null;
+  public $reflection = null;
   
   /**
-   *  create instance of this class
-   *  
-   *  @param  \Montage\Reflection\ReflectionFramework $reflection needed to be able to find suitable classes            
+   *  @since  12-29-11   
+   *  @var  \Montage\Asset\FrameworkAssets
    */
-  function __construct(ReflectionFramework $reflection){
-  
-    $this->reflection = $reflection;
-  
-  }//method
+  public $framework_assets = null;
   
   /**
    *  find all the class names that should be instantiated
    * 
    *  @return array a list of fully namespaced class names
    */
-  public function find(array $ignore_list = array()){
+  public function find(){
+  
+    $ignore_list = array(get_class($this->framework_assets));
   
     return $this->reflection->findClassNames($this->class_extend,$ignore_list);
     

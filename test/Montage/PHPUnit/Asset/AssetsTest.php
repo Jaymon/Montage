@@ -11,6 +11,43 @@ use Montage\Asset\FrameworkAssets;
 class AssetsTest extends FrameworkTestCase {
   
   /**
+   *  test that dependencies are resolved correctly
+   *  
+   *  @since  12-29-11
+   */
+  public function testDependencies(){
+  
+    $dest_path = $this->getTempPath('Asset');
+    $foo_path = $this->getFixturePath('Asset','Foo','assets');
+    $che_path = $this->getFixturePath('Asset','Che','assets');
+  
+    $framework_assets = new FrameworkAssets();
+    $framework_assets->setDestPath($dest_path);
+    $framework_assets->setSrcPaths(array($che_path,$foo_path));
+  
+    $che_assets = new CheAssets();
+    $che_assets->addSrcPath($che_path);
+    $framework_assets->add($che_assets);
+    
+    $foo_assets = new FooAssets();
+    $foo_assets->addSrcPath($foo_path);
+    $framework_assets->add($foo_assets);
+    
+    $framework_assets->handle();
+    
+    ///$str = $framework_assets->render('css');
+    ///\out::e($framework_assets->get());
+    ///\out::i($framework_assets);
+    
+    $assets_map = $framework_assets->get();
+    $assets_map = $assets_map['css'];
+    $assets_list = array_keys($assets_map);
+    $this->assertEquals('Foo',$assets_list[0]);
+    $this->assertEquals('Che',$assets_list[1]);
+  
+  }//method
+  
+  /**
    *  make sure Asset rendering works
    *
    *  @since  10-1-11
@@ -115,6 +152,8 @@ class AssetsTest extends FrameworkTestCase {
 
 class FooAssets extends Assets {
 
+  public function getName(){ return 'Foo'; }//method
+
   public function getExtension(){ return 'css'; }//method
 
 }//class
@@ -122,5 +161,15 @@ class FooAssets extends Assets {
 class BarAssets extends Assets {
 
   public function getExtension(){ return 'js'; }//method
+
+}//class
+
+class CheAssets extends Assets {
+
+  public function getName(){ return 'Che'; }//method
+
+  public function getDependencies(){ return array('Foo'); }//method
+
+  public function getExtension(){ return 'css'; }//method
 
 }//class

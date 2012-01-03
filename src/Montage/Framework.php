@@ -527,11 +527,11 @@ class Framework extends Field implements Dependable,Eventable {
     
     $dest_path = new Path($config->getPublicPath(),'assets');
     
-    // create the assets selector...
-    $select = $container->getInstance('\Montage\Asset\Select');
-    
-    // create the global assets class that will handle everything...
+    // create the global assets class that will handle app asset management...
     $assets = $container->getAssets();
+    
+    // create the assets selector that will be used to compile the other assets...
+    $select = $container->getInstance('\\Montage\\Asset\\Select');
     
     $assets->setDestPath($dest_path);
     
@@ -545,7 +545,7 @@ class Framework extends Field implements Dependable,Eventable {
     $assets->setSrcPaths($config->getField('asset_paths',array()));
     
     // create all the "other" asset classes...
-    $class_name_list = $select->find(array(get_class($assets)));
+    $class_name_list = $select->find();
     foreach($class_name_list as $class_name){
     
       $assets->add($container->createInstance($class_name));

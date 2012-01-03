@@ -40,6 +40,13 @@ class Asset extends Field implements Assetable {
   public function __toString(){ return $this->render(); }//method
   
   /**
+   *  this method is not used by default for a single asset  
+   *   
+   *  @return array      
+   */
+  public function getDependencies(){ return array(); }//method
+  
+  /**
    *  render a particular asset
    *  
    *  @param  string  $name the name of the asset      

@@ -13,6 +13,14 @@ namespace Montage\Asset;
 interface Assetable {
   
   /**
+   *  a list of dependency names that this asset relies on  
+   *   
+   *  @since  12-29-11
+   *  @return array a list of dependendencies that need to be rendered before this instance   
+   */
+  public function getDependencies();
+  
+  /**
    *  get the name of this asset
    *
    *  @return string

@@ -6,7 +6,7 @@
  *  class would represent the Foo library, and there would be 5 Asset class instances
  *  internal to this class that represent each individual css file   
  *  
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes
  *  @since 9-22-11
  *  @package montage
@@ -52,14 +52,26 @@ abstract class Assets implements Assetable,IteratorAggregate {
   protected $asset_list = array();
   
   /**
+   *  get the dependencies that these assets rely on in order to function properly  
+   *   
+   *  @since  12-29-11
+   *  @return array a list of dependendencies that need to be rendered before this instance   
+   */
+  public function getDependencies(){ return array(); }//method
+  
+  /**
    *  get the name of this asset
    *
+   *  @note by default, this will just be the class name. But in plugins and modular code
+   *  it would probably be wise to override this method to have a better name so 
+   *  handling dependencies will be easier      
+   *      
    *  @return string
    */
   public function getName(){
   
     $ret_str = get_class($this);
-    $ret_str = str_replace('\\','/',$ret_str);
+    if($ret_str[0] !== '\\'){ $ret_str = '\\'.$ret_str; }//if
     return $ret_str;
     
   }//method
