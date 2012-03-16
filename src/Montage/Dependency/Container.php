@@ -7,7 +7,7 @@
  *  (that's more theory than practice because I haven't tried to use a different container
  *     
  *  @version 0.2
- *  @author Jay Marcyes {@link http://marcyes.com}
+ *  @author Jay Marcyes
  *  @since 7-22-11
  *  @package montage
  ******************************************************************************/

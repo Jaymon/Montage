@@ -878,16 +878,13 @@ class Framework extends Field implements Dependable,Eventable {
               );
               $event = $this->broadcastEvent($event);
               
-              // if we've created the object then go ahead and end look for a creation event
+              // if we've done something to the param then go ahead and end looking for a creation event
               if($event->changedParam()){
               
                 $filtered_param = $event->getParam();
+                $params[$index] = $filtered_param;
+                break;
               
-                if(is_object($filtered_param)){
-                  $params[$index] = $filtered_param;
-                  break;
-                }//if
-               
               }//if
               
             }//foreach
@@ -1099,6 +1096,8 @@ class Framework extends Field implements Dependable,Eventable {
         get_class($e),
         $e->getMessage()
       );
+      
+      \out::i($this);
       
       ///trigger_error($e_msg,E_USER_ERROR);
       throw new \RuntimeException($e_msg,$e->getCode());

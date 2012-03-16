@@ -136,6 +136,8 @@ class ReflectionContainer extends Container {
     $cb_class_list = $reflection->getParents($class_name);
     if(!in_array($class_name,$cb_class_list)){ $cb_class_list[] = $class_name; }//if
     
+    $this->handleCreateDependencies($class_name);
+    
     foreach($cb_class_list as $cb_class_name){
     
       $params = $this->_handleOnCreate($cb_class_name,$params);
@@ -170,7 +172,7 @@ class ReflectionContainer extends Container {
     $cb_class_list = $reflection->getParents($class_name);
     if(!in_array($class_name,$cb_class_list)){ $cb_class_list[] = $class_name; }//if
     
-    $this->handleDependencies($instance);
+    $this->handleCreatedDependencies($instance);
     
     foreach($cb_class_list as $cb_class_name){
     
@@ -192,6 +194,63 @@ class ReflectionContainer extends Container {
   }//method
   
   /**
+   *  check static methods and params and set those values before creating the class
+   *      
+   *  this is handy when you want to use a static value in the constructor of the class
+   *  (as I just recently wanted to do)
+   *  
+   *  @since  1-12-12
+   *  @param  string  $class_name same class name as all the other methods
+   */
+  protected function handleCreateDependencies($class_name){
+  
+    $dependency_list = array();
+    $instance_class_name = $this->getClassName($class_name);
+    $reflection = $this->getReflection();
+    $rclass = new ReflectionClass($instance_class_name);
+    
+    // first check cache, if it doesn't exist, build it and save it
+    $class_map = $reflection->getClass($instance_class_name);
+    if(!isset($class_map['info']['create'])){
+      
+      // find the dependency methods
+      $filter = ReflectionMethod::IS_PUBLIC;
+      $rmethod_list = $rclass->getMethods($filter);
+      foreach($rmethod_list as $rmethod){
+  
+        if($rmethod->isStatic()){
+  
+          if($map = $this->getMethodDependencyMap($rmethod)){ $dependency_list[] = $map; }//if
+          
+        }//if
+  
+      }//foreach
+      
+      $filter = ReflectionProperty::IS_PUBLIC;
+      $rparam_list = $rclass->getProperties($filter);
+      foreach($rparam_list as $rparam){
+  
+        if($rparam->isStatic()){
+  
+          if($map = $this->getParamDependencyMap($rparam)){ $dependency_list[] = $map; }//if
+          
+        }//if
+      
+      }//foreach
+      
+      $reflection->addClassInfo($instance_class_name,array('create' => $dependency_list));
+      
+    }else{
+    
+      $dependency_list = $class_map['info']['create'];
+    
+    }//if/else
+
+    foreach($dependency_list as $map){ $this->injectInstance($rclass,$map); }//foreach
+    
+  }//method
+  
+  /**
    *  automatically inject dependencies in the recently created instance
    *  
    *  currently, there are three ways to do dependencies:
@@ -205,7 +264,7 @@ class ReflectionContainer extends Container {
    *  @param  object  $instance
    *  @return object  the same instance with dependencies injected
    */
-  protected function handleDependencies($instance){
+  protected function handleCreatedDependencies($instance){
   
     // canary...
     if(empty($instance)){ throw new \InvalidArgumentException('$instance was empty'); }//if
@@ -216,42 +275,50 @@ class ReflectionContainer extends Container {
     
     // first check cache, if it doesn't exist, build it and save it
     $class_map = $reflection->getClass($robj->getName());
-    if(!isset($class_map['info']['inject'])){
+    if(!isset($class_map['info']['created'])){
       
       // find the dependency methods
       $rmethod_list = $robj->getMethods(ReflectionMethod::IS_PUBLIC);
       foreach($rmethod_list as $rmethod){
   
-        if($map = $this->getMethodDependencyMap($rmethod,$instance)){
-      
-          $dependency_list[] = $map;  
+        if(!$rmethod->isStatic()){
+    
+          if($map = $this->getMethodDependencyMap($rmethod,$instance)){
         
+            $dependency_list[] = $map;  
+          
+          }//if
+          
         }//if
   
       }//foreach
       
       $rparam_list = $robj->getProperties(ReflectionProperty::IS_PUBLIC);
       foreach($rparam_list as $rparam){
-  
-        if($map = $this->getParamDependencyMap($rparam,$instance)){
-      
-          $dependency_list[] = $map;  
+
+        if(!$rparam->isStatic()){
+    
+          if($map = $this->getParamDependencyMap($rparam,$instance)){
         
+            $dependency_list[] = $map;  
+          
+          }//if
+          
         }//if
       
       }//foreach
       
-      $reflection->addClassInfo($robj->getName(),array('inject' => $dependency_list));
+      $reflection->addClassInfo($robj->getName(),array('created' => $dependency_list));
       
     }else{
     
-      $dependency_list = $class_map['info']['inject'];
+      $dependency_list = $class_map['info']['created'];
     
     }//if/else
 
     foreach($dependency_list as $map){
     
-      $this->injectInstance($robj,$instance,$map);
+      $this->injectInstance($robj,$map,$instance);
     
     }//foreach
     
@@ -263,23 +330,28 @@ class ReflectionContainer extends Container {
    *  inject a dependency using: $instance::$rmethod({@link getInjectClassName()})
    *
    *  @since  9-7-11
-   *  @param  object  $instance
-   *  @param  ReflectionFunctionAbstract  $rmethod  the reflection of the method of $instance
-   *  @return boolean true if the instance was going to be reflected, regardless of whether it was
+   *     
+   *  @param  \ReflectionClass  $rclass info about the class being injected into
+   *  @param  array $map  information about the param
+   *  @param  object|null $instance   
+   *  @return object|null the $instance, with dependency in $map injected into it
    */
-  protected function injectInstance(\ReflectionObject $robj,$instance,array $map){
+  protected function injectInstance(\ReflectionClass $rclass,array $map,$instance = null){
   
     $class_name = $map['class_name'];
     $name = $map['name'];
   
     if(empty($map['method'])){
     
-      $rparam = $robj->getProperty($name);
+      $rparam = $rclass->getProperty($name);
+      $param_instance = $rparam->isStatic() ? null : $instance;
     
-      $rparam->setValue(
-        $rparam->isStatic() ? null : $instance,
-        $this->getInstance($class_name)
-      );
+      // before trying to inject the instance, make sure it isn't already set
+      if($rparam->getValue($param_instance) === null){
+      
+        $rparam->setValue($param_instance,$this->getInstance($class_name));
+        
+      }//if
     
     }else{
     
@@ -292,15 +364,19 @@ class ReflectionContainer extends Container {
       
       }else{
       
-        $callback = array($robj->getName(),$name);
+        $callback = array($rclass->getName(),$name);
       
       }//if/else
     
       if(empty($map['optional'])){
         
+        // fail if the injected instance can't be successfully created
+        
         call_user_func($callback,$this->getInstance($class_name));
           
       }else{
+      
+        // if we don't already have an active instance, let's not set the dependency
       
         try{
         
@@ -314,7 +390,7 @@ class ReflectionContainer extends Container {
           // exceptions aren't fatal, just don't set the dependency
         }//try/catch
           
-      }//if/else if
+      }//if/else
       
     }//if/else
   
@@ -326,12 +402,16 @@ class ReflectionContainer extends Container {
    *  returns a dependency map if the method is a valid dependency inject method
    *  
    *  @since  9-7-11   
-   *  @param  ReflectionMethod  $method  the reflection of the method/function           
+   *  @param  ReflectionMethod  $method  the reflection of the method/function
+   *  @param  object|null $instance the object instance, or null if it hasn't been created yet             
    *  @return array
    */
-  protected function getParamDependencyMap(\ReflectionProperty $rparam,$instance){
+  protected function getParamDependencyMap(\ReflectionProperty $rparam,$instance = null){
   
-    $val = $rparam->getValue($instance);
+    $val = empty($instance)
+      ? $rparam->getValue()
+      : $rparam->getValue($instance);
+  
     $docblock = $rparam->getDocComment();
   
     // canary
@@ -350,8 +430,8 @@ class ReflectionContainer extends Container {
       // fix namespace...
       if($class_name[0] !== '\\'){
       
-        $robj = new ReflectionObject($instance);
-        $class_name = sprintf('%s\\%s',$robj->getNamespaceName(),$class_name);
+        $rclass = $rparam->getDeclaringClass();
+        $class_name = sprintf('%s\\%s',$rclass->getNamespaceName(),$class_name);
       
       }//if
       
@@ -374,7 +454,7 @@ class ReflectionContainer extends Container {
    *  @param  ReflectionMethod  $method  the reflection of the method/function           
    *  @return array
    */
-  protected function getMethodDependencyMap(\ReflectionMethod $rmethod,$instance){
+  protected function getMethodDependencyMap(\ReflectionMethod $rmethod,$instance = null){
   
     // canary
     if($rmethod->getNumberOfParameters() !== 1){ return array(); }//if

@@ -150,7 +150,7 @@ class Session extends SymfonySession implements Fieldable {
     // canary
     ///if(!$this->started){ throw new \RuntimeException('session is not started'); }//if
   
-    $this->setAttributes($field_map);
+    $this->replace($field_map);
     return $this;
     
   }//method
@@ -160,7 +160,7 @@ class Session extends SymfonySession implements Fieldable {
    *  
    *  @return array
    */
-  public function getFields(){ return $this->getAttributes(); }//method
+  public function getFields(){ return $this->all(); }//method
   
   /**
    *  bump the field at $key by $count

@@ -194,8 +194,8 @@ namespace Montage\PHPUnit {
       $class_map = $this->reflection->getClass('Montage\Test\Fixtures\Dependency\FooBar');
       
       $this->assertArrayHasKey('info',$class_map);
-      $this->assertArrayHasKey('inject',$class_map['info']);
-      $this->assertEquals(2,count($class_map['info']['inject']));
+      $this->assertArrayHasKey('created',$class_map['info']);
+      $this->assertEquals(2,count($class_map['info']['created']));
     
     }//method
     
@@ -211,15 +211,32 @@ namespace Montage\PHPUnit {
       
       $class_map = $this->reflection->getClass('Montage\Test\Fixtures\Dependency\BarBaz');
       
-      $this->assertEquals(4,count($class_map['info']['inject']));
+      $this->assertEquals(4,count($class_map['info']['created']));
       
       $method_name_list = array('setFoo','injectBar','setChe','injectBong');
-      foreach($class_map['info']['inject'] as $map){
+      foreach($class_map['info']['created'] as $map){
       
         $this->assertTrue(in_array($map['name'],$map));
       
       }//foreach
       
+    }//method
+    
+    /**
+     *  make sure static params get created before the class is created     
+     *
+     *  @since  1-12-12
+     */
+    public function testStaticParamInject(){
+    
+      $instance = $this->container->getInstance(
+        '\\Montage\\Test\\Fixtures\\Dependency\\ParamStaticInjection'
+      );
+      
+      $this->assertTrue($instance instanceof \Montage\Test\Fixtures\Dependency\ParamStaticInjection);
+      $this->assertTrue($instance->che instanceof \Che);
+      $this->assertTrue(\Montage\Test\Fixtures\Dependency\ParamStaticInjection::$bong instanceof \Bong);
+    
     }//method
   
   }//class
@@ -227,6 +244,30 @@ namespace Montage\PHPUnit {
 }//namespace
 
 namespace Montage\Test\Fixtures\Dependency {
+
+  class ParamStaticInjection {
+  
+    /**
+     *  @var  \Bong this is static for no reason
+     */
+    public static $bong = null;
+  
+    /**
+     *  @var  \Che
+     */
+    public $che = null;
+    
+    public function __construct(){
+  
+      if(!(self::$bong instanceof \Bong)){
+      
+        throw new \RuntimeException('bong should be created');
+      
+      }//if  
+    
+    }//method
+  
+  }//class
 
   class ParamInjected {
   
