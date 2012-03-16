@@ -1,4 +1,12 @@
 <?php
+/**
+ *  this tests the Framework.php file, which is the core of the entire framework
+ *  
+ *  @version 0.2
+ *  @author Jay Marcyes
+ *  @package test
+ *  @subpackage PHPUnit
+ ******************************************************************************/
 namespace Montage\PHPUnit;
 
 use PHPUnit\TestCase;

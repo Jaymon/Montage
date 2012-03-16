@@ -38,14 +38,14 @@ class ReflectionFile implements Reflector {
   
     // canary...
     if(empty($filename)){ throw new \InvalidArgumentException('$filename was empty'); }//if
+    if(!is_file($filename)){
+      throw new \InvalidArgumentException(
+        sprintf('$filename (%s) was not a valid filepath',$filename)
+      );
+    }//if
     
     $this->filename = $filename;
-    
-    if(is_file($filename)){
-  
-      $this->body = file_get_contents($filename);
-      
-    }//if
+    $this->body = file_get_contents($filename);
   
   }//method
   
