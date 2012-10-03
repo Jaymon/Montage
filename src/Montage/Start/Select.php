@@ -75,10 +75,10 @@ class Select {
   
     $reflection = $this->reflection;
   
-    $class_name = '\Montage\Start\FrameworkStart';
+    $class_name = '\\Montage\\Start\\FrameworkStart';
     if($reflection->isChildClass($class_name,$this->class_interface)){
     
-      $class_name = $reflection->findClassName('\Montage\Start\FrameworkStart');
+      $class_name = $reflection->findClassName('\\Montage\\Start\\FrameworkStart');
     
     }//if
   
@@ -97,10 +97,10 @@ class Select {
     $reflection = $this->reflection;
     
     // start application...
-    $class_name = sprintf('\Start\%sStart',$prefix);
+    $class_name = sprintf('\\Start\\%sStart',$prefix);
     if(!$reflection->isChildClass($class_name,$this->class_interface)){
     
-      $class_name = '\Start\Start';
+      $class_name = '\\Start\\Start';
       if(!$reflection->isChildClass($class_name,$this->class_interface)){
         $class_name = '';
       }//if

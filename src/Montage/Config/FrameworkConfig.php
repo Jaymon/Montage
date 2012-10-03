@@ -2,7 +2,7 @@
 /**
  *  a giant application wide place to store configuration  
  *  
- *  @version 0.1
+ *  @version 0.2
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 6-17-11
  *  @package montage
@@ -117,5 +117,51 @@ class FrameworkConfig extends Config {
    *  @return string
    */
   public function getTimezone(){ return $this->getField('timezone','UTC'); }//method
+  
+  /**
+   *  overrides parent to allow paths to be appended instead of just over-written  
+   *
+   *  @since  4-3-12   
+   *  @param  array $field_map  the associative array returned from the config file   
+   */
+  protected function mergeFileFields(array $field_map){
+    
+    $path_key_list = array(
+      'reflection_paths',
+      'view_paths',
+      'vendor_paths',
+      'asset_paths',
+      'plugin_paths',
+      'test_paths',
+      'config_paths'
+    );
+    
+    foreach($path_key_list as $path_key){
+    
+      if(!empty($field_map[$path_key])){
+      
+        if(isset($this->field_map[$path_key])){
+        
+          $this->field_map[$path_key] = array_merge(
+            $this->field_map[$path_key],
+            (array)$field_map[$path_key]
+          );
+        
+        }else{
+        
+          $this->field_map[$path_key] = $field_map[$path_key];
+        
+        }//if/else
+        
+        unset($field_map[$path_key]);
+        
+      }//if
+    
+    }//foreach
+    
+    // merge the rest of the file fields normally
+    return parent::mergeFileFields($field_map);
+  
+  }//method
 
 }//class

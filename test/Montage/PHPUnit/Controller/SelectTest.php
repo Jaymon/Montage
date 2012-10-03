@@ -65,6 +65,13 @@ namespace Montage\PHPUnit {
         'in' => array('','foo/bar',array()),
         'out' => array('Test\\Controller2\\FooController','handleBar',array())
       );
+      // @todo: this will fail because baz overrides bar, so bar can't be found
+      // I can fix this by going through all the children of each controller looking
+      // for a match (first one wins I guess), but I don't have time to do it now
+      $test_list[] = array(
+        'in' => array('','bar/',array()),
+        'out' => array('Test\\Controller\\BarController','handleIndex',array())
+      );
       
       $method = 'find';
       $this->assertCalls($this->cselect,$method,$test_list);
@@ -153,6 +160,12 @@ namespace Test\Controller {
   
   }//class
   
+  class BarController extends Controller {
+  
+    public function handleIndex(array $params = array()){}//method
+  
+  }//class
+  
   class CheController extends Controller {
   
     public function handleIndex(array $params = array()){}//method
@@ -174,6 +187,12 @@ namespace Test\Controller2 {
     public function handleIndex(array $params = array()){}//method
     
     public function handleBar(array $params = array()){}//method
+  
+  }//class
+  
+  class BazController extends \Test\Controller\BarController {
+  
+    public function handleIndex(array $params = array()){}//method
   
   }//class
 
