@@ -197,14 +197,10 @@ class Framework extends Field implements Dependable,Eventable {
       
       // container should now exist
       
-      // start the START classes...
-      // this comes about as early as I can make it since it is key to making sure
-      // singletons can be created right
-      $this->handleStart();
-      
       // start the event SUBSCRIBE classes...
-      // this comes after start so the event subscribe classes can get singleton dependencies
       $this->handleEvent();
+
+      // it should be safe to create any singleton now
 
       $event = new Event('framework.preHandle');
       $this->broadcastEvent($event);
@@ -701,40 +697,6 @@ class Framework extends Field implements Dependable,Eventable {
     
     return $class_list;
   
-  }//method
-
-  /**
-   *  start all the known \Montage\Start\Startable classes
-   *  
-   *  a Start class is a class that will do configuration stuff
-   *  
-   *  @return array a list of Start instances      
-   */
-  protected function handleStart(){
-  
-    $instance_list = array();
-    $config = $this->getConfig();
-    $env = $config->getField('env');
-    $container = $this->getContainer();
-    $select = $container->getInstance('\Montage\Start\Select');
-    
-    $event = new InfoEvent(sprintf('Using Start class selector: %s',get_class($select)));
-    $this->broadcastEvent($event);
-    
-    $start_class_list = $select->find($env);
-
-    foreach($start_class_list as $i => $class_name){
-    
-      $event = new InfoEvent(sprintf('Starting: %s',$class_name));
-      $this->broadcastEvent($event);
-    
-      $instance_list[$i] = $container->createInstance($class_name);
-      $instance_list[$i]->handle();
-      
-    }//foreach
-    
-    return $instance_list;
-     
   }//method
 
   /**

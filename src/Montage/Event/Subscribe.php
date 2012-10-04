@@ -10,7 +10,10 @@
  ******************************************************************************/
 namespace Montage\Event;
 
-abstract class Subscribe implements Subscribeable {
+use Montage\Dependency\Containable;
+use Montage\Dependency\Dependable;
+
+abstract class Subscribe implements Subscribeable, Dependable {
 
   /**
    *  the event dispatcher
@@ -19,6 +22,20 @@ abstract class Subscribe implements Subscribeable {
    *  @var  Dispatch      
    */
   protected $dispatch = null;
+
+  /**
+   *  the dependency injection container
+   *
+   *  this class gets the DIC because it is better not to have the dependencies
+   *  given to subscription classes on init, because other sub classes might subscribe
+   *  to object creation events, but get created after a sub class has already created
+   *  the object, so instead, it's better to not have your dependencies satisfied
+   *  on class creation and instead get them on-demand when the event fires
+   *  
+   *  @see  setContainer(), getContainer()
+   *  @var  \Montage\Dependency\Containable
+   */
+  protected $container = null;
 
   /**
    *  get the name(s) of the event(s) this class is subscribing to      
@@ -33,7 +50,10 @@ abstract class Subscribe implements Subscribeable {
    *  
    *  @param  Event $event
    */
-  abstract public function handle(Event $event);
+  public function handle(Event $event){}//method
+
+  public function setContainer(Containable $container){ $this->container = $container; }//method
+  public function getContainer(){ return $this->container; }//method
 
   /**
    *  get the event dispatcher
