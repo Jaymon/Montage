@@ -51,4 +51,15 @@ interface Requestable {
    */
   public function getPath();
 
+  /*
+   * get the request type
+   *
+   * usually this is something like web or command, this is handy for the controller
+   * to pick which type of controller should be used
+   *
+   * @since 10-19-12
+   * @return  string  'Web' if a web request, 'Controller' if cli request
+   */
+  public function getType();
+
 }//method

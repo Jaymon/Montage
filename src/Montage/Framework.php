@@ -291,6 +291,8 @@ class Framework extends Field implements Dependable,Eventable {
       list($controller_class,$controller_method,$controller_method_params) = $container
         ->getControllerSelect()
           ->find(
+            $request->getType(),
+            $request->getMethod(),
             $request->getHost(),
             $request->getPath()
           );

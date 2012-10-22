@@ -20,24 +20,31 @@ use Montage\Event\Subscribe as MontageSub;
 
 class FrameworkSub extends MontageSub {
 
+  /**
+   * the framework configuration object
+   *
+   * @var \Montage\Config\FrameworkConfig
+   */
+  public $config = null;
+
   public function getEventName(){
     return array(
-      'framework.filter.created:\\Montage\\Response\\Response' => 'handleCreatedResponse',
-      'framework.filter.created:\\Montage\\Response\\Template' => 'handleCreatedTemplate',
-      'framework.filter.created:\\Montage\\Cache\\Cacheable' => 'handleCreatedCacheable',
-      'framework.filter.created:\\Montage\\Field\\SetFieldable' => 'handleCreatedFieldable',
-      'framework.filter.create:\\Montage\\Session' => 'handleCreateSession',
-      'framework.filter.create:\\Montage\\Request\\Requestable' => 'handleCreateRequest',
-      'framework.filter.create:\\Montage\\Url' => 'handleCreateUrl',
-      'framework.filter.create:\\Screen' => 'handleCreateScreen',
-      'framework.preHandle' => 'handleStart'
-    )
+      'framework.filter.created:\\Montage\\Response\\Response' => array($this, 'handleCreatedResponse'),
+      'framework.filter.created:\\Montage\\Response\\Template' => array($this, 'handleCreatedTemplate'),
+      'framework.filter.created:\\Montage\\Cache\\Cacheable' => array($this, 'handleCreatedCacheable'),
+      'framework.filter.created:\\Montage\\Field\\SetFieldable' => array($this, 'handleCreatedFieldable'),
+      'framework.filter.create:\\Montage\\Session' => array($this, 'handleCreateSession'),
+      'framework.filter.create:\\Montage\\Request\\Requestable' => array($this, 'handleCreateRequest'),
+      'framework.filter.create:\\Montage\\Url' => array($this, 'handleCreateUrl'),
+      'framework.filter.create:\\Screen' => array($this, 'handleCreateScreen'),
+      'framework.preHandle' => array($this, 'handleStart')
+    );
   }//method
   
   /**
    * handle the framework initialization
    */
-  public function handleStart(Montage\Event\Event $event){
+  public function handleStart(\Montage\Event\Event $event){
 
     $this->handleError();
     mb_internal_encoding($this->config->getCharset());

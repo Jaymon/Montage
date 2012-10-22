@@ -1,21 +1,18 @@
 <?php
 /**
- *  Just some handy stuff to help Cli specific Controllers do their thing
- *  
- *  @note some of these methods would most likely be better as a trait, sadly we
- *  aren't on PHP 5.4, but maybe someday    
+ *  For a controller to do something on the command line, it must extend this Controller
  *   
  *  @version 0.1
  *  @author Jay Marcyes
  *  @since 7-27-11
  *  @package montage 
  ******************************************************************************/
-namespace Montage\Controller;
+namespace Montage\Controller\Command
 
 use Montage\Controller\Controller;
 use Montage\Reflection\ReflectionController;
 
-class CliController extends Controller {
+class CommandController extends Controller {
 
   /**
    *  @since  12-22-11  
@@ -23,6 +20,9 @@ class CliController extends Controller {
    */
   public $screen = null;
 
+  /*
+   * @deprecated  this will be done at the framework level in the future
+   */
   public function preHandle(){
   
     if(!empty($this->request)){
@@ -43,6 +43,8 @@ class CliController extends Controller {
    *  check config stuff for potential problems
    *  
    *  this is inspired by Symfony 2.0's web/config.php file
+   *
+   *  @todo move this to a montage CommandController that will house these methods
    *  
    *  @since  8-23-11
    */
@@ -117,26 +119,6 @@ class CliController extends Controller {
     echo $rthis;
     
     return false;
-  
-  }//method
-  
-  /**
-   *  @deprecated 12-22-11 use \Screen instance instead
-   */
-  protected function trace(){
-  
-    $args = func_get_args();
-    return call_user_func_array(array($this->screen,'trace'),$args);
-  
-  }//method
-  
-  /**
-   *  @deprecated 12-22-11 use \Screen instance instead
-   */
-  protected function out($format_msg = ''){
-  
-    $args = func_get_args();
-    return call_user_func_array(array($this->screen,'out'),$args);
   
   }//method
 

@@ -95,9 +95,9 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
   /**
    *  Returns true if the request is an XMLHttpRequest.
    *
-   *  It works if your JavaScript library set an X-Requested-With HTTP header.
+   *  It works if your JavaScript library sets an X-Requested-With HTTP header.
    *  Works with Prototype, Mootools, jQuery, and perhaps others or if ajax_request
-   *  was passed in
+   *  is passed in as a get/post param
    *
    *  @return bool true if the request is an XMLHttpRequest, false otherwise
    */
@@ -150,13 +150,26 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
    *  @return string  just the request path without the root path
    */
   public function getPath(){ return $this->getPathInfo(); }//method
+
+  /*
+   * get the request type
+   *
+   * usually this is something like web or command, this is handy for the controller
+   * to pick which type of controller should be used
+   *
+   * @since 10-19-12
+   * @return  string  'Web' if a web request, 'Controller' if cli request
+   */
+  public function getType(){
+    return $this->isCommand() ? 'Command' : 'Web';
+  }//method
   
   /**
    *  shortcut method for you to know if this is a command line request
    *  
    *  @return boolean
    */
-  function isCli(){
+  function isCommand(){
     return !$this->server->has('HTTP_HOST');
     // @note  we can't use the PHP_SAPI because of testing, using the test browser would report a cli request
     // when in actuality it should be treated as a normal http request

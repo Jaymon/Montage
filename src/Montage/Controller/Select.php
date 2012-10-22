@@ -4,7 +4,8 @@
  *  
  *  this class should be renamed to something like Finder or Matcher, though
  *  Matcher::find() sounds strange, what about Resolve?  6-17-11 - I went with
- *  Select 
+ *  Select. I'm not extremely happy with these Select classes, but I'm not sure
+ *  I want all this functionality to sit in Framework since it does so much already
  *  
  *  @version 0.6
  *  @author Jay Marcyes
@@ -101,12 +102,14 @@ class Select {
   /**
    *  turns the info provided by the $host, $path and $params into a controller::method
    *  
+   *  @param  string  $type the namespace for this controller (eg, Web, Controller)
+   *  @param  string  $method the method of the request (eg GET, POST, CLI)
    *  @param  string  $host the host that is making the request
    *  @param  string  $path the path of the request
    *  @param  array $params currently not used
    *  @return array array($controller,$method,$method_params)
    */
-  public function find($host,$path,array $params = array()){
+  public function find($type,$method,$host,$path,array $params = array()){
   
     $path_list = array_values(array_filter(explode('/',$path))); // ignore empty values
     $class_name = '';
@@ -114,7 +117,7 @@ class Select {
     $method_params = array();
   
     // find a suitable controller class
-    list($class_name,$path_list) = $this->findClass($path_list,$this->class_default);
+    list($class_name,$path_list) = $this->findClass($type,$path_list,$this->class_default);
   
     // find a suitable method
     // 1 - $class_name::$path_list[0]
@@ -175,13 +178,14 @@ class Select {
    *  and then finds which is the right most child and uses that, if it can't resolve, an exception
    *  is thrown, if no shortname classes are found, it will then use the fallback class name
    *         
-   *  @since  6-16-11   
+   *  @since  6-16-11
+   *  @param  string  $type the type of the request
    *  @param  array $path_list  the path broken up by /
    *  @param  string  $fallback_class_name  if the class can't be found through the $path_list, use
    *                                        this class
    *  @return array array($class_name,$path_list)
    */
-  protected function findClass(array $path_list,$fallback_class_name = ''){
+  protected function findClass($type,array $path_list,$fallback_class_name = ''){
 
     $ret_str = '';
     $path_bit = reset($path_list);
@@ -198,7 +202,7 @@ class Select {
       
       if(!empty($fallback_class_name)){
       
-        $ret_str = $this->getClassName($fallback_class_name);
+        $ret_str = $this->getClassName($fallback_class_name, $type);
         
       }//if
       
@@ -237,9 +241,10 @@ class Select {
    *  @param  string  $class_name a partial class name that will be turned into a full class name, this
    *                              value would be equivalent to {@link ReflectionClass::getShortName()} and
    *                              is the name of the class without the namespace         
+   *  @param  string  $type
    *  @return string
    */
-  protected function getClassName($class_shortname){
+  protected function getClassName($class_shortname, $type = ''){
   
     // canary...
     if(empty($class_shortname)){
@@ -247,7 +252,7 @@ class Select {
     }//if
   
     $ret_str = '';
-    $regex = sprintf('#%s$#i',preg_quote($this->normalizeClassName('',$class_shortname)));
+    $regex = sprintf('#%s$#i',preg_quote($this->normalizeClassName('', $class_shortname)));
     $reflection = $this->reflection;
     $class_list = $reflection->findClassNames($this->class_interface);
     

@@ -1,6 +1,13 @@
 <?php
 /**
  *  interface to allow easy class based event subscriptions
+ *
+ *  any class that implements this interface will automatically subscribe to the
+ *  events when the framework is started up, you should be careful to avoid dependency
+ *  injection on startup because all the subscribe events might not be set so you
+ *  could inadvertly create an object that would be created differently after all
+ *  the events are registered (because a later Subscribeable child registers a 
+ *  creation event)
  *  
  *  @version 0.2
  *  @author Jay Marcyes
