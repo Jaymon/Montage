@@ -4,15 +4,15 @@
  *   
  *  @version 0.1
  *  @author Jay Marcyes
- *  @since 7-27-11
+ *  @since 2013-2-4
  *  @package montage 
  ******************************************************************************/
-namespace Montage\Controller\Command
+namespace Montage\Controller;
 
 use Montage\Controller\Controller;
-use Montage\Reflection\ReflectionController;
+use Montage\Reflection\ReflectionController; // used for help
 
-class CommandController extends Controller {
+class Command extends Controller {
 
   /**
    *  @since  12-22-11  

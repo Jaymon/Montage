@@ -283,37 +283,10 @@ class Framework extends Field implements Dependable,Eventable {
     try{
     
       $this->preHandle();
-    
-      $container = $this->getContainer();
-      $request = $container->getRequest();
-  
-      // decide where the request should be forwarded to...
-      list($controller_class,$controller_method,$controller_method_params) = $container
-        ->getControllerSelect()
-          ->find(
-            $request->getType(),
-            $request->getMethod(),
-            $request->getHost(),
-            $request->getPath()
-          );
-      
-      $event = new InfoEvent(
-        sprintf(
-          'Controller: %s::%s from host: %s, and path: %s',
-          $controller_class,$controller_method,
-          $request->getHost(),
-          $request->getPath()
-        )
-      );
-      $this->broadcastEvent($event);
-      
-      ///\out::e($request->getHost(),$request->getPath());
-      ///\out::e($controller_class,$controller_method,$controller_method_params);
-      
-      $event = new Event('framework.handle');
-      $this->broadcastEvent($event);
 
-      $controller_response = $this->handleController($controller_class,$controller_method,$controller_method_params);
+      $container = $this->getContainer();
+      $request = $this->getContainer()->getRequest();
+      $controller_response = $this->handleRequest($request->getPath());
       $ret_mixed = $this->handleResponse($controller_response);
       
       $event = new Event('framework.handle.stop');
@@ -401,23 +374,32 @@ class Framework extends Field implements Dependable,Eventable {
       $response->setContent(json_encode($controller_response));
     
     }else if(is_object($controller_response)){
-    
-      if(method_exists($controller_response,'__toString')){
-      
-        $event = new InfoEvent('Controller Response was an object, returning __toString()');
-        $this->broadcastEvent($event);
-      
-        $response->setContent((string)$controller_response);
-      
+
+      if($controller_response instanceof \Exception){
+
+        // TODO something awesome right here with the exception
+        $response->setContent('<pre>'.(string)$controller_response.'</pre>');
+
       }else{
-      
-        throw new \RuntimeException(
-          sprintf(
-            'Controller returned an "%s" instance which has no __toString()',
-            get_class($controller_response)
-          )
-        );
-      
+
+        if(method_exists($controller_response,'__toString')){
+        
+          $event = new InfoEvent('Controller Response was an object, returning __toString()');
+          $this->broadcastEvent($event);
+        
+          $response->setContent((string)$controller_response);
+        
+        }else{
+        
+          throw new \RuntimeException(
+            sprintf(
+              'Controller returned an "%s" instance which has no __toString()',
+              get_class($controller_response)
+            )
+          );
+        
+        }//if/else
+
       }//if/else
     
     }else{
@@ -595,7 +577,7 @@ class Framework extends Field implements Dependable,Eventable {
     // create the standard autoloader...
     if($sal = $container->getAutoloader()){
     
-      $sal->addPaths($config->getField('reflection_paths',array()));
+      $sal->addPaths($config->getField('src_paths',array()));
       $sal->addPaths($config->getField('vendor_paths',array()));
       
       $sal->setCache($this->getCache());
@@ -742,13 +724,47 @@ class Framework extends Field implements Dependable,Eventable {
   }//method
 
   /**
+   * given a path do all the request related stuff, including calling the controller
+   * to handle the request
+   *
+   * @param string  $path the path that is being requested
+   * @param array $params any request params (get parms, post params) that might be handy
+   * @return \Montage\Request
+   */
+  protected function handleRequest($path, array $params = array()){
+
+    $container = $this->getContainer();
+    $request = $container->getRequest();
+
+    // decide where the request should be forwarded to...
+    list($controller_class, $controller_methods, $controller_params) = $container
+      ->getControllerSelect()
+        ->find(
+          $request->getMethod(),
+          $request->getHost(),
+          $path,
+          $params
+        );
+    
+    ///\out::e($request->getHost(),$request->getPath());
+    ///\out::e($controller_class,$controller_method,$controller_method_params);
+    
+    $event = new Event('framework.handle');
+    $this->broadcastEvent($event);
+
+    $controller_response = $this->handleController($controller_class, $controller_methods, $controller_params);
+    return $controller_response;
+
+  }//method
+
+  /**
    *  create a controller instance and call that instance's $method to handle the request
    *  
    *  @param  string  $class_name the controller class name
    *  @param  string  $method the method that will be called
    *  @param  array $params the arguments that will be passed to the $class_name->$method() call
    */
-  protected function handleController($class_name,$method,array $params = array()){
+  protected function handleController($class_name, $methods, array $params = array()){
   
     ///\out::e($class_name,$method,$params);
   
@@ -757,24 +773,27 @@ class Framework extends Field implements Dependable,Eventable {
     // allow filtering of the controller info...
     $filter_map = array(
       'controller' => $class_name,
-      'method' => $method,
+      'methods' => $methods,
       'params' => $params
     );
-    $event = new FilterEvent('framework.filter.controller_info',$filter_map);
+    $event = new FilterEvent('framework.filter.controller_info', $filter_map);
     $event = $this->broadcastEvent($event);
     
     $filter_map = $event->getParam();
     $class_name = $filter_map['controller'];
-    $method = $filter_map['method'];
+    $methods = $filter_map['methods'];
     $params = $filter_map['params'];
     
     $controller = $container->getInstance($class_name);
     
-    $rmethod = new \ReflectionMethod($controller,$method);
-    $rmethod_params = $this->normalizeControllerParams($rmethod,$params);
-    
     $controller->preHandle();
-    $ret_mixed = $rmethod->invokeArgs($controller,$rmethod_params);
+    foreach($methods as $method){
+      $rmethod = new \ReflectionMethod($controller, $method);
+      $rmethod_params = $this->normalizeControllerParams($rmethod, $params);
+      $ret_mixed = $rmethod->invokeArgs($controller, $rmethod_params);
+      if($ret_mixed != null){ break; }//if
+
+    }//foreach
     $controller->postHandle();
     
     return $ret_mixed;
@@ -1003,17 +1022,9 @@ class Framework extends Field implements Dependable,Eventable {
         
       }else{
         
-        list($controller_class,$controller_method,$controller_method_params) = $this->getContainer()->getControllerSelect()->findException($e);
-        
-        $event = new InfoEvent(
-          sprintf('Exception Controller: %s::%s',$controller_class,$controller_method)
-        );
+        $event = new FilterEvent('montage.handle.error', $e);
         $this->broadcastEvent($event);
-        
-        $controller_method_params = array_reverse($e_list);
-        
-        $controller_response = $this->handleController($controller_class,$controller_method,$controller_method_params);
-        $ret_mixed = $this->handleResponse($controller_response);
+        $ret_mixed = $this->handleResponse($event->getParam()); // not sure this is best choice, 
         
       }//try/catch
       
@@ -1259,7 +1270,7 @@ class Framework extends Field implements Dependable,Eventable {
     $reflection->setCache($this->getCache());
     $reflection->importCache();
     
-    $reflection->addPaths($config->getField('reflection_paths',array()));
+    $reflection->addPaths($config->getField('src_paths',array()));
     
     $this->instance_map['reflection'] = $reflection;
 
@@ -1267,13 +1278,61 @@ class Framework extends Field implements Dependable,Eventable {
   
   }//method
   
+
+  /**
+   * recursively compile the paths of a base_path
+   *
+   * since plugins can have plugins, etc. this method will recursively compile
+   * all the valid montage paths that are needed for the app
+   *
+   * @param mixed $base_path
+   * @param array $paths
+   * @return array  the compiled list of paths
+   */
+  protected function handlePathBase($base_path, array $paths){
+
+    $path_bits = array('src', 'config', 'view', 'vendor', 'assets', 'test');
+    foreach($path_bits as $path_bit){
+      if(!isset($paths[$path_bit])){ $paths[$path_bit] = array(); }//if
+
+      $path = new Path($base_path, $path_bit);
+      if($path->exists()){ $paths[$path_bit][] = $path; }//if
+
+    }//foreach
+
+    // add the plugin paths...
+    $path_bit = 'plugins';
+    if(!isset($paths[$path_bit])){ $paths[$path_bit] = array(); }//if
+
+    $plugin_base_path = new Path($base_path, $path_bit);
+    if($plugin_base_path->isDir()){
+      
+      foreach($plugin_base_path->createIterator('', 1) as $plugin_path => $plugin_dir){
+      
+        if($plugin_dir->isDir()){
+          $plugin_name = $plugin_dir->getBasename();
+          $paths = $this->handlePathBase($plugin_name, $paths);
+          $paths[$path_bit] = $plugin_dir;
+        
+        }//if
+      
+      }//foreach
+      
+    }//if
+
+    return $paths;
+    
+  }//method
+
   /**
    *  compile all the important framework paths
    *
+   *  before this is called, the config instance is not aware of all the paths in the app
+   *
    *  @todo this could be cached by saving the lists and then pulling them in and
-   *  just seeing if the created path matches one in the list, that would save the is_file
-   *  checks      
-   *      
+   *  just seeing if the created path matches one in the list, that would save 
+   *  the is_file checks
+   *
    *  @since  6-27-11
    */
   protected function handlePaths(){
@@ -1290,100 +1349,31 @@ class Framework extends Field implements Dependable,Eventable {
       throw new \UnexpectedValueException('$config->getField("app_path") failed');
     }//if
 
-    $framework_path = new Path(__DIR__,'..','..');
-    $config->setField('framework_path',$framework_path);
+    $framework_path = new Path(__DIR__, '..', '..');
+    $config->setField('framework_path', $framework_path);
     
     if(!$config->hasField('cache_path')){
-      
-      $path = new Path($app_path,'cache');
+      $path = new Path($app_path, 'cache');
       $path->assure();
-      $config->setField('cache_path',$path);
+      $config->setField('cache_path', $path);
       
     }//if
-    
-    $reflection_path_list = array();
-    $view_path_list = array();
-    $vendor_path_list = array();
-    $assets_path_list = array();
-    $plugins_path_list = array();
-    $test_path_list = array();
-    $config_path_list = array();
-    
-    $path = new Path($framework_path,'src');
-    $reflection_path_list[] = $path;
-    
-    $path = new Path($app_path,'src');
-    if($path->exists()){ $reflection_path_list[] = $path; }//if
-    
-    $path = new Path($app_path,'config');
-    if($path->exists()){ $config_path_list[] = $path; }//if
-    
-    $path = new Path($app_path,'view');
-    if($path->exists()){ $view_path_list[] = $path; }//if
-    
-    $path = new Path($app_path,'vendor');
-    if($path->exists()){ $vendor_path_list[] = $path; }//if
-    
-    $path = new Path($app_path,'test');
-    if($path->exists()){ $test_path_list[] = $path; }//if
-    
-    // add the plugin paths...
-    $plugin_base_path_list = array();
-    $plugin_base_path_list[] = new Path($framework_path,'plugins');
-    $plugin_base_path_list[] = new Path($app_path,'plugins');
-    foreach($plugin_base_path_list as $plugin_base_path){
-      
-      if($plugin_base_path->isDir()){
-        
-        foreach($plugin_base_path->createIterator('',1) as $plugin_path => $plugin_dir){
-        
-          if($plugin_dir->isDir()){
-          
-            $plugin_name = $plugin_dir->getBasename();
-            $plugins_path_list[] = $plugin_dir;
-          
-            $path = new Path($plugin_path,'config');
-            if($path->exists()){ $config_path_list[] = $path; }//if
-            
-            $path = new Path($plugin_path,'src');
-            if($path->exists()){ $reflection_path_list[] = $path; }//if 
-          
-            $path = new Path($plugin_path,'view');
-            if($path->exists()){ $view_path_list[] = $path; }//if
-            
-            $path = new Path($plugin_path,'vendor');
-            if($path->exists()){ $vendor_path_list[] = $path; }//if
-            
-            $path = new Path($plugin_path,'assets');
-            if($path->exists()){ $assets_path_list[] = $path; }//if
-            
-            $path = new Path($plugin_path,'test');
-            if($path->exists()){ $test_path_list[] = $path; }//if
-          
-          }//if
-        
-        }//foreach
-        
-      }//if
-      
+
+    $paths = $this->handlePathBase($framework_path, array());
+    $paths = $this->handlePathBase($app_path, $paths);
+
+    // reverse seom paths so framework will be the dominant path
+    // TODO: it would probably be better that functionality like what template was used
+    // isn't so dependant on order, or at least move this into the template handlers
+    foreach(array('view', 'test') as $path_bit){
+      $paths[$path_bit] = array_reverse($paths[$path_bit]);
     }//foreach
-  
-    $path = new Path($app_path,'assets');
-    if($path->exists()){ $assets_path_list[] = $path; }//if
-    
-    $path = new Path($framework_path,'view');
-    if($path->exists()){ $view_path_list[] = $path; }//if
-    
-    $path = new Path($framework_path,'test');
-    if($path->exists()){ $test_path_list[] = $path; }//if
-  
-    $config->setField('reflection_paths',$reflection_path_list);
-    $config->setField('view_paths',$view_path_list);
-    $config->setField('vendor_paths',$vendor_path_list);
-    $config->setField('asset_paths',$assets_path_list);
-    $config->setField('plugin_paths',$plugins_path_list);
-    $config->setField('test_paths',$test_path_list);
-    $config->setField('config_paths',$config_path_list);
+
+    // save all the paths into the config so the will be available app wide
+    // \out::e($paths);
+    foreach($paths as $path_bit => $path_list){
+      $config->setField(sprintf('%s_paths', $path_bit), $path_list);
+    }//foreach
 
   }//method
   

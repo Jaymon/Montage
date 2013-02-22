@@ -31,8 +31,10 @@ namespace Montage\PHPUnit {
   $fal = new FrameworkAutoloader('Montage',$base_src);
   $fal->register();
   
+
   class SelectTest extends PHPUnit_Framework_TestCase {
   
+
     protected $cselect = null;
   
     public function setUp(){
@@ -49,28 +51,59 @@ namespace Montage\PHPUnit {
       $this->cselect->reflection->addFile(__FILE__);
       
     }//method
-    
+
+    public function testNormalizeName(){
+
+      $rmethod = new \ReflectionMethod($this->cselect, 'normalizeClassName');
+      $rmethod->setAccessible(true);
+
+      $tests = array(
+        array(
+          'in' => array('', 'Foo', 'Endpoint'),
+          'out' => '\\FooEndpoint'
+        ),
+        array(
+          'in' => array('', 'fOo', 'Command'),
+          'out' => '\\FooCommand'
+        ),
+        array(
+          'in' => array('\\Foo\\Bar', 'Foo', 'Command'),
+          'out' => '\\Foo\\Bar\\FooCommand'
+        ),
+      );
+
+      foreach($tests as $test){
+        $ret = $rmethod->invokeArgs($this->cselect, $test['in']);
+        $this->assertEquals($ret, $test['out']);
+      }//foreach
+    }//method
+
     public function testFind(){
-    
+
       $test_list = array();
       $test_list[] = array(
-        'in' => array('','bar/baz',array()),
-        'out' => array('Test\\Controller\\IndexController','handleIndex',array('bar','baz'))
+        'in' => array('POST', 'example.com', 'foo/', array()),
+        'out' => array(
+          'Test\\Controller\\FooEndpoint',
+          array('handlePostDefault', 'handleDefault'),
+          array()
+        )
       );
       $test_list[] = array(
-        'in' => array('','foo',array()),
-        'out' => array('Test\\Controller2\\FooController','handleIndex',array())
+        'in' => array('POST', 'example.com', 'foo/bar', array()),
+        'out' => array(
+          'Test\\Controller\\FooEndpoint',
+          array('handlePostBar'),
+          array()
+        )
       );
       $test_list[] = array(
-        'in' => array('','foo/bar',array()),
-        'out' => array('Test\\Controller2\\FooController','handleBar',array())
-      );
-      // @todo: this will fail because baz overrides bar, so bar can't be found
-      // I can fix this by going through all the children of each controller looking
-      // for a match (first one wins I guess), but I don't have time to do it now
-      $test_list[] = array(
-        'in' => array('','bar/',array()),
-        'out' => array('Test\\Controller\\BarController','handleIndex',array())
+        'in' => array('GET', 'example.com', 'foo/baz', array()),
+        'out' => array(
+          'Test\\Controller\\FooEndpoint',
+          array('handleBaz'),
+          array()
+        )
       );
       
       $method = 'find';
@@ -152,45 +185,22 @@ namespace Montage\PHPUnit {
 
 namespace Test\Controller {
 
-  use Montage\Controller\Controller;
-  
-  class FooController extends Controller {
-  
-    public function handleIndex(array $params = array()){}//method
-  
-  }//class
-  
-  class BarController extends Controller {
-  
-    public function handleIndex(array $params = array()){}//method
-  
-  }//class
-  
-  class CheController extends Controller {
-  
-    public function handleIndex(array $params = array()){}//method
-  
-  }//class
-  
-  class IndexController extends \Montage\Controller\IndexController {
-  
-    public function handleIndex(array $params = array()){}//method
-  
-  }//class
+  use Montage\Controller\Endpoint;
+  use Montage\Controller\Command;
 
-}//namespace
+  class FooEndpoint extends Endpoint {
 
-namespace Test\Controller2 {
-
-  class FooController extends \Test\Controller\FooController {
+    public function handlePostBar(array $params = array()){}//method
+    public function handleBaz(array $params = array()){}//method
   
-    public function handleIndex(array $params = array()){}//method
-    
-    public function handleBar(array $params = array()){}//method
+    public function handlePostDefault(array $params = array()){}//method
+    public function handleDefault(array $params = array()){}//method
+    public function errorPostDefault(\Exception $e){}//method
+    public function errorDefault(\Exception $e){}//method
   
   }//class
   
-  class BazController extends \Test\Controller\BarController {
+  class BazCommand extends Command {
   
     public function handleIndex(array $params = array()){}//method
   

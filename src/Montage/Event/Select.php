@@ -1,6 +1,6 @@
 <?php
 /**
- *  handles deciding what classes that implement subable should be started
+ *  handles deciding what classes that implement subscribeable should be started
  *  
  *  @version 0.2
  *  @author Jay Marcyes
@@ -15,7 +15,7 @@ use Montage\Reflection\ReflectionFramework;
 class Select {
   
   /**
-   *  this is the interface a class has to implement to be considered a controller
+   *  this is the interface a class has to implement
    *  
    *  @var  string
    */

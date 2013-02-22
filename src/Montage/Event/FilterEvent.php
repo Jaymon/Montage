@@ -32,7 +32,8 @@ class FilterEvent extends Event {
    *  create a new Event
    *  
    *  @param  string  $msg  the info message
-   *  @param  array $options  any other values you want to pass to the event callback   
+   *  @param  mixed $param  the argument being filtered
+   *  @param  array $field_map  any other values you want to pass to the event callback   
    */
   public function __construct($name,$param,array $field_map = array()){
   

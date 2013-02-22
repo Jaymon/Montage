@@ -5,10 +5,8 @@
  *  
  *  checkout: http://us2.php.net/manual/en/function.class-parents.php and
  *    http://us2.php.net/manual/en/function.class-implements.php so you can check if
- *    a class is iterable and stuff when you escape it. It doesn't extend montage_base
- *    because it wraps other classes that do extend it and we don't want method name
- *    clashing  
- *  
+ *    a class is iterable and stuff when you escape it.
+ *
  *  @version 0.3
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 12-28-09

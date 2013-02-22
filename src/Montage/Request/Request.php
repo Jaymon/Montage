@@ -150,19 +150,6 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
    *  @return string  just the request path without the root path
    */
   public function getPath(){ return $this->getPathInfo(); }//method
-
-  /*
-   * get the request type
-   *
-   * usually this is something like web or command, this is handy for the controller
-   * to pick which type of controller should be used
-   *
-   * @since 10-19-12
-   * @return  string  'Web' if a web request, 'Controller' if cli request
-   */
-  public function getType(){
-    return $this->isCommand() ? 'Command' : 'Web';
-  }//method
   
   /**
    *  shortcut method for you to know if this is a command line request
@@ -175,6 +162,13 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
     // when in actuality it should be treated as a normal http request
     ///return (strncasecmp(PHP_SAPI, 'cli', 3) === 0) || !isset($_SERVER['HTTP_HOST']);
   }//method
+
+  /**
+   * I can't decide which name I like better, this or isCommand()
+   *
+   * @see isCommand()
+   */
+  function isCli(){ return $this->isCommand(); }//method
   
   /**
    *  check if $key exists and is non-empty

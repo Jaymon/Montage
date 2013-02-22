@@ -1,0 +1,20 @@
+{
+  "name": "montage/montage",
+  "type": "Framework",
+  "description": "Easy Request Framework",
+  "keywords": [],
+  "homepage": "https://github.com/Jaymon/Montage",
+  "license": "MIT",
+  "authors": [
+    {
+        "name": "Jay Marcyes",
+        "email": "jay@marcyes.com"
+    }
+  ],
+  "require": {
+    "php": ">=5.3.3",
+    "symfony/browser-kit": "2.*",
+    "symfony/http-foundation": "2.*",
+    "symfony/css-selector": "2.*"
+  }
+}

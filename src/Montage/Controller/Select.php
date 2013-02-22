@@ -33,29 +33,21 @@ class Select {
    *  @see  normalizeClass
    *  @var  string
    */
-  protected $class_postfix = 'Controller';
+  //protected $class_postfix = '';
   
   /**
    *  if no controller can be found using passed in params, use this controller name
    *
    *  @var  string   
    */        
-  protected $class_default = 'IndexController';
-  
+  protected $default_class_name = 'Default';
+
   /**
-   *  when an exception is encountered, use this class to handle it
+   * the default method name if another one can't be found
    *
-   *  @var  string   
+   * @var string
    */
-  protected $class_exception = 'ExceptionController';
-  
-  /**
-   *  this is the interface a class has to implement to be considered a controller
-   *  
-   *  @var  string
-   */
-  protected $class_interface = '\\Montage\\Controller\\Controllable';
-  
+  protected $default_method = 'default';
   
   /**
    *  this prefix will be used to decide what a vanilla method name coming in will be
@@ -67,38 +59,17 @@ class Select {
    *  @var  string      
    */
   protected $method_prefix = 'handle';
-  
+
   /**
-   *  if no method can be found then fallback to this method
-   *
-   *  @var  string   
+   *  this prefix is used to decide what an error class will use
+   *  
+   *  
+   *  so, if you have method "bar" it would become: "errorBar"
+   *  
+   *  @var  string
    */
-  protected $method_default = 'handleIndex';
-  
-  /**
-   *  get the full default class name
-   *
-   *  @since  6-21-11
-   *  @return string  a full namespaced class name      
-   */
-  public function getDefaultClassName(){
-  
-    return $this->getClassName($this->class_default);
-  
-  }//method
-  
-  /**
-   *  get the full exception class name
-   *
-   *  @since  6-21-11
-   *  @return string  a full namespaced class name      
-   */
-  public function getExceptionClassName(){
-  
-    return $this->getClassName($this->class_exception);
-  
-  }//method
-  
+  protected $error_method_prefix = 'error';
+
   /**
    *  turns the info provided by the $host, $path and $params into a controller::method
    *  
@@ -109,68 +80,87 @@ class Select {
    *  @param  array $params currently not used
    *  @return array array($controller,$method,$method_params)
    */
-  public function find($type,$method,$host,$path,array $params = array()){
+  public function find($method, $host, $path, array $params = array()){
   
     $path_list = array_values(array_filter(explode('/',$path))); // ignore empty values
     $class_name = '';
     $method_name = '';
     $method_params = array();
-  
-    // find a suitable controller class
-    list($class_name,$path_list) = $this->findClass($type,$path_list,$this->class_default);
-  
-    // find a suitable method
-    // 1 - $class_name::$path_list[0]
-    // 2 - $class_name::$this->method_default
-    list($method_name,$method_params) = $this->findMethod($class_name,$path_list);
+    $env = $this->getEnv($method, $host, $params);
 
-    return array($class_name,$method_name,$method_params);
+    list($class_name,$path_list) = $this->findClassName(
+      $path_list,
+      $env['class_postfix'],
+      $env['class_interface']
+    );
+  
+    list($method_names, $method_params) = $this->findMethod(
+      $class_name,
+      $path_list,
+      $env['method_prefixes']
+    );
+
+    return array($class_name, $method_names, $method_params);
   
   }//method
   
   /**
-   *  get the controller::method that should be used for the given exception $e
-   *  
-   *  @param  Exception $e
-   *  @return array array($controller,$method,$method_params)        
+   * get the class postfix that will be appended to the controller class name
+   *
+   * @param string  $method
+   * @return string
    */
-  public function findException(\Exception $e){
-    
-    $re = new \ReflectionObject($e);
-    $e_name = $re->getShortName();
-    $class_name = '';
-    $method_name = '';
-    
-    // find the controller...
-    try{
-    
-      $class_name = $this->getClassName($this->class_exception);
-      
-    }catch(Exception $e){
-    
-      throw new \UnexpectedValueException(
-        sprintf(
-          'A suitable Exception Controller class could not be found to handle the exception: %s',
-          $e
-        ),
-        $e->getCode(),
-        $e
-      );
-    
-    }//try/catch
-    
-    // check in order:
-    // 1 - $class_name::$e_name
-    // 2 - $class_name::$this->method_default
-    list($method_name,$method_params) = $this->findMethod($class_name,array($e_name));
+  protected function getClassInfo($method, $host, array $params){
+
+    $ret_map = array();
+    if(empty($method) || ($method != 'cli')){
+      $ret_map['class_postfix'] = 'Endpoint';
+      $ret_map['class_interface'] = '\\Montage\\Controller\\Endpoint';
+
+    }else{
+      $ret_map['class_postfix'] = 'Command';
+      $ret_map['class_interface'] = '\\Montage\\Controller\\Command';
+    }//if/else
+
+    return $ret_map;
+
+  }//method
+
+  protected function getMethodInfo($method, $host, array $params){
+
+    $ret_map = array();
+    $method = ucfirst($method);
+    $ret_map['method_prefixes'] = array(
+      sprintf('%s%s', $this->method_prefix, $method),
+      $this->method_prefix
+    );
+
+    $ret_map['method_error_prefixes'] = array(
+      sprintf('%s%s', $this->error_method_prefix, $method),
+      $this->error_method_prefix
+    );
+
+    return $ret_map;
+
+  }//method
+
+  /**
+   * get some environment info that will be used to find the controller and method to use
+   *
+   * @param mixed $method
+   * @param mixed $host
+   * @param array $params
+   * @return array
+   */
+  protected function getEnv($method, $host, array $params){
   
-    // override params to just be the exception...
-    $method_params = array($e);
-  
-    return array($class_name,$method_name,$method_params);
+    $method = strtolower($method);
+    $ret_map = $this->getClassInfo($method, $host, $params);
+    $ret_map = array_merge($ret_map, $this->getMethodInfo($method, $host, $params));
+    return $ret_map;
   
   }//method
-  
+
   /**
    *  find the controller class
    *  
@@ -179,32 +169,28 @@ class Select {
    *  is thrown, if no shortname classes are found, it will then use the fallback class name
    *         
    *  @since  6-16-11
-   *  @param  string  $type the type of the request
    *  @param  array $path_list  the path broken up by /
-   *  @param  string  $fallback_class_name  if the class can't be found through the $path_list, use
-   *                                        this class
+   *  @param  string $class_postfix part of the $path_list will be combined with this to get the full class name
+   *  @param  string  $class_interface  the found class will need to extend this interface to be valid
    *  @return array array($class_name,$path_list)
    */
-  protected function findClass($type,array $path_list,$fallback_class_name = ''){
+  protected function findClassName(array $path_list, $class_postfix, $class_interface){
 
     $ret_str = '';
     $path_bit = reset($path_list);
+    $fallback_class_name = $this->default_class_name;
     
     // first test the first item in the path list
-    if(!empty($path_bit)){ 
+    if(!empty($path_bit)){
     
-      $ret_str = $this->getClassName($path_bit);
+      $ret_str = $this->getClassName($path_bit, $class_postfix, $class_interface);
       
     }//if
     
     // check for the default class name if the path list failed to find something...
     if(empty($ret_str)){
       
-      if(!empty($fallback_class_name)){
-      
-        $ret_str = $this->getClassName($fallback_class_name, $type);
-        
-      }//if
+      $ret_str = $this->getClassName($fallback_class_name, $class_postfix, $class_interface);
       
     }else{
     
@@ -220,7 +206,7 @@ class Select {
     if(empty($ret_str)){
       throw new \UnexpectedValueException(
         sprintf(
-          'A suitable Controller class could not be found to handle the request [%s] with fallback class [%s]',
+          'A suitable Controller class could not be found to handle the request [/%s] with fallback class [%s]',
           join('/',$path_list),
           $fallback_class_name
         )
@@ -238,23 +224,24 @@ class Select {
    *  with the same shortname, and to get the absolute child of the controller class   
    *      
    *  @since  6-20-11
-   *  @param  string  $class_name a partial class name that will be turned into a full class name, this
+   *  @param  string  $class_shortname a partial class name that will be turned into a full class name, this
    *                              value would be equivalent to {@link ReflectionClass::getShortName()} and
    *                              is the name of the class without the namespace         
-   *  @param  string  $type
+   *  @param  string  $class_postfix
+   *  @param  string  $class_interface
    *  @return string
    */
-  protected function getClassName($class_shortname, $type = ''){
+  protected function getClassName($class_shortname, $class_postfix, $class_interface){
   
     // canary...
-    if(empty($class_shortname)){
-      throw new \InvalidArgumentException('$class_shortname was empty');
+    if(empty($class_postfix)){
+      throw new \InvalidArgumentException('$class_postfix was empty');
     }//if
   
     $ret_str = '';
-    $regex = sprintf('#%s$#i',preg_quote($this->normalizeClassName('', $class_shortname)));
+    $regex = sprintf('#%s$#i',preg_quote($this->normalizeClassName('', $class_shortname, $class_postfix)));
     $reflection = $this->reflection;
-    $class_list = $reflection->findClassNames($this->class_interface);
+    $class_list = $reflection->findClassNames($class_interface);
     
     foreach($class_list as $class_name){
     
@@ -282,43 +269,46 @@ class Select {
    *  @since  6-16-11
    *  @param  string  $class_name the controller class
    *  @param  array $path_list
+   *  @param  array $method_prefixes
    *  @return array($method,$method_params)
    */
-  protected function findMethod($class_name,array $path_list){
+  protected function findMethod($class_name, array $path_list, array $method_prefixes){
   
-    $method_name = '';
+    $method_names = array();
     $method_params = array();
-    $path_bit = reset($path_list);
     
     // check in order:
     // 1 - $class_name/$path_list[0]
     // 2 - $class_name/$this->method_default
   
-    // find the method...
+    $path_bit = reset($path_list);
     if(!empty($path_bit)){
-    
-      $method_name = $this->normalizeMethod($path_bit);
+
+      foreach($method_prefixes as $method_prefix){
       
-      // if the controller method does not exist then use the default...
-      if(method_exists($class_name,$method_name)){ // confirmed controller/method
-      
-        $method_params = array_slice($path_list,1);
-        
-      }else{
-        $method_name = '';
-      }//if/else
-    
+        $method_name = $this->normalizeMethod($path_bit, $method_prefix);
+        if(method_exists($class_name, $method_name)){
+          $method_names[] = $method_name;
+          
+        }//if
+
+      }//foreach
+
     }//if
     
-    if(empty($method_name)){
+    if(empty($method_names)){
     
-      // check for controller/$arg using the default method...
-      $method_name = $this->method_default;
-      if(method_exists($class_name,$method_name)){
+      foreach($method_prefixes as $method_prefix){
+
+        $method_name = $this->normalizeMethod($this->default_method, $method_prefix);
+        if(method_exists($class_name, $method_name)){
+          $method_names[] = $method_name;
+
+        }//if
+
+      }//foreach
       
-        $method_params = $path_list;
-      
-      }else{
+      if(empty($method_names)){
       
         throw new \UnexpectedValueException(
           sprintf(
@@ -327,32 +317,39 @@ class Select {
           )
         );
       
+      }else{
+        $method_params = $path_list;
+
       }//if/else
-    
+
+    }else{
+      $method_params = array_slice($path_list,1);
+
     }//if
   
-    return array($method_name,array_values($method_params));
+    return array($method_names, array_values($method_params));
   
   }//method
   
   /**
    *  gets the "usable" controller class name
    *  
-   *  basically, if you pass in something like "foo" then this will return "FooController"
+   *  basically, if you pass in something like "foo" then this will return "FooPostfix"
    *  which is the non-resolved classname before the namespace is added    
    *      
    *  @param  string  $namespace  the namespace you want to prepend to the $class_name   
    *  @param  string  $class_name  the potential controller class name
+   *  @param  string  $class_postfix  the postfix this class will use in the normalized name
    *  @return string
    */
-  protected function normalizeClassName($namespace,$class_name){
+  protected function normalizeClassName($namespace, $class_name, $class_postfix = ''){
   
     // canary...
     if(empty($class_name)){
       throw new \InvalidArgumentException('$class_name was empty');
     }//if
-    if(mb_stripos($class_name,$this->class_postfix) === false){
-      $class_name = sprintf('%s%s',ucfirst($class_name),$this->class_postfix);
+    if(!empty($class_postfix) && (mb_stripos($class_name,$class_postfix) === false)){
+      $class_name = ucfirst(strtolower($class_name)).$class_postfix;
     }//if
     
     // make sure the namespace starts with a \
@@ -362,7 +359,7 @@ class Select {
     
     }//if
   
-    return sprintf('%s\\%s',$namespace,$class_name);
+    return $namespace.'\\'.$class_name;
   
   }//method
   
@@ -371,22 +368,18 @@ class Select {
    *  
    *  @param  string  $method_name  can be the full method name (eg, hanldeFoo) or a partial 
    *                                that will be made into the full name (eg, foo gets turned into handleFoo)      
+   *  @param`string $method_prefix  the prefix to add to the method name
    *  @return string
    */
-  protected function normalizeMethod($method_name){
+  protected function normalizeMethod($method_name, $method_prefix){
   
     // canary...
     if(empty($method_name)){
       throw new \InvalidArgumentException('$method_name was empty');
     }//if
-    if(mb_stripos($method_name,$this->method_prefix) > 0){ return $method_name; }//if
-    
-    $method_name = sprintf(
-      '%s%s',
-      $this->method_prefix,
-      ucfirst($method_name)
-    );
-  
+    if(mb_stripos($method_name,$method_prefix) > 0){ return $method_name; }//if
+
+    $method_name = $method_prefix.ucfirst(strtolower($method_name));
     return $method_name;
   
   }//method

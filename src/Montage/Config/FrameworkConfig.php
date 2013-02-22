@@ -127,7 +127,7 @@ class FrameworkConfig extends Config {
   protected function mergeFileFields(array $field_map){
     
     $path_key_list = array(
-      'reflection_paths',
+      'src_paths',
       'view_paths',
       'vendor_paths',
       'asset_paths',
