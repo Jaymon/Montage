@@ -301,25 +301,53 @@ abstract class Assets implements Assetable,IteratorAggregate {
   public function render($name = ''){
 
     $ret_str = '';
-    $asset_map = $this->get();
-    
-    if(isset($asset_map[$name])){
-    
-      $ret_str .= $asset_map[$name]->render().PHP_EOL;
-    
+    if(empty($name)){
+      $ret_str = $this->renderAll();
     }else{
-
-      $assets_iterator = new FlattenArrayIterator($this->get());
-      foreach($assets_iterator as $asset){
-      
-        $ret_str .= $asset->render().PHP_EOL;
-        
-      }//foreach
-    
+      $ret_str = $this->renderName($name);
     }//if/else
-  
+
     return $ret_str;
   
+  }//method
+
+  /**
+   * render all the assets
+   *
+   * @see render()
+   * @return  string
+   */
+  public function renderAll(){
+    $ret_str = '';
+    $assets_iterator = new FlattenArrayIterator($this->get());
+    foreach($assets_iterator as $asset){
+    
+      $ret_str .= $asset->render().PHP_EOL;
+      
+    }//foreach
+  
+    return $ret_str;
+
+  }//method
+
+  /**
+   * render just the asset at name
+   *
+   * @see render()
+   * @param string  $name the name of the asset to render
+   * @return  string
+   */
+  public function renderName($name){
+    $ret_str = '';
+    $asset_map = $this->get();
+    if(isset($asset_map[$name])){
+    
+      $ret_str = $asset_map[$name]->render().PHP_EOL;
+    
+    }//if
+
+    return $ret_str;
+
   }//method
   
   /**
