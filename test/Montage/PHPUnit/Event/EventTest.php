@@ -13,7 +13,7 @@ class EventTest extends FrameworkTestCase {
   
     $framework = $this->getFramework();
     $container = $framework->getContainer();
-    $this->dispatch = $container->getInstance('Montage\Event\Dispatch');
+    $this->dispatch = $container->getInstance('\\Montage\\Event\\Dispatch');
   
   }//method
   

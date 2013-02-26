@@ -13,7 +13,7 @@ namespace Montage\Event;
 use Montage\Dependency\Containable;
 use Montage\Dependency\Dependable;
 
-abstract class Subscribe implements Subscribeable, Dependable {
+abstract class MultiSub implements Subscribeable, Dependable {
 
   /**
    *  the event dispatcher
@@ -36,21 +36,13 @@ abstract class Subscribe implements Subscribeable, Dependable {
    *  @var  \Montage\Dependency\Containable
    */
   protected $container = null;
-
+  
   /**
-   *  get the name(s) of the event(s) this class is subscribing to      
+   *  get the name of the event this class is subscribing to
    *  
-   *  @return string|array  if a string, then the it is the event name, if an array, then it is
-   *                        a map of event_name/callback pairs 
+   *  @return string  the event names this class subscribes to, this expects event_name => callback key/val pairs
    */
-  abstract public function getEventName();
-
-  /**
-   *  this is the callback that will be registered to the name(s) returned from {@link getEventName()}
-   *  
-   *  @param  Event $event
-   */
-  public function handle(Event $event){}//method
+  abstract public function getEventNames();
 
   public function setContainer(Containable $container){ $this->container = $container; }//method
   public function getContainer(){ return $this->container; }//method
@@ -76,19 +68,10 @@ abstract class Subscribe implements Subscribeable, Dependable {
   
     $dispatch = $this->getEventDispatch();
     
-    $event_name_list = $this->getEventName();
-    if(is_array($event_name_list)){
-      
-      foreach($event_name_list as $event_name => $callback){
-        $dispatch->listen($event_name,$callback);
-      }//foreach
-      
-    }else{
-    
-      $callback = array($this,'handle');
-      $dispatch->listen($event_name_list,$callback);
-    
-    }//if/else
+    $event_name_list = $this->getEventNames();
+    foreach($event_name_list as $event_name => $callback){
+      $dispatch->listen($event_name,$callback);
+    }//foreach
   
   }//method
   
@@ -99,19 +82,10 @@ abstract class Subscribe implements Subscribeable, Dependable {
   
     $dispatch = $this->getEventDispatch();
 
-    $event_name_list = $this->getEventName();
-    if(is_array($event_name_list)){
-      
-      foreach($event_name_list as $event_name => $callback){
-        $dispatch->kill($event_name,$callback);
-      }//foreach
-      
-    }else{
-    
-      $callback = array($this,'handle');
-      $dispatch->kill($event_name_list,$callback);
-    
-    }//if/else
+    $event_name_list = $this->getEventNames();
+    foreach($event_name_list as $event_name => $callback){
+      $dispatch->kill($event_name,$callback);
+    }//foreach
   
   }//method
 

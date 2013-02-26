@@ -294,7 +294,7 @@ class Framework extends Field implements Dependable,Eventable {
     
     }catch(\Exception $e){
 
-      $ret_mixed = $this->handleException($e);
+      $ret_mixed = $this->handleError($e);
     
     }//try/catch
     
@@ -379,6 +379,9 @@ class Framework extends Field implements Dependable,Eventable {
 
         // TODO something awesome right here with the exception
         $response->setContent('<pre>'.(string)$controller_response.'</pre>');
+        // TODO I thought just throwing the exception would work, but that just causes the recursion
+        // exception to be raised after 3 times
+        //throw $controller_response;
 
       }else{
 
@@ -951,7 +954,7 @@ class Framework extends Field implements Dependable,Eventable {
    *  
    *  @return boolean $use_template
    */
-  protected function handleException(\Exception $e){
+  protected function handleError(\Exception $e){
 
     // canary...
     $this->handleRecursion($e);
@@ -969,12 +972,7 @@ class Framework extends Field implements Dependable,Eventable {
 
       if($e instanceof \Montage\Exception\InternalRedirectException){
       
-        list($controller_class,$controller_method,$controller_method_params) = $this->getContainer()->getControllerSelect()->find(
-          $request->getHost(),
-          $e->getPath()
-        );
-      
-        $controller_response = $this->handleController($controller_class,$controller_method,$controller_method_params);
+        $controller_response = $this->handleRequest($e->getPath());
         $ret_mixed = $this->handleResponse($controller_response);
       
       }else if($e instanceof \Montage\Exception\RedirectException){
@@ -1032,7 +1030,7 @@ class Framework extends Field implements Dependable,Eventable {
     
       if($this->isHandled(self::HANDLE_PRE)){
     
-        $ret_mixed = $this->handleException($e);
+        $ret_mixed = $this->handleError($e);
         
       }else{
       

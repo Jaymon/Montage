@@ -5,7 +5,7 @@
  *  
  *  this class should only be extended if you want to change core framework configuration
  *  and shouldn't be extended from stuff like Plugin, or app, subscription classes (those should
- *  all extend Montage\Event\Subscribe like this class does)
+ *  all extend Montage\Event\MultiSub like this class does)
  *
  *  @version 0.1
  *  @author Jay Marcyes
@@ -15,10 +15,7 @@
  ******************************************************************************/
 Namespace Montage\Event;
 
-use Montage\Event\Event;
-use Montage\Event\Subscribe as MontageSub;
-
-class FrameworkSub extends MontageSub {
+class FrameworkSub extends MultiSub {
 
   /**
    * the framework configuration object
@@ -27,7 +24,7 @@ class FrameworkSub extends MontageSub {
    */
   public $config = null;
 
-  public function getEventName(){
+  public function getEventNames(){
     return array(
       'framework.filter.created:\\Montage\\Response\\Response' => array($this, 'handleCreatedResponse'),
       'framework.filter.created:\\Montage\\Response\\Template' => array($this, 'handleCreatedTemplate'),

@@ -19,7 +19,7 @@ class Select {
    *  
    *  @var  string
    */
-  protected $class_interface = '\Montage\Event\Subscribeable';
+  protected $class_interface = '\\Montage\\Event\\Subscribeable';
   
   /**
    *  holds the information about what classes exist in the system
