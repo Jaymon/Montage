@@ -346,7 +346,7 @@ class Framework extends Field implements Dependable,Eventable {
     // set a default title if one hasn't been set...
     if(!$response->hasTitle()){
       $request = $this->getContainer()->getRequest();
-      $response->setTitle(ltrim($request->getPath(),'/'));
+      $response->setTitle($request->getPath());
     }//if
   
     $event = new FilterEvent(
@@ -377,11 +377,7 @@ class Framework extends Field implements Dependable,Eventable {
 
       if($controller_response instanceof \Exception){
 
-        // TODO something awesome right here with the exception
-        $response->setContent('<pre>'.(string)$controller_response.'</pre>');
-        // TODO I thought just throwing the exception would work, but that just causes the recursion
-        // exception to be raised after 3 times
-        //throw $controller_response;
+        throw $controller_response;
 
       }else{
 
@@ -504,7 +500,7 @@ class Framework extends Field implements Dependable,Eventable {
     $config = $this->getConfig();
 
     // canary...
-    if(!$config->hasField('asset_paths')){ return; }//if
+    if(!$config->hasField('assets_paths')){ return; }//if
   
     $request = $container->getRequest();
     
@@ -525,7 +521,7 @@ class Framework extends Field implements Dependable,Eventable {
       )
     );
     
-    $assets->setSrcPaths($config->getField('asset_paths',array()));
+    $assets->setSrcPaths($config->getField('assets_paths',array()));
     
     // create all the "other" asset classes...
     $class_name_list = $select->find();
@@ -1020,7 +1016,8 @@ class Framework extends Field implements Dependable,Eventable {
         
       }else{
         
-        $event = new FilterEvent('montage.handle.error', $e);
+        $event = new FilterEvent('framework.handleError', $e);
+        $event->setField('e_list', $e_list);
         $this->broadcastEvent($event);
         $ret_mixed = $this->handleResponse($event->getParam()); // not sure this is best choice, 
         
@@ -1308,9 +1305,9 @@ class Framework extends Field implements Dependable,Eventable {
       foreach($plugin_base_path->createIterator('', 1) as $plugin_path => $plugin_dir){
       
         if($plugin_dir->isDir()){
-          $plugin_name = $plugin_dir->getBasename();
-          $paths = $this->handlePathBase($plugin_name, $paths);
-          $paths[$path_bit] = $plugin_dir;
+          ///$plugin_name = $plugin_dir->getBasename();
+          $paths = $this->handlePathBase($plugin_dir, $paths);
+          $paths[$path_bit][] = $plugin_dir;
         
         }//if
       

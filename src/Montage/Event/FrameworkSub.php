@@ -20,6 +20,8 @@ class FrameworkSub extends MultiSub {
   /**
    * the framework configuration object
    *
+   * this is only needed for the handle start event, none others
+   *
    * @var \Montage\Config\FrameworkConfig
    */
   public $config = null;
