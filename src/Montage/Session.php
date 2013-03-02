@@ -2,6 +2,11 @@
 /**
  *  handle session stuff 
  *
+ *  to start this and check for headers:
+ *
+ *  $file = $line = '';
+ *  if(!headers_sent($file,$line)){ $this->start(); }//if
+ *
  *  @version 0.3
  *  @author Jay Marcyes {@link http://marcyes.com}
  *  @since 2-28-10
@@ -12,24 +17,10 @@ namespace Montage;
 use Montage\Field\Fieldable;
 use Montage\Field\Escape;
 
-use Symfony\Component\HttpFoundation\Session as SymfonySession;
-use Symfony\Component\HttpFoundation\SessionStorage\SessionStorageInterface;
+use Symfony\Component\HttpFoundation\Session\Session as SymfonySession;
+use Symfony\Component\HttpFoundation\Session\Storage\SessionStorageInterface;
 
 class Session extends SymfonySession implements Fieldable {
-
-  public function __construct(SessionStorageInterface $storage, $defaultLocale = 'en'){
-  
-    parent::__construct($storage,$defaultLocale);
-    
-    // only start the session if headers haven't been sent...
-    $file = $line = '';
-    if(!headers_sent($file,$line)){
-    
-      $this->start();
-      
-    }//if
-  
-  }//method
 
   /**
    *  set the $val into $key
@@ -39,9 +30,6 @@ class Session extends SymfonySession implements Fieldable {
    *  @return object  the class instance for fluid interface
    */
   public function setField($key,$val = null){
-  
-    // canary
-    ///if(!$this->started){ throw new \RuntimeException('session is not started'); }//if
   
     $this->set($key,$val);
     return $this;
@@ -54,7 +42,10 @@ class Session extends SymfonySession implements Fieldable {
    *  @param  string  $key   
    *  @return  boolean
    */
-  public function hasField($key){ return !empty($this->attributes[$key]); }//method
+  public function hasField($key){
+    $val = $this->get($key, null);
+    return !empty($val);
+  }//method
   
   /**
    *  check if $key exists
@@ -94,9 +85,6 @@ class Session extends SymfonySession implements Fieldable {
    */
   public function killField($key){
   
-    // canary
-    ///if(!$this->started){ throw new \RuntimeException('session is not started'); }//if
-  
     $this->remove($key);
     return $this;
     
@@ -126,14 +114,12 @@ class Session extends SymfonySession implements Fieldable {
    *  @return object  the class instance for fluid interface
    */
   public function addFields(array $field_map){
-  
+
     // canary
-    ///if(!$this->started){ throw new \RuntimeException('session is not started'); }//if
-  
-    if(!empty($field_map)){
-      $this->attributes = array_merge($this->attributes,$field_map);
-    }//if
-    
+    if(empty($field_map)){ return $this; }//if
+
+    $field_map = array_merge($this->all(), $field_map);
+    $this->replace($field_map);
     return $this;
   
   }//method
@@ -146,9 +132,6 @@ class Session extends SymfonySession implements Fieldable {
    *  @return object  the class instance for fluid interface
    */
   public function setFields(array $field_map){
-  
-    // canary
-    ///if(!$this->started){ throw new \RuntimeException('session is not started'); }//if
   
     $this->replace($field_map);
     return $this;
@@ -186,7 +169,10 @@ class Session extends SymfonySession implements Fieldable {
    *  @since  6-30-11   
    *  @return boolean
    */
-  public function hasFields(){ return true; }//method
+  public function hasFields(){
+    $field_map = $this->all();
+    return !empty($field_map);
+  }//method
   
   /**
    *  get a field from any part of the session
@@ -204,8 +190,8 @@ class Session extends SymfonySession implements Fieldable {
     $ret_mixed = $default_val;
     if($this->existsField($key)){
       $ret_mixed = $this->getField($key);
-    }else if($this->hasFlash($key)){
-      $ret_mixed = $this->getFlash($key);
+    }else if($this->getFlashBag()->has($key)){
+      $ret_mixed = $this->getFlashBag()->get($key);
     }//if/else if
   
     return $ret_mixed;
@@ -228,7 +214,7 @@ class Session extends SymfonySession implements Fieldable {
     if(!empty($_POST)){
       $field_map['_POST'] = empty($field_map['_POST']) ? $_POST : array_merge($field_map['_POST'],$_POST);
     }//if
-    if(!empty($field_map)){ $this->setFlash('montage_session::request_saved',$field_map); }//if
+    if(!empty($field_map)){ $this->getFlashBag()->set('montage_session::request_saved',$field_map); }//if
   
   }//method
   
@@ -248,7 +234,7 @@ class Session extends SymfonySession implements Fieldable {
    */
   protected function loadRequest(){
     
-    $field_map = $this->getFlash('montage_session::request_saved',array());
+    $field_map = $this->getFlashBag()->get('montage_session::request_saved',array());
     
     if(!empty($field_map)){
       

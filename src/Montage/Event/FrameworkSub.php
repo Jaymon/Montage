@@ -32,7 +32,6 @@ class FrameworkSub extends MultiSub {
       'framework.filter.created:\\Montage\\Response\\Template' => array($this, 'handleCreatedTemplate'),
       'framework.filter.created:\\Montage\\Cache\\Cacheable' => array($this, 'handleCreatedCacheable'),
       'framework.filter.created:\\Montage\\Field\\SetFieldable' => array($this, 'handleCreatedFieldable'),
-      'framework.filter.create:\\Montage\\Session' => array($this, 'handleCreateSession'),
       'framework.filter.create:\\Montage\\Request\\Requestable' => array($this, 'handleCreateRequest'),
       'framework.filter.create:\\Montage\\Url' => array($this, 'handleCreateUrl'),
       'framework.filter.create:\\Screen' => array($this, 'handleCreateScreen'),
@@ -108,22 +107,6 @@ class FrameworkSub extends MultiSub {
       }//foreach
       
     }//if
-    
-  }//method
-
-  public function handleCreateSession(\Montage\Event\FilterEvent $event){
-
-    $params = $event->getParam();
-  
-    if(!isset($params['storage']) && !isset($params[0])){
-    
-      // there are about 6 children of the SessionInterface, so we are choosing here which one
-      // we want....
-      $params['storage'] = new \Symfony\Component\HttpFoundation\SessionStorage\NativeSessionStorage();
-    
-    }//if
-  
-    $event->setParam($params);
     
   }//method
 
