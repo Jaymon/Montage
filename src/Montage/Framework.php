@@ -745,13 +745,20 @@ class Framework extends Field implements Dependable,Eventable {
           $params
         );
     
-    ///\out::e($request->getHost(),$request->getPath());
-    ///\out::e($controller_class,$controller_method,$controller_method_params);
+    ///\out::i($container->getInstance('\Montage\Reflection\ReflectionFramework'));
+    ///\out::e($request->getMethod(),$request->getHost(),$request->getPath());
+    ///\out::e($controller_class,$controller_methods,$controller_params);
     
     $event = new Event('framework.handle');
     $this->broadcastEvent($event);
 
     $controller_response = $this->handleController($controller_class, $controller_methods, $controller_params);
+
+    // we don't want to drop into views on a command, so we'll default to false to turn off templates
+    if($request->isCli()){
+      if($controller_response === null){ $controller_response = false; }//if
+    }//if
+
     return $controller_response;
 
   }//method
@@ -1357,7 +1364,7 @@ class Framework extends Field implements Dependable,Eventable {
     $paths = $this->handlePathBase($framework_path, array());
     $paths = $this->handlePathBase($app_path, $paths);
 
-    // reverse seom paths so framework will be the dominant path
+    // reverse some paths so framework will be the dominant path
     // TODO: it would probably be better that functionality like what template was used
     // isn't so dependant on order, or at least move this into the template handlers
     foreach(array('view', 'test') as $path_bit){

@@ -9,7 +9,5 @@
  ******************************************************************************/
 namespace Montage\Controller;
 
-use Montage\Controller\Controller;
-
-class Endpoint extends Controller {}//class
+abstract class Endpoint extends Controller {}//class
 

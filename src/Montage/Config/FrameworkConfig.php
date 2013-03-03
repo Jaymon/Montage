@@ -102,7 +102,7 @@ class FrameworkConfig extends Config {
    *
    *  @return array
    */
-  public function getPluginPaths(){ return $this->getField('plugin_paths',array()); }//method
+  public function getPluginPaths(){ return $this->getField('plugins_paths',array()); }//method
   
   /**
    *  get the app's set Charset
@@ -130,8 +130,8 @@ class FrameworkConfig extends Config {
       'src_paths',
       'view_paths',
       'vendor_paths',
-      'asset_paths',
-      'plugin_paths',
+      'assets_paths',
+      'plugins_paths',
       'test_paths',
       'config_paths'
     );

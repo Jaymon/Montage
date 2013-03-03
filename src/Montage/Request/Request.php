@@ -121,6 +121,25 @@ class Request extends SymfonyRequest implements Requestable,GetFieldable {
   public function isMethod($method){
     return $this->getMethod() === mb_strtoupper($method);
   }//method
+
+  /**
+   * return the request method
+   *
+   * this overrides parent because we return CLI if the request is coming from the command
+   * line, by default GET would be returned in parent
+   *
+   * @return  string  the request method (eg, GET, POST, CLI), always uppercase
+   */
+  public function getMethod(){
+    $ret_str = 'CLI';
+    if(!$this->isCli()){
+      $ret_str = parent::getMethod();
+    }//if
+
+    return $ret_str;
+
+  }//method
+
   
   /**
    *  return the base requested url

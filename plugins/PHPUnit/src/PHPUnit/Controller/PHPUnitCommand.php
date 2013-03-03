@@ -10,13 +10,13 @@
  ******************************************************************************/
 namespace PHPUnit\Controller;
 
-use Montage\Controller\CliController;
+use Montage\Controller\Command;
 use Montage\Framework;
 use Montage\Config\FrameworkConfig;
 use Path;
 use Montage\Response\Template;
 
-class PHPUnitController extends CliController {
+class PHPUnitCommand extends Command {
 
   /**
    *  @var  \Montage\Framework
@@ -38,7 +38,7 @@ class PHPUnitController extends CliController {
    *
    *  @param  array $params   
    */
-  public function handleIndex(array $params = array()){ return $this->handleHelp($params); }//method
+  public function handleDefault(array $params = array()){ return $this->handleHelp($params); }//method
   
   /**
    *  actually run the passed in tests
@@ -50,11 +50,15 @@ class PHPUnitController extends CliController {
   public function handleTest(array $test_list = array()){
   
     $test_path_list = array();
+
+    // TODO: allow testname.php::methodname to set the --filter param
   
     // find and add all the passed in test paths...
     foreach($test_list as $test_name)
     {
-      $test_path_list[] = $this->findTest($test_name);
+      if($test_path = $this->findTest($test_name)){
+        $test_path_list[] = $test_path;
+      }//if
     
     }//foreach
     
@@ -75,7 +79,8 @@ class PHPUnitController extends CliController {
   protected function runTests(array $test_list){
   
     // canary...
-    if(empty($test_list)){ $this->out('No tests to run were found'); return; }//if
+    if(empty($test_list)){ $this->screen->out('No tests to run were found'); return; }//if
+
   
     $command = $this->request->getField('phpunit-path','phpunit');
   
@@ -102,8 +107,8 @@ class PHPUnitController extends CliController {
     // add custom values...
     ///$command .= sprintf(' --app-path="%s"',$this->framework_config->getAppPath());
     
-    $this->out('Running command: %s',$command);
-    $this->out();
+    $this->screen->out('Running command: %s',$command);
+    $this->screen->out();
     
     /* echo sprintf(
       'Test(s) will use the "%s" environment and the "%s" application',
@@ -114,9 +119,9 @@ class PHPUnitController extends CliController {
     $ret_int = 0;
     passthru($command,$ret_int);
     
-    $this->out();
-    $this->out();
-    $this->out('Command returned: %s',$ret_int);
+    $this->screen->out();
+    $this->screen->out();
+    $this->screen->out('Command returned: %s',$ret_int);
     
     return $ret_int;
     
@@ -144,9 +149,9 @@ class PHPUnitController extends CliController {
     // first, check the main test dir...
     $test_dir = $this->getMainTestDir();
     
-    $this->trace('Searching for %s in...',$test_name);
+    $this->screen->trace('Searching for %s in...',$test_name);
     
-    $this->trace('  %s',$test_dir);
+    $this->screen->trace('  %s',$test_dir);
 
     if($test_dir->exists() && ($test_path = $test_dir->getChild($test_regex)))
     {
@@ -157,7 +162,7 @@ class PHPUnitController extends CliController {
       $test_dirs = $this->getSubTestDirs();
       foreach($test_dirs as $test_dir)
       {
-        $this->trace('  %s',$test_dir);
+        $this->screen->trace('  %s',$test_dir);
         
         if($test_dir->exists() && ($test_path = $test_dir->getChild($test_regex)))
         {
@@ -171,7 +176,7 @@ class PHPUnitController extends CliController {
   
     if(!empty($ret_path)){
   
-      $this->trace('Found test %s',$ret_path);
+      $this->screen->trace('Found test %s',$ret_path);
       
     }//if
   

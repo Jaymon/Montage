@@ -41,9 +41,16 @@ class Screen {
 
   }//method
   
+  /**
+   * this will render the format message to a string
+   *
+   * if you want to print a message, use out() or trace()
+   *
+   * @return  string
+   */
   public function render($format_msg = ''){
 
-    $msg = '';
+    $msg = $format_msg;
     $args = func_get_args();
     
     if(!empty($args))
