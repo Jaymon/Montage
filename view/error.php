@@ -6,7 +6,7 @@
 
 <?php echo '<hr>'; ?>
 
-<h2>Exception List</h2>
+<h2>All Exceptions Thrown</h2>
 
 <?php if($e_list = $this->getField('e_list')): ?>
   <?php foreach($e_list as $e): ?>

@@ -26,18 +26,7 @@ class Select {
    *
    *  @var  \Montage\Reflection\ReflectionFramework
    */
-  protected $reflection = null;
-  
-  /**
-   *  create instance of this class
-   *  
-   *  @param  \Montage\Reflection\ReflectionFramework $reflection needed to be able to find suitable start classes            
-   */
-  function __construct(ReflectionFramework $reflection){
-  
-    $this->reflection = $reflection;
-  
-  }//method
+  public $reflection = null;
   
   /**
    *  find all the class names that should be instantiated

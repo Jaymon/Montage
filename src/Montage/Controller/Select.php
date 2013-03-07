@@ -105,7 +105,36 @@ class Select {
   }//method
   
   /**
+   * find all first postition endpoint controller names
+   *
+   * if you had a controller: Namespace\UserEndpoint, this would return array('user')
+   *
+   * @since 2013-3-7
+   * @return  array an array of endpoint names
+   */
+  public function findEndpoints(){
+    $ret_list = array();
+    $map = $this->getClassInfo('GET', '', array());
+    $reflection = $this->reflection;
+    $class_list = $reflection->findClassNames($map['class_interface']);
+    foreach($class_list as $class_name){
+      $class_start = mb_strrpos($class_name, '\\');
+      $short_name = mb_substr($class_name, $class_start);
+      $short_name = str_replace(array('\\', $map['class_postfix']), array('', ''), $short_name);
+      $ret_list[] = mb_strtolower($short_name);
+    }//foreach
+
+    // TODO: go through default endpoint and also add handle* methods
+
+    return $ret_list;
+
+  }//method
+
+  /**
    * get the class postfix that will be appended to the controller class name
+   *
+   * TODO the info should probably be gotten in getEndpointInfo() and getCommandInfo() methods
+   * to make it easier to extend, and also to make findEndpoints() not have to pass in 'GET' and stuff
    *
    * @param string  $method
    * @return string
@@ -222,7 +251,7 @@ class Select {
    *  
    *  this allows any other method to make sure any shortname has a controller class
    *  with the same shortname, and to get the absolute child of the controller class   
-   *      
+   *
    *  @since  6-20-11
    *  @param  string  $class_shortname a partial class name that will be turned into a full class name, this
    *                              value would be equivalent to {@link ReflectionClass::getShortName()} and

@@ -118,7 +118,7 @@ class ReflectionContainer extends Container {
   /**
    *  get the internal reflection instance this class uses
    *  
-   *  @return Montage\Dependency\Reflection
+   *  @return Montage\Reflection\ReflectionFramework
    */
   protected function getReflection(){ return $this->reflection; }//method
   

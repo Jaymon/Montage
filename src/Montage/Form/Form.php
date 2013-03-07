@@ -252,11 +252,74 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
   }//method
   
   /**
-   *  return the instance's field_map
+   * get all non submit field values, similar to getFields()
+   *
+   * @since 2013-3-7
+   * @return  array a map of name => value
+   */
+  public function getVals(){
+
+    $ret_map = array();
+
+    foreach($this->getFields() as $name => $field){
+    
+      $ret_map[$name] = $field->getVal();
+
+    }//foreach
+
+    return $ret_map;
+
+  }//method
+
+  /**
+   * get all field values, similar to getAllFields()
+   *
+   * @since 2013-3-7
+   * @return  array a map of name => value
+   */
+  public function getAllVals(){
+
+    $ret_map = array();
+
+    foreach($this->getAllFields() as $name => $field){
+    
+      $ret_map[$name] = $field->getVal();
+
+    }//foreach
+
+    return $ret_map;
+
+  }//method
+  /**
+   *  return the instance's field_map, minus the submit fields
+   *
+   *  this is handy because most of the time you want the fields without the submit
+   *  fields
    *  
    *  @return array
    */
-  public function getFields(){ return $this->field_map; }//method
+  public function getFields(){
+    $ret_map = array();
+
+    foreach($this as $name => $field){
+      
+      // canary, skip submit buttons...
+      if($field instanceof Submit){ continue; }//if
+    
+      $ret_map[$name] = $field;
+
+    }//foreach
+
+    return $ret_map;
+
+  }//method
+
+  /**
+   * this will return all fields, including submit fields
+   *
+   * @return  array
+   */
+  public function getAllFields(){ return $this->field_map; }//method
   
   /**
    *  get an array with all the errors mapped to their names, this includes the global

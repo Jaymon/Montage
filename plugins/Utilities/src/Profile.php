@@ -24,6 +24,8 @@ class Profile {
    *  @var  array         
    */
   protected $stopped_map = array();
+
+  protected $title_map = array();
   
   /**
    *  hold the total profiled time
@@ -45,10 +47,17 @@ class Profile {
    *  @return boolean pretty much always returns true
    */
   public function start($title){
+
+    if(empty($this->title_map[$title])){
+      $this->title_map[$title] = 1;
+    }else{
+      $this->title_map[$title] += 1;
+    }//if/else
   
     $profile_map = array();
     $profile_map['start'] = microtime(true);
-    $profile_map['title'] = $title;
+    $profile_map['title'] = sprintf('%s %s', $title, $this->title_map[$title]);
+    ///$profile_map['title'] = $title;
     $this->stack_started->push($profile_map);
     return true;
 

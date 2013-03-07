@@ -173,7 +173,7 @@ class Framework extends Field implements Dependable,Eventable {
     // canary...
     if($this->isHandled(self::HANDLE_PRE)){ return true; }//if
   
-    $this->profileStart('Handle preHandle');
+    $this->profileStart(__FUNCTION__);
     
     $ret_mixed = true;
     
@@ -278,7 +278,7 @@ class Framework extends Field implements Dependable,Eventable {
    */
   public function handle(){
   
-    $this->profileStart('Handle');
+    $this->profileStart(__FUNCTION__);
   
     try{
     
@@ -855,6 +855,8 @@ class Framework extends Field implements Dependable,Eventable {
             
               $event_name = 'framework.filter.controller_param_create';
               if(!empty($event_class_name)){ $event_name .= ':'.$event_class_name; }//if
+
+              $dispatch = $this->getEventDispatch();
             
               // broadcast an event to give a chance to create the object instance...
               $event = new FilterEvent(
@@ -1023,6 +1025,8 @@ class Framework extends Field implements Dependable,Eventable {
         
       }else{
         
+        // TODO: maybe clear cache?
+
         $event = new FilterEvent('framework.handleError', $e);
         $event->setField('e_list', $e_list);
         $this->broadcastEvent($event);
@@ -1031,6 +1035,8 @@ class Framework extends Field implements Dependable,Eventable {
       }//try/catch
       
     }catch(\Exception $e){
+
+      // TODO: maybe clear cache?
     
       if($this->isHandled(self::HANDLE_PRE)){
     
@@ -1341,6 +1347,8 @@ class Framework extends Field implements Dependable,Eventable {
   
     // canary
     if($this->isHandled(self::HANDLE_PATHS)){ return; }//if
+
+    $this->profileStart(__FUNCTION__);
   
     $this->setHandled(self::HANDLE_PATHS);
     $config = $this->getConfig();
@@ -1376,6 +1384,8 @@ class Framework extends Field implements Dependable,Eventable {
     foreach($paths as $path_bit => $path_list){
       $config->setField(sprintf('%s_paths', $path_bit), $path_list);
     }//foreach
+
+    $this->profileStop();
 
   }//method
   

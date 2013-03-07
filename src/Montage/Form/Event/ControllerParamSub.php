@@ -13,9 +13,9 @@
 Namespace Montage\Form\Event;
 
 use Montage\Event\Event;
-use Montage\Event\Subscribe as MontageSub;
+use Montage\Event\SingleSub;
 
-class ControllerParamSub extends MontageSub {
+class ControllerParamSub extends SingleSub {
   
   public function getEventName(){
     return 'framework.filter.controller_param_created:\\Montage\\Form\\Form';
@@ -42,7 +42,7 @@ class ControllerParamSub extends MontageSub {
   public function handle(Event $event){
   
     $instance = $event->getParam();
-    $container = $event->getField('container');
+    $container = $this->getContainer();
     $request = $container->getRequest();
     
     $form_name = $instance->getName();
