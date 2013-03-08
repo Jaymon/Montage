@@ -6,6 +6,6 @@
     
   </div>
 
-<?php \out::i($this->getContainer()->getProfile()); ?>
+<?php /* \out::i($this->getContainer()->getProfile()); // */ ?>
   
 <?php endif; ?>

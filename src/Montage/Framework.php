@@ -185,25 +185,35 @@ class Framework extends Field implements Dependable,Eventable {
     try{
     
       // collect all the paths we're going to use...
+      $this->profileStart('handlePaths');
       $this->handlePaths();
+      $this->profileStop();
   
       // handle loading the config files...
+      $this->profileStart('handleConfig');
       $this->handleConfig();
+      $this->profileStop();
       
       // start the autoloaders...
       // this is the first thing done because it is needed to make sure all the classes
       // can be found
+      $this->profileStart('handleAutoload');
       $this->handleAutoload();
+      $this->profileStop();
       
       // container should now exist
       
       // start the event SUBSCRIBE classes...
+      $this->profileStart('handleEvent');
       $this->handleEvent();
+      $this->profileStop();
 
       // it should be safe to create any singleton now
 
+      $this->profileStart('framework.preHandle');
       $event = new Event('framework.preHandle');
       $this->broadcastEvent($event);
+      $this->profileStop();
       
     }catch(\ReflectionException $e){
       
@@ -286,11 +296,17 @@ class Framework extends Field implements Dependable,Eventable {
 
       $container = $this->getContainer();
       $request = $this->getContainer()->getRequest();
+      $this->profileStart('handleRequest');
       $controller_response = $this->handleRequest($request->getPath());
+      $this->profileStop();
+      $this->profileStart('handleResponse');
       $ret_mixed = $this->handleResponse($controller_response);
+      $this->profileStop();
       
+      $this->profileStart('framework.handle.stop');
       $event = new Event('framework.handle.stop');
       $this->broadcastEvent($event);
+      $this->profileStop();
     
     }catch(\Exception $e){
 
@@ -1348,8 +1364,6 @@ class Framework extends Field implements Dependable,Eventable {
     // canary
     if($this->isHandled(self::HANDLE_PATHS)){ return; }//if
 
-    $this->profileStart(__FUNCTION__);
-  
     $this->setHandled(self::HANDLE_PATHS);
     $config = $this->getConfig();
   
@@ -1384,8 +1398,6 @@ class Framework extends Field implements Dependable,Eventable {
     foreach($paths as $path_bit => $path_list){
       $config->setField(sprintf('%s_paths', $path_bit), $path_list);
     }//foreach
-
-    $this->profileStop();
 
   }//method
   

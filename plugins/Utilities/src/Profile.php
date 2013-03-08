@@ -25,8 +25,6 @@ class Profile {
    */
   protected $stopped_map = array();
 
-  protected $title_map = array();
-  
   /**
    *  hold the total profiled time
    *
@@ -48,16 +46,9 @@ class Profile {
    */
   public function start($title){
 
-    if(empty($this->title_map[$title])){
-      $this->title_map[$title] = 1;
-    }else{
-      $this->title_map[$title] += 1;
-    }//if/else
-  
     $profile_map = array();
     $profile_map['start'] = microtime(true);
-    $profile_map['title'] = sprintf('%s %s', $title, $this->title_map[$title]);
-    ///$profile_map['title'] = $title;
+    $profile_map['title'] = $title;
     $this->stack_started->push($profile_map);
     return true;
 
@@ -79,12 +70,14 @@ class Profile {
     $profile_map = $this->stack_started->pop();
     
     $profile_map['stop'] = microtime(true);
-    
-    $profile_map['time'] = $this->getTime($profile_map['start'],$profile_map['stop']);
-    
-    $profile_map['summary'] = sprintf('%s = %s ms',$profile_map['title'],$profile_map['time']);
-    
+    $profile_map['time'] = $this->getTime($profile_map['start'], $profile_map['stop']);
+    $profile_map['summary'] = sprintf('%s = %s ms', $profile_map['title'], $profile_map['time']);
+
     if($this->stack_started->isEmpty()){
+
+      // the stack is empty, so this was a top level call, so it should be merged into an already
+      // existing key with the same name (because we've maybe stopped children), or a new key if no
+      // children were ever started and stopped.
     
       if(isset($this->stopped_map[$profile_map['title']])){
         
@@ -99,42 +92,44 @@ class Profile {
         
       }//if/else
       
+      // we add to total here because otherwise it will get counted twice
       $this->total += $profile_map['time'];
-    
+
     }else{
+
+      // this is a child, so if there were 3 nested calls: Foo -> Bar -> che, and we
+      // are stopping che, we should build a map that has a Foo key, with a Bar child, and
+      // that Bar child will have a Che child, that's where this profile map will go
     
-      $add_profile = true;
-    
-      // go through and build a path...
-      
+      // go through and build a path, by the time this is done, we'll know where $profile_map goes
       $current_map = &$this->stopped_map;
-      foreach($this->stack_started as $key => $map){
+      // stack iteration is fixes as LIFO now, so we need to go through it backward
+      $stack_key = count($this->stack_started) - 1;
+      while(isset($this->stack_started[$stack_key])){
+        $map = $this->stack_started[$stack_key--];
       
         if(!isset($current_map[$map['title']])){
-          $current_map[$map['title']] = array('time' => 0,'children' => array());
-        }//if
+          $current_map[$map['title']] = array('time' => 0, 'children' => array());
+        }else{
+          if(!isset($current_map[$map['title']]['children'])){
+            $current_map[$map['title']]['children'] = array();
+          }//if
+        }//if/else
       
         $current_map = &$current_map[$map['title']]['children'];
         
-        if(isset($current_map[$profile_map['title']])){
-        
-          $current_map[$profile_map['title']] = array_merge(
-            $current_map[$profile_map['title']],
-            $profile_map
-          );
-          
-          $add_profile = false;
-        
-        }//if
+      }//while
       
-      }//foreach
-      
-      if($add_profile){
-      
+      if(isset($current_map[$profile_map['title']])){
+        $current_map[$profile_map['title']] = array_merge(
+          $current_map[$profile_map['title']],
+          $profile_map
+        );
+
+      }else{
         $current_map[$profile_map['title']] = $profile_map;
-        
-      }//if
-      
+      }//if/else
+
     }//if/else
 
     return $profile_map;
