@@ -387,8 +387,8 @@ class Framework extends Field implements Dependable,Eventable {
 
         $exit_code = $controller_response->getCode();
         if(empty($exit_code)){ $exit_code = 2; }//if
-
-        echo $controller_response, PHP_EOL;
+        
+        fwrite(STDERR, ((string)$controller_response).PHP_EOL);
         
       }//if/else if
 

@@ -43,7 +43,6 @@ class NewCommand extends Command implements Eventable, Dependable {
    * @param string  --dir the directory you want to write the files to (defaults to /app_path/src/Controller)
    */
   public function handleCommand(array $names = array()){
-    throw new \RuntimeException('testing');
 
     return $this->writeControllers($names, 'Command', '\\Montage\\Controller\\Command');
   
