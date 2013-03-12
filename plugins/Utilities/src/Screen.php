@@ -126,4 +126,22 @@ class Screen {
   
   }//method
 
+  /**
+   * exactly the same as out() but writes to stderr instead
+   *
+   * @see out()
+   * @since 2013-3-11
+   */
+  public function err($format_msg = ''){
+  
+    // sanity...
+    if($this->is_quiet){ return; }//if
+  
+    $args = func_get_args();
+    $msg = call_user_func_array(array($this,'render'),$args);
+    fwrite(STDERR, $msg.PHP_EOL);
+    flush();
+  
+  }//method
+
 }//class

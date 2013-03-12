@@ -22,10 +22,16 @@ class ErrorSub extends SingleSub {
    *  @param  Event $event
    */
   public function handle(Event $event){
+
     $container = $this->getContainer();
+    $request = $container->getRequest();
+    
+    // canary, we pass the exception on if it is command line request
+    if($request->isCli()){ return; }//if
+
     $e = $event->getParam();
     $response = $container->getResponse();
-    
+
     if($e instanceof HttpException){
       $response->setStatusCode($e->getCode(), $e->getStatusMessage());
       // $event->setParam(false);

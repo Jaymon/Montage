@@ -20,6 +20,13 @@ abstract class Command extends Controller {
   public $screen = null;
 
   /**
+   * print out all the commands available in the app
+   */
+  public function handleDefault(array $params = array()){
+    $this->screen->out('TODO: print out commands for this command');
+  }//method
+
+  /**
    *  print out all the different cli commands for this namespace
    *
    *  @param  array $params does nothing

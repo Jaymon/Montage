@@ -355,18 +355,13 @@ class Framework extends Field implements Dependable,Eventable {
    */
   protected function handleResponse($controller_response = null){
   
-    $container = $this->getContainer();
     $use_template = false;
-    $response = $this->getContainer()->getResponse();
+    $container = $this->getContainer();
+    $response = $container->getResponse();
+    $request = $container->getRequest();
 
-    // start the session if session object has been created
-    ///if($container->hasSession()){ $container->getSession()->start(); }//if
-    
     // set a default title if one hasn't been set...
-    if(!$response->hasTitle()){
-      $request = $this->getContainer()->getRequest();
-      $response->setTitle($request->getPath());
-    }//if
+    if(!$response->hasTitle()){ $response->setTitle($request->getPath()); }//if
   
     $event = new FilterEvent(
       'framework.filter.controller_response',
@@ -376,102 +371,136 @@ class Framework extends Field implements Dependable,Eventable {
     
     $event = $this->broadcastEvent($event);
     $controller_response = $event->getParam();
-  
-    if(is_string($controller_response)){
-    
-      $event = new InfoEvent('Controller Response was a string, so returning that raw');
-      $this->broadcastEvent($event);
-    
-      $response->setContent($controller_response);
-    
-    }else if(is_array($controller_response)){
-    
-      $event = new InfoEvent('Controller Response was an array, returning json');
-      $this->broadcastEvent($event);
-    
-      $response->setContentType(Response::CONTENT_JSON);
-      $response->setContent(json_encode($controller_response));
-    
-    }else if(is_object($controller_response)){
 
-      if($controller_response instanceof \Exception){
+    if($request->isCli()){
 
-        throw $controller_response;
-
-      }else{
-
-        if(method_exists($controller_response,'__toString')){
-        
-          $event = new InfoEvent('Controller Response was an object, returning __toString()');
-          $this->broadcastEvent($event);
-        
-          $response->setContent((string)$controller_response);
-        
-        }else{
-        
-          throw new \RuntimeException(
-            sprintf(
-              'Controller returned an "%s" instance which has no __toString()',
-              get_class($controller_response)
-            )
-          );
-        
-        }//if/else
-
-      }//if/else
-    
-    }else{
-    
-      // wipe the rendering if the controller returned false... 
+      $exit_code = 0;
       if($controller_response === false){
+
+        $exit_code = 1;
+
+      }else if (is_int($controller_response)){
+
+        $exit_code = (int)$controller_response;
+
+      }else if ($controller_response instanceof \Exception){
+
+        $exit_code = $controller_response->getCode();
+        if(empty($exit_code)){ $exit_code = 2; }//if
+
+        echo $controller_response, PHP_EOL;
+        
+      }//if/else if
+
+      if($exit_code > 0){
+
+        // TODO: maybe integrate this with Response in some way
+        register_shutdown_function(function() use ($exit_code){ exit($exit_code); });
+        // we're supposed to return the response, but it wasn't changed, so why return it
+
+      }//if
+
+      $response = null;
+
+    }else{
+
+      if(is_string($controller_response)){
       
-        $event = new InfoEvent('Controller Response was false, not using template');
+        $event = new InfoEvent('Controller Response was a string, so returning that raw');
         $this->broadcastEvent($event);
       
-        $response->killTemplate();
-        $response->setContent('');
-        $use_template = false;
+        $response->setContent($controller_response);
       
-      }else{
+      }else if(is_array($controller_response)){
       
-        if(!$response->hasContent()){
+        $event = new InfoEvent('Controller Response was an array, returning json');
+        $this->broadcastEvent($event);
       
-          if($response->hasTemplate()){
+        $response->setContentType(Response::CONTENT_JSON);
+        $response->setContent(json_encode($controller_response));
+      
+      }else if(is_object($controller_response)){
+
+        if($controller_response instanceof \Exception){
+
+          throw $controller_response;
+
+        }else{
+
+          if(method_exists($controller_response,'__toString')){
           
-            $use_template = true;
+            $event = new InfoEvent('Controller Response was an object, returning __toString()');
+            $this->broadcastEvent($event);
+          
+            $response->setContent((string)$controller_response);
           
           }else{
           
-            if(!$response->isRedirect()){
-            
-              $response->setContentType(Response::CONTENT_JSON);
-              $response->setContent(json_encode($response->getFields()));
-              
-            }//if
+            throw new \RuntimeException(
+              sprintf(
+                'Controller returned an "%s" instance which has no __toString()',
+                get_class($controller_response)
+              )
+            );
           
           }//if/else
-          
-        }//if
+
+        }//if/else
+      
+      }else{
+      
+        // wipe the rendering if the controller returned false... 
+        if($controller_response === false){
         
+          $event = new InfoEvent('Controller Response was false, not using template');
+          $this->broadcastEvent($event);
+        
+          $response->killTemplate();
+          $response->setContent('');
+          $use_template = false;
+        
+        }else{
+        
+          if(!$response->hasContent()){
+        
+            if($response->hasTemplate()){
+            
+              $use_template = true;
+            
+            }else{
+            
+              if(!$response->isRedirect()){
+              
+                $response->setContentType(Response::CONTENT_JSON);
+                $response->setContent(json_encode($response->getFields()));
+                
+              }//if
+            
+            }//if/else
+            
+          }//if
+          
+        }//if/else
+      
       }//if/else
-    
-    }//if/else
-    
-    $response->sendHeaders();
-    ///$response->send(); // send headers and content
-    
-    // handle outputting using the template...
-    if($use_template){
-    
-      $ret_mix = $this->handleTemplate();
       
-      // if a string was returned, set that into the response object...
-      if(is_string($ret_mix)){ $response->setContent($ret_mix); }//if
+      $response->sendHeaders();
+      ///$response->send(); // send headers and content
       
-    }else{
-    
-      $response->sendContent();
-    
+      // handle outputting using the template...
+      if($use_template){
+      
+        $ret_mix = $this->handleTemplate();
+        
+        // if a string was returned, set that into the response object...
+        if(is_string($ret_mix)){ $response->setContent($ret_mix); }//if
+        
+      }else{
+      
+        $response->sendContent();
+      
+      }//if/else
+
     }//if/else
     
     return $response;
@@ -772,11 +801,6 @@ class Framework extends Field implements Dependable,Eventable {
 
     $controller_response = $this->handleController($controller_class, $controller_methods, $controller_params);
 
-    // we don't want to drop into views on a command, so we'll default to false to turn off templates
-    if($request->isCli()){
-      if($controller_response === null){ $controller_response = false; }//if
-    }//if
-
     return $controller_response;
 
   }//method
@@ -977,97 +1001,84 @@ class Framework extends Field implements Dependable,Eventable {
   protected function handleError(\Exception $e){
 
     // canary...
-    $this->handleRecursion($e);
+    /// $this->handleRecursion($e);
     
     $event = new InfoEvent('Handling Exception',array('e' => $e));
     $this->broadcastEvent($event);
     
+    // deprecated, this can all be removed when I remove handleRecursion
     $e_list = $this->getField('e_list',array());
     $e_list[] = $e;
     $this->setField('e_list',$e_list);
   
     $ret_mixed = null;
   
-    try{
+    if($e instanceof \Montage\Exception\InternalRedirectException){
+    
+      $controller_response = $this->handleRequest($e->getPath());
+      $ret_mixed = $this->handleResponse($controller_response);
+    
+    }else if($e instanceof \Montage\Exception\RedirectException){
+    
+      $response = $this->getContainer()->getResponse();
+      $redirect_url = $e->getUrl();
+      $wait_time = $e->getWait();
+      
+      $response->killTemplate();
+      $response->setContent('');
+      $response->setStatusCode($e->getCode());
+      $response->setHeader('Location',$redirect_url);
+      $controller_response = null;
+    
+      if(headers_sent()){
 
-      if($e instanceof \Montage\Exception\InternalRedirectException){
-      
-        $controller_response = $this->handleRequest($e->getPath());
-        $ret_mixed = $this->handleResponse($controller_response);
-      
-      }else if($e instanceof \Montage\Exception\RedirectException){
-      
-        $response = $this->getContainer()->getResponse();
-        $redirect_url = $e->getUrl();
-        $wait_time = $e->getWait();
-        
-        $response->killTemplate();
-        $response->setContent('');
-        $response->setStatusCode($e->getCode());
-        $response->setHeader('Location',$redirect_url);
+        // http://en.wikipedia.org/wiki/Meta_refresh
+        $response->setContent(
+          sprintf('<meta http-equiv="refresh" content="%s;url=%s">',$wait_time,$redirect_url)
+        );
+
         $controller_response = null;
-      
-        if(headers_sent()){
-  
-          // http://en.wikipedia.org/wiki/Meta_refresh
-          $response->setContent(
-            sprintf('<meta http-equiv="refresh" content="%s;url=%s">',$wait_time,$redirect_url)
-          );
-  
-          $controller_response = null;
-  
-        }else{
-        
-          if($wait_time > 0){ sleep($wait_time); }//if
-          
-          $controller_response = false;
-          
-        }//if/else
-        
-        $ret_mixed = $this->handleResponse($controller_response);
-      
-      }else if($e instanceof Montage\Exception\StopException){
-        
-        // don't do anything, we're done
-        $ret_mixed = $this->handleResponse($e->getControllerResponse());
-        
-      }else if($e instanceof \ReflectionException){
-      
-        $this->handleRecovery($e);
-        
-        // re-handle the request...
-        $ret_mixed = $this->handle();
-        
+
       }else{
+      
+        if($wait_time > 0){ sleep($wait_time); }//if
         
-        // TODO: maybe clear cache?
+        $controller_response = false;
+        
+      }//if/else
+      
+      $ret_mixed = $this->handleResponse($controller_response);
+    
+    }else if($e instanceof Montage\Exception\StopException){
+      
+      // don't do anything, we're done
+      $ret_mixed = $this->handleResponse($e->getControllerResponse());
+      
+    }else if($e instanceof \ReflectionException){
+    
+      $this->handleRecovery($e);
+      
+      // re-handle the request...
+      $ret_mixed = $this->handle();
+      
+    }else{
+      
+      if($this->isHandled(self::HANDLE_PRE)){
 
         $event = new FilterEvent('framework.handleError', $e);
         $event->setField('e_list', $e_list);
         $this->broadcastEvent($event);
         $ret_mixed = $this->handleResponse($event->getParam()); // not sure this is best choice, 
-        
-      }//try/catch
-      
-    }catch(\Exception $e){
 
-      // TODO: maybe clear cache?
-    
-      if($this->isHandled(self::HANDLE_PRE)){
-    
-        $ret_mixed = $this->handleError($e);
-        
       }else{
-      
-        // we failed to handle the exception and the framework isn't ready, so just throw
+        // we can't "gracefully" handle the exception because the framework isn't ready, so just throw
         // the exception because there is a very high probability it will fail handling
         // the exception again...
         throw $e;
-      
       }//if/else
-    
-    }//try/catch
-  
+      
+    }//if/else
+
     return $ret_mixed;
   
   }//method
@@ -1078,6 +1089,7 @@ class Framework extends Field implements Dependable,Eventable {
    *  this is done by keeping an internal count of how many times this method has been called, 
    *  if that count reaches the max count then an exception is thrown
    *  
+   *  @deprecated I've removed catching exceptions from handleError, so this is no longer needed, I'll remove next pass
    *  @return integer the current count
    */
   protected function handleRecursion(\Exception $e){
