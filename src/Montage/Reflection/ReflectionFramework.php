@@ -139,7 +139,7 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
           $parent_list = $this->getParents($parent_class_name);
           if(!empty($parent_list)){
           
-            $ret_list = array_merge($ret_list,array_map($normalize_closure,$parent_list));
+            $ret_list = array_merge($ret_list, array_map($normalize_closure,$parent_list));
             
           }//if
         
@@ -157,7 +157,7 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
         
           $ret_list = array_merge(
             $ret_list,
-            array_map($normalize_closure,array_values($interface_list))
+            array_map($normalize_closure, array_values($interface_list))
           );
           
         }//if
@@ -165,7 +165,7 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
       }//if/else
       
       // save the dependency list for the future...
-      $this->addClassInfo($class_name,array('dependencies' => $ret_list));
+      $this->addClassInfo($class_name, array('dependencies' => $ret_list));
       
     }//if/else
   
@@ -348,7 +348,7 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
       }//if/else
       
     }catch(\Exception $e){
-    
+
       if($this->reload() > 0){
           
         $ret_str = $this->findClassName($class_name);
@@ -503,6 +503,7 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
    */
   public function addClass($class_name){
   
+    throw new RuntimeException('to be updated, this has stuff like getClassName() that does not exist');
     $rclass = new ReflectionClass($class_name);
     $implement_list = $rclass->getInterfaceNames();
     $extend_list = array();
@@ -568,7 +569,11 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
     if(!empty($class_name)){
     
       $class_key = $this->normalizeClassName($class_name);
-      $ret_bool = isset($this->class_map[$class_key]);
+      ///$ret_bool = isset($this->class_map[$class_key]);
+      // we only consider a class there if it has minimum info
+      if(isset($this->class_map[$class_key])){
+        $ret_bool = isset($this->class_map[$class_key]['key']);
+      }//if
       
     }//if
   
@@ -598,11 +603,11 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
    *  get the class info
    *  
    *  the class info is all the information about the class that this class has
-   *  accumulated         
+   *  accumulated
    *
    *  @since  6-27-11
    *  @param  string  $class_name
-   *  @return array         
+   *  @return array
    */
   public function getClass($class_name){
   
@@ -754,23 +759,42 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
   
     // canary...
     if(empty($this->class_map[$class_key])){
-      $e_msg = sprintf('class %s does not exist in %s',$class_key,get_class($this));
+      $e_msg = sprintf('class %s does not exist in %s', $class_key, get_class($this));
       throw new \ReflectionException($e_msg);
     }//if
+    // if the class is a PHP standard class, we shouldn't try and check it to see if it has changed
     if(!empty($this->class_map[$class_key]['internal'])){ return false; }//if
-    if(empty($this->class_map[$class_key]['path'])){
-      $e_msg = sprintf('info on external class %s is incomplete',$class_key);
-      throw new \ReflectionException($e_msg);
-    }//if
-    if(!file_exists($this->class_map[$class_key]['path'])){
-      $e_msg = sprintf('%s does not exist anymore',$this->class_map[$class_key]['path']);
-      throw new \ReflectionException($e_msg);
-    }//if
-  
-    $old = $this->class_map[$class_key]['hash'];
-    $new = md5_file($this->class_map[$class_key]['path']);
 
-    return ((string)$old !== (string)$new);
+    //if(empty($this->class_map[$class_key]['path'])){
+      //$e_msg = sprintf('info on class %s is incomplete',$class_key);
+      //throw new \ReflectionException($e_msg);
+    //}//if
+    //if(!file_exists($this->class_map[$class_key]['path'])){
+      //$e_msg = sprintf('%s does not exist anymore',$this->class_map[$class_key]['path']);
+      //throw new \ReflectionException($e_msg);
+    //}//if
+  
+    //$old = $this->class_map[$class_key]['hash'];
+    //$new = md5_file($this->class_map[$class_key]['path']);
+
+    $ret_bool = false;
+    if(!empty($this->class_map[$class_key]['path'])){
+
+      // the reflection cache has gotten out of sync with file system changes
+      if(!file_exists($this->class_map[$class_key]['path'])){
+        $e_msg = sprintf('%s does not exist anymore',$this->class_map[$class_key]['path']);
+        throw new \ReflectionException($e_msg);
+      }//if
+  
+      if(isset($this->class_map[$class_key]['hash'])){
+        $old = $this->class_map[$class_key]['hash'];
+        $new = md5_file($this->class_map[$class_key]['path']);
+        $ret_bool = ((string)$old !== (string)$new);
+      }//if
+
+    }//if
+
+    return $ret_bool;
   
   }//method
   
@@ -878,11 +902,12 @@ class ReflectionFramework extends ObjectCache implements \Reflector {
     
     }else{
     
-      if(class_exists($class_name,false) || interface_exists($class_name,false)){
+      if(class_exists($class_name, false) || interface_exists($class_name, false)){
     
         $rclass = new \ReflectionClass($class_name);
         $class_map['internal'] = $rclass->isInternal();
-        
+        $class_map['path'] = $rclass->getFileName();
+
       }else{
       
         // since the class doesn't exist it is most definitely a user defined class

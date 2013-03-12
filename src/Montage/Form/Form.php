@@ -15,6 +15,7 @@ namespace Montage\Form;
 use Montage\Form\Common;
 use Montage\Form\Field\Field;
 use Montage\Form\Field\Input;
+use Montage\Form\Field\Submit;
 
 use ReflectionObject,ReflectionProperty;
 use Montage\Form\Annotation\FormAnnotation;

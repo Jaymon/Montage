@@ -5,6 +5,7 @@
  *  this is a companion to the {@link FrameworkClient}  
  *  
  *  @link http://symfony.com/doc/current/book/testing.html
+ *  @link http://symfony.com/doc/2.0/components/dom_crawler.html
  *  
  *  @version 0.1
  *  @author Jay Marcyes
@@ -27,5 +28,24 @@ class FrameworkCrawler extends Crawler {
    *  @return boolean
    */
   public function has($selector){ return $this->filter($selector)->count() > 0; }//method
+
+  /**
+   * get the content of the crawled page
+   *
+   * @since 2013-3-8
+   * @return  string
+   */
+  public function getContent(){
+
+    $ret_html = '';
+    foreach($this as $dom_element){
+        $ret_html .= $dom_element->ownerDocument->saveHTML();
+    }//foreach
+
+    return $ret_html;
+
+  }//method
+
+  public function __toString(){ return $this->getContent(); }//method
 
 }//class

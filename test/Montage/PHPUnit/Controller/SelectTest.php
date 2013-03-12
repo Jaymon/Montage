@@ -14,7 +14,7 @@ namespace Montage\PHPUnit {
   use Montage\Controller\Select;
   use Montage\Autoload\FrameworkAutoloader;
 
-  require_once('/vagrant/public/out_class.php');
+  ///require_once('/vagrant/public/out_class.php');
 
   $base = realpath(__DIR__.'/../../../..');
   $base_src = $base.'/src';
@@ -33,7 +33,6 @@ namespace Montage\PHPUnit {
   
 
   class SelectTest extends PHPUnit_Framework_TestCase {
-  
 
     protected $cselect = null;
   
@@ -46,8 +45,6 @@ namespace Montage\PHPUnit {
       
       $this->cselect->reflection->addFile($base_src.'/Montage/Controller/Controllable.php');
       $this->cselect->reflection->addFile($base_src.'/Montage/Controller/Controller.php');
-      $this->cselect->reflection->addFile($base_src.'/Montage/Controller/IndexController.php');
-      $this->cselect->reflection->addFile($base_src.'/Montage/Controller/ExceptionController.php');
       $this->cselect->reflection->addFile(__FILE__);
       
     }//method
@@ -78,7 +75,7 @@ namespace Montage\PHPUnit {
       }//foreach
     }//method
 
-    public function testFind(){
+    public function xtestFind(){
 
       $test_list = array();
       $test_list[] = array(

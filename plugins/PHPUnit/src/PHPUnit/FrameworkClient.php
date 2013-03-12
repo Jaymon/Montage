@@ -121,7 +121,7 @@ class FrameworkClient extends Client {
   
     // create a Montage compatible Request instance...
     $container = $this->framework->getContainer();
-    $framework_request_class_name = $container->getClassName('montage\Request\Requestable');
+    $framework_request_class_name = $container->getClassName('\\montage\\Request\\Requestable');
     
     $framework_request = call_user_func(
       array($framework_request_class_name,'create'),
@@ -151,7 +151,7 @@ class FrameworkClient extends Client {
     
     if($cookies = $response->headers->getCookies()){
       
-      \out::e($cookies);
+      ///\out::e($cookies);
       
       /*
       $cookies = array();
@@ -190,11 +190,21 @@ class FrameworkClient extends Client {
    *  @return Response A Response instance
    */
   protected function doRequest($request){
+
+    // build a session before clearning the framework
+    $container = $this->framework->getContainer();
+    // create a session that doesn't actually do anything
+    // http://symfony.com/doc/master/components/http_foundation/session_testing.html
+    $session_storage = $container->createInstance(
+      '\\Symfony\\Component\\HttpFoundation\\Session\\Storage\\MockArraySessionStorage'
+    );
+    $session = $container->createInstance('\\Montage\Session', array($session_storage));
     
     $this->framework->reset();
     $container = $this->framework->getContainer();
     $container->setInstance('request',$request);
-    
+    $container->setInstance(get_class($session), $session);
+
     // actually handle the request, capture the output since handle usually echoes to the screen...
     ob_start();
     

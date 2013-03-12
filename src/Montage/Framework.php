@@ -358,6 +358,9 @@ class Framework extends Field implements Dependable,Eventable {
     $container = $this->getContainer();
     $use_template = false;
     $response = $this->getContainer()->getResponse();
+
+    // start the session if session object has been created
+    ///if($container->hasSession()){ $container->getSession()->start(); }//if
     
     // set a default title if one hasn't been set...
     if(!$response->hasTitle()){
@@ -686,7 +689,6 @@ class Framework extends Field implements Dependable,Eventable {
     $select = $container->getInstance('\\Montage\\Event\\Select');
     
     $class_list = $select->find();
-
     foreach($class_list as $i => $class_name){
     
       $class_list[$i] = $container->createInstance($class_name);
@@ -879,8 +881,7 @@ class Framework extends Field implements Dependable,Eventable {
                 $event_name,
                 $raw_param,
                 array(
-                  'reflection_param' => $rparam,
-                  'container' => $container
+                  'reflection_param' => $rparam
                 )
               );
               $event = $this->broadcastEvent($event);
@@ -903,8 +904,7 @@ class Framework extends Field implements Dependable,Eventable {
               'framework.filter.controller_param',
               $raw_param,
               array(
-                'reflection_param' => $rparam,
-                'container' => $container
+                'reflection_param' => $rparam
               )
             );
             $event = $this->broadcastEvent($event);
@@ -929,8 +929,7 @@ class Framework extends Field implements Dependable,Eventable {
                 $rfunc_params[$index],
                 array(
                   'param' => $raw_param,
-                  'reflection_param' => $rparam,
-                  'container' => $container
+                  'reflection_param' => $rparam
                 )
               );
               $event = $this->broadcastEvent($event);

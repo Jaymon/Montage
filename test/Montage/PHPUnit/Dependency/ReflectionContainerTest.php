@@ -1,7 +1,7 @@
 <?php
 /**
  *  this class doesn't use any of the PHPUnit Montage plugin stuff because all
- *  that stuff relies on the Container working withut problems, so you can't test
+ *  that stuff relies on the Container working without problems, so you can't test
  *  the container using it because if the container doesn't work, then the test
  *  won't load   
  *
@@ -33,7 +33,7 @@ namespace Montage\PHPUnit {
   require_once($base.'/src/Montage/Dependency/Container.php');
   require_once($base.'/src/Montage/Dependency/ReflectionContainer.php');
   
-  require_once('out_class.php');
+  ///require_once('/montage/public/out_class.php');
   
   ///use PHPUnit\FrameworkTestCase;
   use Montage\Reflection\ReflectionFramework;
@@ -53,6 +53,21 @@ namespace Montage\PHPUnit {
       $this->container = new ReflectionContainer($this->reflection);
       
       ///out::e(spl_autoload_functions());
+    
+    }//method
+
+    /**
+     * added to test for a bug where an external class (a class reflection didn't know about)
+     * would fail
+     *
+     * @since 2013-3-8
+     */
+    public function testGetInstanceNotReflected(){
+      // Path is an external class because the version of Reflection we use only internally
+      // has classes found in this file
+      $class_name = '\Path';
+      $instance = $this->container->getInstance($class_name, array('.'));
+      $this->assertInstanceOf($class_name, $instance);
     
     }//method
     
@@ -176,7 +191,7 @@ namespace Montage\PHPUnit {
       );
       
       $instance = $this->container->getInstance('\B',array('foo' => 1));
-      $this->assertType('\AA',$instance);
+      $this->assertInstanceOf('\AA',$instance);
       $this->assertSame(1,$instance->foo);
       $this->assertSame(2,$instance->bar);
     
