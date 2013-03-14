@@ -2,6 +2,8 @@
 
 /**
  *  hold lots of text helper methods
+ *
+ *  TODO: maybe add a firstLine() method that just gets from start to first newline of string
  *  
  *  @version 0.4
  *  @author Jay Marcyes
@@ -644,7 +646,7 @@ class Str implements \ArrayAccess, \IteratorAggregate {
       
     return array(
       sprintf(
-        '<a class="linkify" href="%" title="%s">',
+        '<a class="linkify" href="%s" title="%s">',
         $url,
         $url
       ),

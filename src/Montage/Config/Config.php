@@ -115,7 +115,7 @@ abstract class Config extends Field implements Configurable {
           // @note  I can't decide which one I like better, ./ is universal and always means
           // current directory, I am actually changing that to mean app_path, where ~/ means home
           // dir and is variable, so in this context, ~/ could mean app_path since that is the app's
-          // home directory. I also thought of using my own, something like -/ or +/
+          // home directory. I also thought of using my own, something like -/, +/, or $/
           && (($val[0] == '.') || ($val[0] == '~')) // the first char starts with . or ~ 
           && (($val[1] == '/') || ($val[1] == '\\')); // the second char is a directory separator
       

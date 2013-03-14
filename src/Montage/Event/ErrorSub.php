@@ -35,16 +35,17 @@ class ErrorSub extends SingleSub {
     if($e instanceof HttpException){
       $response->setStatusCode($e->getCode(), $e->getStatusMessage());
       // $event->setParam(false);
-      $event->setParam(sprintf('%s - %s', $e->getCode(), $e->getStatusMessage()));
+      ///$event->setParam(sprintf('%s - %s', $e->getCode(), $e->getStatusMessage()));
+      $response->setTitle(sprintf('%s - %s', $e->getCode(), $e->getStatusMessage()));
 
     }else{
-
-      $response->setField('content_template', 'error.php');
-      $response->setField('e', $e);
-      $response->setField('e_list', $event->getField('e_list', array()));
-      $event->setParam(null);
-    
+      $response->setTitle($e->getMessage());
     }//if/else
+
+    $response->setTemplate('page'); // we reset to the default page in case it was changed
+    $response->setField('content_template', 'error.php');
+    $response->setField('e', $e);
+    $event->setParam(null);
 
   }//method
 

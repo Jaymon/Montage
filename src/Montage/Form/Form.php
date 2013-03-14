@@ -158,7 +158,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
    *  
    *  @param  array $field_map  name/val pairs
    */
-  public function set($field_map){
+  public function setFields($field_map){
     
     foreach($field_map as $name => $val){
     
@@ -172,7 +172,13 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
     }//foreach
   
   }//method
-  
+  /**
+   * I've changed the name of this method to setFields to be more consistent, this
+   * is now deprecated
+   * @deprecated
+   */
+  public function set($field_map){ return $this->set($field_map); }//method
+
   /**
    *  return the value of $key, return $default_val if key doesn't exist
    *

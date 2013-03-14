@@ -173,6 +173,18 @@ class Session extends SymfonySession implements Fieldable {
     $field_map = $this->all();
     return !empty($field_map);
   }//method
+
+  /**
+   * just making it easier to check if a key exists in any field type
+   *
+   * @since 2013-3-13
+   * @param string  $key  the key to check in all the field types
+   * @return  boolean
+   */
+  public function hasAny($key){
+    $val = $this->getAny($key);
+    return !empty($val);
+  }//method
   
   /**
    *  get a field from any part of the session
