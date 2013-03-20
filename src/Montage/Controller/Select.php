@@ -105,7 +105,7 @@ class Select {
   }//method
   
   /**
-   * find all first postition endpoint controller names
+   * find all first position endpoint controller names
    *
    * if you had a controller: Namespace\UserEndpoint, this would return array('user')
    *
@@ -219,8 +219,14 @@ class Select {
     // check for the default class name if the path list failed to find something...
     if(empty($ret_str)){
       
-      $ret_str = $this->getClassName($fallback_class_name, $class_postfix, $class_interface);
-      
+      // first try and get the default class name by ignoring any montage classes with it
+      $ret_str = $this->getClassName($fallback_class_name, $class_postfix, $class_interface, '#Montage#i');
+
+      // that failed, so try and get it allowing Montage classes
+      if(empty($ret_str)){
+        $ret_str = $this->getClassName($fallback_class_name, $class_postfix, $class_interface);
+      }//if
+
     }else{
     
       if(!empty($path_list)){
@@ -258,9 +264,11 @@ class Select {
    *                              is the name of the class without the namespace         
    *  @param  string  $class_postfix
    *  @param  string  $class_interface
+   *  @param  regex $ignore_regex if you would like to exclude certain class names, set this regex, if the 
+   *  class name matches this regex it won't match and be returned (can match on both class name and namespace)
    *  @return string
    */
-  protected function getClassName($class_shortname, $class_postfix, $class_interface){
+  protected function getClassName($class_shortname, $class_postfix, $class_interface, $ignore_regex = ''){
   
     // canary...
     if(empty($class_postfix)){
@@ -275,13 +283,17 @@ class Select {
     foreach($class_list as $class_name){
     
       if(preg_match($regex,$class_name)){
-      
-        $rclass = new \ReflectionClass($class_name);
-        if($rclass->isInstantiable()){
+
+        if(empty($ignore_regex) || !preg_match($ignore_regex, $class_name)){
         
-          $ret_str = $class_name;
-          break;
+          $rclass = new \ReflectionClass($class_name);
+          if($rclass->isInstantiable()){
           
+            $ret_str = $class_name;
+            break;
+            
+          }//if
+
         }//if
       
       }//if

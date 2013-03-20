@@ -76,6 +76,14 @@ class Str implements \ArrayAccess, \IteratorAggregate {
       )@xi';
   
   }//method
+
+  /**
+   * for fluid interface, create an instance and return it
+   *
+   * @since 2013-3-16
+   * @return  \Str
+   */
+  public static function create($str){ return new static($str); }//method
   
   /**
    *  return the internal raw string

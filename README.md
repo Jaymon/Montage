@@ -131,7 +131,7 @@ that can be run to compile the cache on deploy to prod, likewise, if apc is enab
 
 - I'm not satisfied with the unit tests at all, there aren't enough, and the ones that are there seem fragile
 
-- In order to override the default page, your `DefaultEndpoint` or `DefaultCommand` have to override the `\Montage\Controller\DefaultEndpoint` or `\Montage\Controller\DefaultCommand` instead of just `\Montage\Controller\Endpoint` like every other controller endpoint has to extend, this is bad because it isn't uniform, and so it will lead to confusion (I was confused for a second) but I'm not sure I have a good fix for this yet that isn't complicated, like checking for an app controller, and only then choosing the Montage versions if no other controller with a non Montage namespace can be found.
+- I've only got a bandaid on this problem, not sure I like how I solved it, but it is solved right now: In order to override the default page, your `DefaultEndpoint` or `DefaultCommand` have to override the `\Montage\Controller\DefaultEndpoint` or `\Montage\Controller\DefaultCommand` instead of just `\Montage\Controller\Endpoint` like every other controller endpoint has to extend, this is bad because it isn't uniform, and so it will lead to confusion (I was confused for a second) but I'm not sure I have a good fix for this yet that isn't complicated, like checking for an app controller, and only then choosing the Montage versions if no other controller with a non Montage namespace can be found.
 
 ## Why did you write Montage when there are so many other awesome frameworks?
 

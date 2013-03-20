@@ -41,6 +41,14 @@ http://www.w3schools.com/html5/tag_doctype.asp
       <link rel="alternate" type="application/rss+xml" title="RSS feed for this page" href="<?php echo $this->getField('rss_url'); ?>" />
     <?php endif; ?>
 
+    <?php if($this->hasField('head_template')): ?>
+  
+      <!-- BEGIN custom head -->
+      <?php $this->out($this->getField('head_template')); ?> 
+      <!-- END custom head -->
+      
+    <?php endif; ?>
+
     <?php if($assets = $this->getContainer()->getAssets()): ?>
     
       <?php echo $assets->render('css'); ?>

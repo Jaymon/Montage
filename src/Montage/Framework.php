@@ -231,7 +231,7 @@ class Framework extends Field implements Dependable,Eventable {
     }//try/catch
     
     $this->profileStop();
-  
+
     return $ret_mixed;
   
   }//method
@@ -865,7 +865,7 @@ class Framework extends Field implements Dependable,Eventable {
     $count = 0;
   
     foreach($rparams as $index => $rparam){
-    
+
       try{
     
         // if any param is an array, then it will take all the remainder passed in $params...
@@ -922,23 +922,40 @@ class Framework extends Field implements Dependable,Eventable {
             }//foreach
           
           }else{
-          
-            // broadcast an event to give a chance to modify the controller param...
-            $event = new FilterEvent(
+
+            $param_changed = false;
+            $event_names = array(
               'framework.filter.controller_param',
-              $raw_param,
-              array(
-                'reflection_param' => $rparam
-              )
+              sprintf('framework.filter.controller_param:%s', $rparam->getName())
             );
-            $event = $this->broadcastEvent($event);
+
+            foreach($event_names as $event_name){
             
-            $filtered_param = $event->getParam();
-            if($event->changedParam()){ $params[$index] = $filtered_param; }//if
-          
+              // broadcast an event to give a chance to modify the controller param...
+              $event = new FilterEvent(
+                $event_name,
+                $raw_param,
+                array(
+                  'reflection_param' => $rparam
+                )
+              );
+              $event = $this->broadcastEvent($event);
+              if($event->changedParam()){
+                $param_changed = true;
+                $raw_param = $event->getParam();
+              }//if
+
+            }//foreach
+
+            if($param_changed){
+              // the param will now exist (before it might not have existed) so the container
+              // can manipulate it
+              $params[$index] = $raw_param;
+            }//if
+
           }//if/else
     
-          $rfunc_params[$index] = $container->normalizeParam($rparam,$params);
+          $rfunc_params[$index] = $container->normalizeParam($rparam, $params);
           
           // filter the post-creation of the object...
           if(is_object($rfunc_params[$index])){

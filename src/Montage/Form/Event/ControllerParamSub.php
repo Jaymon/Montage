@@ -40,6 +40,7 @@ class ControllerParamSub extends SingleSub {
    *    }
    */
   public function handle(Event $event){
+
   
     $instance = $event->getParam();
     $container = $this->getContainer();
@@ -49,7 +50,7 @@ class ControllerParamSub extends SingleSub {
 
     if($form_field_map = $request->getField($form_name)){
     
-      $instance->set($form_field_map);
+      $instance->setFields($form_field_map);
     
     }//if
     

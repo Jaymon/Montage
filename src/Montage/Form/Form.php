@@ -177,7 +177,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
    * is now deprecated
    * @deprecated
    */
-  public function set($field_map){ return $this->set($field_map); }//method
+  public function set($field_map){ return $this->setFields($field_map); }//method
 
   /**
    *  return the value of $key, return $default_val if key doesn't exist

@@ -70,7 +70,7 @@ class NewCommand extends Command implements Eventable, Dependable {
   protected function writeControllers(array $names, $class_postfix, $parent_class_name){
 
     // canary
-    if(empty($names)){ throw \UnexpectedValueException('no controller names were passed in'); }//if
+    if(empty($names)){ throw new \UnexpectedValueException('no controller names were passed in'); }//if
   
     // get the path where the new file will be written...
     $dir_path = null;
