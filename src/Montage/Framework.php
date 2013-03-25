@@ -1332,6 +1332,25 @@ class Framework extends Field implements Dependable,Eventable {
   
 
   /**
+   * this just adds the full path to paths array using base_path/path_bit if it exists
+   *
+   * @since 2013-3-23
+   * @see handlePathBase(), handlePaths()
+   * @return  array the $paths array modified
+   */
+  protected function handlePathBit($base_path, $path_bit, array $paths){
+
+    // canary
+    if(!isset($paths[$path_bit])){ $paths[$path_bit] = array(); }//if
+
+    $path = new Path($base_path, $path_bit);
+    if($path->exists()){ $paths[$path_bit][] = $path; }//if
+
+      return $paths;
+
+  }//method
+
+  /**
    * recursively compile the paths of a base_path
    *
    * since plugins can have plugins, etc. this method will recursively compile
@@ -1343,14 +1362,8 @@ class Framework extends Field implements Dependable,Eventable {
    */
   protected function handlePathBase($base_path, array $paths){
 
-    $path_bits = array('src', 'config', 'view', 'vendor', 'assets', 'test');
-    foreach($path_bits as $path_bit){
-      if(!isset($paths[$path_bit])){ $paths[$path_bit] = array(); }//if
-
-      $path = new Path($base_path, $path_bit);
-      if($path->exists()){ $paths[$path_bit][] = $path; }//if
-
-    }//foreach
+    $path_bits = array('src', 'config', 'vendor', 'assets');
+    foreach($path_bits as $path_bit){ $paths = $this->handlePathBit($base_path, $path_bit, $paths); }//foreach
 
     // add the plugin paths...
     $path_bit = 'plugins';
@@ -1371,6 +1384,10 @@ class Framework extends Field implements Dependable,Eventable {
       }//foreach
       
     }//if
+
+    // now check for folders where order matters
+    $path_bits = array('view', 'test');
+    foreach($path_bits as $path_bit){ $paths = $this->handlePathBit($base_path, $path_bit, $paths); }//foreach
 
     return $paths;
     
@@ -1414,7 +1431,9 @@ class Framework extends Field implements Dependable,Eventable {
     $paths = $this->handlePathBase($framework_path, array());
     $paths = $this->handlePathBase($app_path, $paths);
 
-    // reverse some paths so framework will be the dominant path
+    // reverse some paths so app dir will be the dominant path, basically, we want
+    // certain paths to have the app directory be the first path checked, other dirs
+    // it doesn't rally matter, but for things like view, order matters
     // TODO: it would probably be better that functionality like what template was used
     // isn't so dependant on order, or at least move this into the template handlers
     foreach(array('view', 'test') as $path_bit){

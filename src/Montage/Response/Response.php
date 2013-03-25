@@ -115,24 +115,79 @@ class Response extends SymfonyResponse implements Fieldable {
   /**
    *  hold the template the response will use to render the response
    */
-  function setTemplate($val){ return $this->setField('template',$val); }//method
-  function getTemplate(){ return $this->getField('template',''); }//method
-  function hasTemplate(){ return $this->hasField('template'); }//method
-  function killTemplate(){ return $this->killField('template'); }//method
+  public function setTemplate($val){ return $this->setField('template',$val); }//method
+  public function getTemplate(){ return $this->getField('template',''); }//method
+  public function hasTemplate(){ return $this->hasField('template'); }//method
+  public function killTemplate(){ return $this->killField('template'); }//method
   
   /**
    *  hold the title
    */
-  function setTitle($val){ return $this->setField('title',$val); }//method
-  function getTitle(){ return $this->getField('title',''); }//method
-  function hasTitle(){ return $this->hasField('title'); }//method
+  public function setTitle($val){ return $this->setField('title',$val); }//method
+  public function hasTitle(){ return $this->hasField('title'); }//method
+
+  /**
+   * this will get a full title with prefix sep title sep postfix
+   *
+   * @return  string
+   */
+  public function getTitle(){
+
+    $title = $this->getField('title', '');
+    if(empty($title)){ return $title; }//if
+
+    if($title_prefix = $this->getTitlePrefix()){
+      $title = $title_prefix.$this->getTitleSep().$title;
+    }//if
+
+    if($title_postfix = $this->getTitlePostfix()){
+      $title .= $this->getTitleSep().$title_postfix;
+    }//if
+
+    return $title;
+
+  }//method
+
+  /**
+   * set the title prefix, if this is set then it will be prepended to title on all getTitle() calls
+   *
+   * @since 2013-3-23
+   * @param string  $val  the prefix to put before the title
+   */
+  public function setTitlePrefix($val){ return $this->setField('title_prefix', $val); }//method
+  public function getTitlePrefix(){ return $this->getField('title_prefix', ''); }//method
+
+  /**
+   * set the title postfix, if this is set then it will be appended to title on all getTitle() calls
+   *
+   * @since 2013-3-23
+   * @param string  $val  the postfix to put after the title
+   */
+  public function setTitlePostfix($val){ return $this->setField('title_postfix', $val); }//method
+  public function getTitlePostfix(){ return $this->getField('title_postfix', ''); }//method
+
+  /**
+   * this is what will separate the title from prefix and postfix titles
+   *
+   * @example
+   *  $this->setTitleSep(' / ');
+   *  $this->setTitlePrefix('Foo');
+   *  $this->setTitle('Bar');
+   *  $this->setTitlePostfix('Che');
+   *  $this->getTitle(); // Foo / Bar / Che
+   *
+   * @since 2013-3-23
+   * @param string  $val  the title separator
+   */
+  public function setTitleSep($val){ return $this->setField('title_sep', $val); }//method
+  public function getTitleSep(){ return $this->getField('title_sep', ' -- '); }//method
 
   /**
    *  hold the description
    */
-  function setDesc($val){ return $this->setField('desc',$val); }//method
-  function getDesc(){ return $this->getField('desc',''); }//method
-  function hasDesc(){ return $this->hasField('desc'); }//method
+  public function setDesc($val){ return $this->setField('desc',$val); }//method
+  public function getDesc(){ return $this->getField('desc',''); }//method
+  public function hasDesc(){ return $this->hasField('desc'); }//method
   
   /**
    *  set the $val into $key

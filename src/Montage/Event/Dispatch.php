@@ -76,7 +76,7 @@ class Dispatch {
     if(empty($callback)){ throw new \InvalidArgumentException('$callback cannot be empty'); }//if
     if(!is_callable($callback)){
       throw new \InvalidArgumentException(
-        'a valid php $callback needs to be passed in. ' 
+        'a valid php callback needs to be passed in. ' 
         .'See: http://us2.php.net/manual/en/language.pseudo-types.php#language.types.callback'
       );
     }//if

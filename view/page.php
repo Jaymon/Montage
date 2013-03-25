@@ -60,7 +60,7 @@ http://www.w3schools.com/html5/tag_doctype.asp
   </head>
   <?php flush(); /* http://developer.yahoo.com/performance/rules.html#flush */ ?>
   
-  <body>
+  <body class="<?php echo $this->getField('body_class', ''); ?>">
   
     <?php if($this->hasField('header_template')): ?>
   
