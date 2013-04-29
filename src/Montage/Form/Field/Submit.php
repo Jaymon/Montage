@@ -1,5 +1,4 @@
 <?php
-
 /**
  *  the object that represents an <input type="submit"> html element
  *   
@@ -11,13 +10,11 @@
  ******************************************************************************/
 namespace Montage\Form\Field;
 
-use Montage\Form\Field\Input;
-
 class Submit extends Input {
 
-  public function __construct($name = '',$val = null){
+  public function __construct($name = '', $val = null){
   
-    parent::__construct($name,$val);
+    parent::__construct($name, $val);
     $this->setType(self::TYPE_SUBMIT);
   
   }//method
@@ -27,6 +24,18 @@ class Submit extends Input {
    *  
    *  @see  parent::renderLabel()      
    */
-  public function renderLabel($label = '',array $attr_map = array()){ return ''; }//method
+  public function renderLabel($label = '', array $attr_map = array()){ return ''; }//method
 
-}//class     
+  /**
+   *  
+   *  @see  parent::setType()
+   */
+  public function setType($val){
+
+    parent::setType($val);
+    if(!$this->hasName()){ $this->setName(self::TYPE_SUBMIT); }//if
+    if(!$this->hasVal()){ $this->setVal('Submit'); }//if
+    
+  }//method
+
+}//class

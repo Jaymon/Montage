@@ -16,16 +16,16 @@ use Montage\Form\Common;
 use Montage\Form\Field\Field;
 use Montage\Form\Field\Input;
 use Montage\Form\Field\Submit;
+use Montage\Form\Field\File;
 
 use ReflectionObject,ReflectionProperty;
 use Montage\Form\Annotation\FormAnnotation;
 
-use ArrayIterator;
-use ArrayAccess,IteratorAggregate;
+use ArrayIterator, ArrayAccess, IteratorAggregate;
 
 use Montage\Field\GetFieldable;
 
-abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetFieldable {
+abstract class Form extends Common implements ArrayAccess, IteratorAggregate, GetFieldable {
 
   /**
    *  @var  Submit
@@ -56,7 +56,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
    *  create a Form
    *  
    *  @param  array $field_map  if you want to set values from an array into this instance, you can
-   *                            pass them (key/val) here, otherwise, you can call {@link set()} at any time             
+   *                            pass them (key/val) here, otherwise, you can call {@link setFields()} at any time
    */
   public function __construct(array $field_map = array()){
 
@@ -65,7 +65,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
     $this->populate();
     
     if(!empty($field_map)){
-      $this->set($field_map);
+      $this->setFields($field_map);
     }//if
   
   }//method
@@ -75,7 +75,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
    *  
    *  this is like a schema building method, basically, you would create Field instances
    *  and set their names in this method. And set any other values that should be default
-   *  on the form   
+   *  on the form
    *  
    *  @since  6-28-11
    */
@@ -83,13 +83,16 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
   
     $annotation = new FormAnnotation($this);
     $annotation->populate();
-  
-    $this->field_map = $annotation->getFields();
+    $this->set($annotation->getFields());
   
   }//method
 
   /**
    *  returns true if form contains valid values
+   *
+   *  it is up to child form classes to override and implement this method, and they
+   *  don't have to if they want to check the validity of the Form's values somewhere
+   *  else
    *
    *  @since  8-1-11   
    *  @return boolean   
@@ -127,7 +130,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
    */
   public function setMethod($val){ return $this->setAttr('method',$val); }//method
   public function hasMethod(){ return $this->hasAttr('method'); }//method
-  public function getMethod(){ return $this->getAttr('method',self::METHOD_POST); }//method
+  public function getMethod(){ return $this->getAttr('method', self::METHOD_POST); }//method
   /**#@-*/
   
   /**#@+
@@ -140,7 +143,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
     $this->setAttr('enctype',$val);
   }//method
   protected function hasEncoding(){ return $this->hasAttr('encoding'); }//method
-  protected function getEncoding(){ return $this->getAttr('encoding',self::ENCODING_POST); }//method
+  protected function getEncoding(){ return $this->getAttr('encoding', self::ENCODING_POST); }//method
   /**#@-*/
   
   /**
@@ -158,7 +161,7 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
    *  
    *  @param  array $field_map  name/val pairs
    */
-  public function setFields($field_map){
+  public function setFields(array $field_map){
     
     foreach($field_map as $name => $val){
     
@@ -172,12 +175,6 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
     }//foreach
   
   }//method
-  /**
-   * I've changed the name of this method to setFields to be more consistent, this
-   * is now deprecated
-   * @deprecated
-   */
-  public function set($field_map){ return $this->setFields($field_map); }//method
 
   /**
    *  return the value of $key, return $default_val if key doesn't exist
@@ -302,6 +299,9 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
    *
    *  this is handy because most of the time you want the fields without the submit
    *  fields
+   *
+   *  this is different than getVals() because it returns the actual Field instances
+   *  instead of just the plain values
    *  
    *  @return array
    */
@@ -394,6 +394,12 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
     
   }//method
   
+  /**
+   * render the form tag, with all attributes set correctly
+   *
+   * @param array $attr_map if you want to set/override any attributes at render time
+   * @return  string  the <form ...> tag
+   */
   public function renderStart(array $attr_map = array()){
   
     $ret_str = '';
@@ -414,15 +420,23 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
     return $ret_str;
     
   }//method
+
+  /**
+   * this is just here for completeness
+   *
+   * I just thought it was ugly to call renderStart() to start the form but close it with </form>
+   *
+   * @return  string
+   */
   public function renderStop(){ return '</form>'; }//method
   
   /**
    *  finds and outputs all the hidden input fields
    *  
-   *  this is a timesaver method for custom fields to easily get all the hidden
-   *  fields and output them
+   *  this is a timesaver method for custom Form output (ie, not just using render())
+   *  to easily get all the hidden fields and output them
    *  
-   *  @since  2-6-10   
+   *  @since  2-6-10
    *  @return string
    */
   public function renderHidden(){
@@ -472,8 +486,27 @@ abstract class Form extends Common implements ArrayAccess,IteratorAggregate,GetF
   /**
    *  reuired method definition for IteratorAggregate
    *
-   *  @return ArrayIterator allows this class to be iteratable by going throught he main array
+   *  @return ArrayIterator allows this class to be iteratable by going through the main array
    */
   public function getIterator(){ return new ArrayIterator($this->field_map); }//spl method
 
-}//class     
+  /**
+   * this will set the internal field_map to the Field instances in field_map
+   *
+   * @param array $field_map  the name/Field instances mapping that this Form uses
+   */
+  protected function set(array $field_map){
+
+    // set the encoding depending on what the form contains
+    foreach($field_map as $field){
+      if($field instanceof File){
+        $this->setEncoding(self::ENCODING_FILE);
+        break;
+      }//if
+    }//foreach
+
+    $this->field_map = $field_map;
+
+  }//method
+
+}//class

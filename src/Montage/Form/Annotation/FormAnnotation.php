@@ -80,15 +80,6 @@ class FormAnnotation extends Annotation {
       $this->form->setMethod($method);
       
     }//if
-  
-    // @todo  this can probably be removed when I implement file field support as
-    // it can be inferred, basically, if there is a file, then it is encoded 
-    // using ENCODING_FILE, otherwise ENCODING_POST
-    if($encoding = $rdocblock->getTag('encoding')){
-    
-      $this->form->setEncoding($encoding);
-      
-    }//if
     
     // @todo  just like encoding, I think this might be short for this world, I originally
     // liked the idea of having the url set in the form, but that was when the Url class

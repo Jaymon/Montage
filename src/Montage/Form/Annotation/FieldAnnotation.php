@@ -51,6 +51,7 @@ class FieldAnnotation extends ParamAnnotation {
   protected $form_field_map = array(
     'Textarea' => 'Montage\\Form\\Field\\Textarea',
     'Input' => 'Montage\\Form\\Field\\Input',
+    'File' => 'Montage\\Form\\Field\\File',
     'Submit' => 'Montage\\Form\\Field\\Submit'
   );
   
